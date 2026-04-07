@@ -1,5 +1,12 @@
 import {type Mesa, type Producto, type Sector, type ItemPedido}  from "../types";
 
+export const MetodosPagoEjemplo = [
+    { id: 'efectivo', nombre: 'Efectivo' },
+    { id: 'tarjeta', nombre: 'Tarjeta de Crédito/Débito' },
+    { id: 'qr', nombre: 'Pago QR' },
+    { id: 'transferencia', nombre: 'Transferencia Bancaria' },
+];
+
 export const PRODUCTOS_CARTA: Producto[] = [
     // --- COMIDA ---
     { id: 1, nombre: 'Pizza Margherita', precio: 1200, categoria: 'Comida' },

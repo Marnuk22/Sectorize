@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import type  { Mesa, Sector, Producto, ItemPedido } from '../types';
+import type  { Mesa, Sector, Producto, ItemPedido, MetodoPago } from '../types';
 import { MesaService } from '../logic/MesaServices';
 import { useVentas } from './VentasContext';
 import { sectoresEjemplo } from '../Data/DataSet';
@@ -14,7 +14,8 @@ interface SalonContextType {
     seleccionarMesa: (idMesa: number | null) => void;
     // --- Operaciones de Pedido ---
     agregarProductoAMesa: (producto: Producto) => void;
-    cerrarMesa: (idMesa: number) => void;onAumentarProducto: (productoId: number) => void;
+    cerrarMesa: (idMesa: number, metodoPago: MetodoPago) => void;
+    onAumentarProducto: (productoId: number) => void;
     onDisminuirProducto: (productoId: number) => void;
     onEliminarProducto: (productoId: number) => void;
     // --- Gestión de Estructura ---
@@ -106,12 +107,12 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         })));
     };
 
-    const cerrarMesa = (idMesa: number) => {
+    const cerrarMesa = (idMesa: number, metodoPago: MetodoPago) => {
         const mesa = buscarMesa(idMesa);
         if (mesa && mesa.pedidos.length > 0) {
             const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
-            registrarVenta(mesa.pedidos, total, mesa);
-            
+            registrarVenta(mesa.pedidos, total, mesa, metodoPago);
+
             // Limpiamos la mesa en el estado
             setSectores(prev => prev.map(sector => ({
                 ...sector,

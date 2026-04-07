@@ -37,3 +37,20 @@ export interface Comanda {
     total: number;
     estado: EstadoPedido;
 }
+
+export interface MetodoPago {
+    id: string;          // UUID o ID numérico
+    nombre: string;      // "Efectivo", "Tarjeta Débito", "Transferencia"
+    activo?: boolean;     // Para "borrar" lógicamente (desactivar) sin romper ventas viejas
+    icono?: string;      // Nombre del icono de Lucide para la UI
+    recargo?: number;    // Por si quieres aplicar un 10% automático a tarjetas
+}
+
+export interface Venta {
+    id: number;
+    fecha: Date;
+    items: ItemPedido[];
+    total: number;
+    mesa: Mesa;
+    metodoPago?: MetodoPago;
+}
