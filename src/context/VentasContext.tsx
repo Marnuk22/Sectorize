@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { type ItemPedido, type Mesa, type MetodoPago, type Venta} from '../types';
-import {MetodosPagoEjemplo} from '../Data/DataSet';
+import {MetodosPagoEjemplo, VentasEjemplo} from '../Data/DataSet';
 
 
 interface VentasContextType {
@@ -12,7 +12,7 @@ interface VentasContextType {
 const VentasContext = createContext<VentasContextType | undefined>(undefined);
 
 export const VentasProvider = ({ children }: { children: ReactNode }) => {
-    const [historialVentas, setHistorialVentas] = useState<Venta[]>([]);
+    const [historialVentas, setHistorialVentas] = useState<Venta[]>([...VentasEjemplo]);
     const [metodosPago] = useState<MetodoPago[]>([...MetodosPagoEjemplo])
 
     const registrarVenta = (items: ItemPedido[], total: number, mesa: Mesa, metodoPago: MetodoPago) => {

@@ -1,4 +1,4 @@
-import {type Mesa, type Producto, type Sector, type ItemPedido}  from "../types";
+import {type Mesa, type Producto, type Sector, type ItemPedido, type Venta}  from "../types";
 
 export const MetodosPagoEjemplo = [
     { id: 'efectivo', nombre: 'Efectivo' },
@@ -37,22 +37,22 @@ const pedidos: ItemPedido[] = [
     { id: 12, nombre: 'Café Jarrito', precio: 450, categoria: 'Cafetería', cantidad: 1 },
 ];
 const mesasEjemplo: Mesa[] = [
-    { id: 1, nombre: "1", estado: 'libre', pedidos: pedidos },
-    { id: 2, nombre: "2", estado: 'ocupada', pedidos: [] },
-    { id: 3, nombre: "3", estado: 'reservada', pedidos: [] },
-    { id: 4, nombre: "4", estado: 'libre', pedidos: [] },
+    { id: 1, nombre: "1", estado: 'libre',  aConfirmar: [], pedidos: pedidos },
+    { id: 2, nombre: "2", estado: 'ocupada', aConfirmar: [], pedidos: [] },
+    { id: 3, nombre: "3", estado: 'reservada', aConfirmar: [], pedidos: [] },
+    { id: 4, nombre: "4", estado: 'libre', aConfirmar: [], pedidos: [] },
 ];
 const mesasEjemplo2: Mesa[] = [
-    { id: 5, nombre: "5", estado: 'libre', pedidos: [] },
-    { id: 6, nombre: "6", estado: 'ocupada', pedidos: [] },
-    { id: 7, nombre: "7", estado: 'reservada', pedidos: [] },
-    { id: 8, nombre: "8", estado: 'libre', pedidos: [] },
+    { id: 5, nombre: "5", estado: 'libre', aConfirmar: [], pedidos: [] },
+    { id: 6, nombre: "6", estado: 'ocupada', aConfirmar: [], pedidos: [] },
+    { id: 7, nombre: "7", estado: 'reservada', aConfirmar: [], pedidos: [] },
+    { id: 8, nombre: "8", estado: 'libre', aConfirmar: [], pedidos: [] },
 ];
 const mesasEjemplo3: Mesa[] = [
-    { id: 9, nombre: "1af", estado: 'libre', pedidos: [] },
-    { id: 10, nombre: "2af", estado: 'ocupada', pedidos: [] },
-    { id: 11, nombre: "3af", estado: 'reservada', pedidos: [] },
-    { id: 12, nombre: "4af" , estado: 'libre', pedidos: [] },
+    { id: 9, nombre: "1af", estado: 'libre', aConfirmar: [], pedidos: [] },
+    { id: 10, nombre: "2af", estado: 'ocupada', aConfirmar: [], pedidos: [] },
+    { id: 11, nombre: "3af", estado: 'reservada', aConfirmar: [], pedidos: [] },
+    { id: 12, nombre: "4af" , estado: 'libre', aConfirmar: [], pedidos: [] },
 ];
 
 export const sectoresEjemplo: Sector[] = [
@@ -60,3 +60,23 @@ export const sectoresEjemplo: Sector[] = [
     {id: 2, nombre: 'Patio', mesas: mesasEjemplo3},
     {id: 3, nombre: 'VIP', mesas: mesasEjemplo2},
 ];
+
+export const VentasEjemplo: Venta[] = [
+    {
+        id: 1,
+        fecha: new Date(),
+        items: pedidos,
+        total: pedidos.reduce((acc, item) => acc + item.precio * item.cantidad, 0),
+        mesa: mesasEjemplo[0],
+        metodoPago: MetodosPagoEjemplo[0]
+    },
+    {
+        id: 2,
+        fecha: new Date(),
+        items: pedidos,
+        total: pedidos.reduce((acc, item) => acc + item.precio * item.cantidad, 0),
+        mesa: mesasEjemplo[1],
+        metodoPago: MetodosPagoEjemplo[1]
+    }
+
+]

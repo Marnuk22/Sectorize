@@ -1,10 +1,14 @@
 import { useSalon } from '../../context/SalonContext.tsx';
 
-const ListaPedidos = () => {
+interface ListaPedidosProps {
+    aConfirmar: boolean; // Si es true, muestra "aConfirmar", si es false, muestra "pedidos"
+}
+
+const ListaPedidos = ({ aConfirmar }: ListaPedidosProps) => {
     const { mesaSeleccionada } = useSalon();
-    const onAumentar = useSalon().onAumentarProducto;
-    const onDisminuir = useSalon().onDisminuirProducto;
-    const onEliminar = useSalon().onEliminarProducto;
+    const onAumentar = aConfirmar ? useSalon().onAumentarAconfirmar : useSalon().onAumentarProducto;
+    const onDisminuir = aConfirmar ? useSalon().onDisminuirAConfirmar : useSalon().onDisminuirProducto;
+    const onEliminar = aConfirmar ? useSalon().onEliminarAConfirmar : useSalon().onEliminarProducto;
 
     // Si no hay mesa, no mostramos nada
     if (!mesaSeleccionada) return (
@@ -12,8 +16,7 @@ const ListaPedidos = () => {
             Selecciona una mesa para ver sus pedidos.
         </div>
     );
-
-    const pedidos = mesaSeleccionada.pedidos;
+    const pedidos = aConfirmar ? mesaSeleccionada.aConfirmar : mesaSeleccionada.pedidos;
 
     return (
         <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

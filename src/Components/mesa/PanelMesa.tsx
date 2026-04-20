@@ -4,6 +4,7 @@ import AccionesMesa from "./AccionesMesa";
 import ListaPedidos from "./ListaPedidos";
 import MenuDisplay from "./MenuDisplay";
 import CierreDeMesa from "./CierreDeMesa";
+import ConfirmarPedidos from "./ConfirmarPedidos";
 
 const PanelMesa = () => {
     const { mesaSeleccionada, agregarProductoAMesa } = useSalon();
@@ -21,23 +22,27 @@ const PanelMesa = () => {
         );
     }
 return(
-    <div className="panel-mesa">
+    <div className="bg-gray-100 h-full w-full overflow-y-auto scroll-smooth">
+        <div className="flex flex-col h-full w-full">
         {/*Cabecera*/}
-        <div className="flex items-center gap-4 p-4 ">
-            <h2 className="text-xl font-bold text-gray-800">Mesa {mesaSeleccionada.nombre}</h2>
-            <span className={`px-2 py-1 text-xs font-semibold rounded ${mesaSeleccionada.estado === 'libre' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {mesaSeleccionada.estado}
-            </span>
-            <AccionesMesa/>
-        </div>
-        <div>
-            <MenuDisplay onSeleccionar={handleSeleccionProducto} />
-        </div>
-        <div>
-            <ListaPedidos />
-        </div>
-        <div> 
-            <CierreDeMesa />
+            <div className="bg-gray-50 p-4">
+                <h2 className="text-xl font-bold text-gray-800">Mesa {mesaSeleccionada.nombre}</h2>
+                <span className={`px-2 py-1 text-xs font-semibold rounded ${mesaSeleccionada.estado === 'libre' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {mesaSeleccionada.estado}
+                </span>
+                <AccionesMesa/>
+            </div>
+            <div>
+                <MenuDisplay onSeleccionar={handleSeleccionProducto} />
+            </div>
+            <div>
+                <ListaPedidos aConfirmar={true} />
+                <ConfirmarPedidos />
+                <ListaPedidos aConfirmar={false} />
+            </div>
+            <div> 
+                <CierreDeMesa />
+            </div>
         </div>
     </div>
 

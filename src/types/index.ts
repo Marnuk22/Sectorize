@@ -20,6 +20,7 @@ export interface Mesa {
     id: number;
     nombre: string;
     estado: EstadoMesa;
+    aConfirmar: ItemPedido[]; // Lo que el mozo agregó pero aún no confirmó
     pedidos: ItemPedido[]; // La mesa contiene la lista de lo que se pidió
 }
 

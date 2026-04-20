@@ -16,14 +16,18 @@ interface SalonContextType {
     agregarProductoAMesa: (producto: Producto) => void;
     cerrarMesa: (idMesa: number, metodoPago: MetodoPago) => void;
     onAumentarProducto: (productoId: number) => void;
+    onAumentarAconfirmar: (productoId: number) => void;
     onDisminuirProducto: (productoId: number) => void;
+    onDisminuirAConfirmar: (productoId: number) => void;
     onEliminarProducto: (productoId: number) => void;
+    onEliminarAConfirmar: (productoId: number) => void;
     // --- Gestión de Estructura ---
     agregarSector: (nombre: string) => void;
     borrarSector: (idSector: number) => void;
     agregarMesaASector: (idSector: number, nombreMesa: string) => void;
     borrarMesa: (idMesa: number) => void;
     //Funcionalidades adicionales podrían ir aquí, como CambiarMesa, etc.
+    confirmarPedidoMesa: (idMesa: number) => void;
     transferirMesa: (idMesaOrigen: number, idMesaDestino: number) => void;
 }
 
@@ -164,6 +168,24 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         // Aquí también podrías disparar el fetch(PUT/POST) a tu API
     };
 
+    const actualizarConfirmadosMesa = (nuevosPedidos: ItemPedido[]) => {
+        setSectores(prevSectores => 
+            prevSectores.map(sector => {
+                if (sector.id !== idSectorSeleccionado) return sector;
+                
+                return {
+                    ...sector,
+                    mesas: sector.mesas.map(mesa => 
+                        mesa.id === idMesaSeleccionada 
+                            ? { ...mesa, aConfirmar: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' : 'libre' } 
+                            : mesa
+                    )
+                };
+            })
+        );
+        // Aquí también podrías disparar el fetch(PUT/POST) a tu API
+    };
+
     const onAumentarProducto = (productoId: number) => {
         console.log("Intentando aumentar producto con ID:", productoId);
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
@@ -173,6 +195,17 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
             item.id === productoId ? { ...item, cantidad: item.cantidad + 1 } : item
         );
         actualizarPedidoMesa(nuevosPedidos);
+    };
+
+    const onAumentarAconfirmar = (productoId: number) => {
+        console.log("Intentando aumentar producto con ID:", productoId);
+        if (!idSectorSeleccionado || !idMesaSeleccionada) return;
+        const mesa = buscarMesa(idMesaSeleccionada);
+        if (!mesa) return;
+        const nuevosPedidos = mesa.aConfirmar.map(item =>
+            item.id === productoId ? { ...item, cantidad: item.cantidad + 1 } : item
+        );
+        actualizarConfirmadosMesa(nuevosPedidos);
     };
 
     const onDisminuirProducto = (productoId: number) => {
@@ -186,6 +219,16 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         actualizarPedidoMesa(nuevosPedidos);
     };
 
+    const onDisminuirAConfirmar = (productoId: number) => {
+        console.log("Intentando disminuir producto con ID:", productoId);
+        if (!idSectorSeleccionado || !idMesaSeleccionada) return;
+        const mesa = buscarMesa(idMesaSeleccionada);
+        if (!mesa) return;
+        const nuevosPedidos = mesa.aConfirmar.map(item =>
+            item.id === productoId ? { ...item, cantidad: Math.max(0, item.cantidad - 1) } : item
+        );
+        actualizarConfirmadosMesa(nuevosPedidos);
+    };
 
     const onEliminarProducto = (productoId: number) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
@@ -193,6 +236,14 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         if (!mesa) return;
         const nuevosPedidos = mesa.pedidos.filter(item => item.id !== productoId);
         actualizarPedidoMesa(nuevosPedidos);
+    };
+
+    const onEliminarAConfirmar = (productoId: number) => {
+        if (!idSectorSeleccionado || !idMesaSeleccionada) return;
+        const mesa = buscarMesa(idMesaSeleccionada);
+        if (!mesa) return;
+        const nuevosPedidos = mesa.aConfirmar.filter(item => item.id !== productoId);
+        actualizarConfirmadosMesa(nuevosPedidos);
     };
 
     const transferirMesa = (idMesaOrigen: number, idMesaDestino: number) => {
@@ -221,7 +272,17 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
             return mesa;
         })
     })));
-}
+    }   
+
+    const confirmarPedidoMesa = (idMesa: number) => {
+        const mesa = buscarMesa(idMesa);
+        if (!mesa) return;
+        const nuevosPedidos = [...mesa.pedidos, ...mesa.aConfirmar];
+        actualizarPedidoMesa(nuevosPedidos);
+        actualizarConfirmadosMesa([]);
+        {/*imprimirComanda*/}
+    };
+
     return (
         <SalonContext.Provider value={{
             sectores,
@@ -237,8 +298,12 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
             borrarSector,
             borrarMesa,
             onAumentarProducto,
+            onAumentarAconfirmar,
             onDisminuirProducto,
+            onDisminuirAConfirmar,
             onEliminarProducto,
+            onEliminarAConfirmar,
+            confirmarPedidoMesa,
             transferirMesa
         }}>
             {children}

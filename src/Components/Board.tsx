@@ -15,7 +15,6 @@ const Board = ({ seccionActiva }: BoardProps) => {
         switch (seccionActiva) {
             case 'sectores':
                 return(
-                    
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorSectores/>    
                     </div>
@@ -31,9 +30,7 @@ const Board = ({ seccionActiva }: BoardProps) => {
             case 'ventas':
                 return(
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <h2 className="text-3xl font-bold text-gray-800">Plano de Ventas</h2>
                         <ContenedorVentas/>
-                        
                     </div>
                 );
         }
@@ -43,7 +40,6 @@ const Board = ({ seccionActiva }: BoardProps) => {
     return (
         <div className="p-4">
             {renderContenido()}
-            {productos.length} productos{/* <- Solo para mostrar que tenemos los datos cargados */}
         </div>
     );
 };

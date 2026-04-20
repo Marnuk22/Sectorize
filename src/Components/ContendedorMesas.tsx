@@ -13,9 +13,9 @@ const  ContenedorMesas = () => {
         setIsModalOpen(false);
 };
     return (
-        <>
+        <div className='flex flex-col gap-6 mt-2 animate-in fade-in duration-500'>
             <button  
-                className="flex flex-col items-center gap-2 bg-white p-4 rounded-lg shadow-sm min-w-37.5 border-2 border-dashed border-gray-200 hover:border-indigo-400 transition-colors text-gray-500 font-bold"
+                className="flex flex-col items-center gap-2 bg-white p-4 rounded-lg shadow-sm min-w-37.5 border-2 border-dashed border-gray-200 hover:border-indigo-400 transition-colors text-gray-500 font-bold w-32 h-15"
                 onClick={()=> setIsModalOpen(true)}
                 >
                 <span className="text-xs text-indigo-600">+  agregar mesa</span>
@@ -28,7 +28,7 @@ const  ContenedorMesas = () => {
                         <div 
                         key={mesa.id} 
                         onClick={() => seleccionarMesa(mesa.id)}
-                        className={`bg-white p-6 rounded-xl shadow-sm border-2 cursor-pointer transition-all hover:shadow-md ${
+                        className={`bg-gray-200 p-6 rounded-xl shadow-sm border-2 cursor-pointer transition-all hover:shadow-md ${
                                 mesaSeleccionada?.id === mesa.id ? 'border-indigo-500 bg-indigo-50' : 'border-transparent'
                             }`}>
                             <h3 className="text-lg font-semibold text-gray-800">{mesa.nombre}</h3>
@@ -55,14 +55,14 @@ const  ContenedorMesas = () => {
                 {mesaSeleccionada && (
                     <>
                         {/* Cabecera del Panel */}
-                        <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+                        <div className="fixed top-0 right-0 h-full w-full p-6 border-b flex justify-between items-center bg-gray-50">
                             <PanelMesa/>
                         </div>
                     </>
                     )}
             </div>
         </div>
-        </>
+        </div>
     )
 }
 

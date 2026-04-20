@@ -5,9 +5,6 @@ export const MesaService = {
   // Ahora pedimos el nombre que el usuario escribió
     agregarMesa: (sector: Sector, nombreElegido: string): Sector => {
     
-        const maxId = sector.mesas.length > 0 
-            ? Math.max(...sector.mesas.map(m => m.id)) 
-            : 0;
 
         // Validación básica: que no esté vacío  y  que  no  supere cierta longitud, por ejemplo 25 caracteres.
         const nombreLimpio = nombreElegido.trim();
@@ -19,9 +16,10 @@ export const MesaService = {
         }
 
         const nuevaMesa: Mesa = {
-            id: maxId+1, // El ID sigue siendo la clave para React
+            id: Date.now(), // El ID sigue siendo la clave para React
             nombre: nombreElegido,   // Aquí guardamos lo que el usuario escribió
             estado: 'libre',
+            aConfirmar: [],
             pedidos: []
         };
 
@@ -32,13 +30,22 @@ export const MesaService = {
     },
 
     agregarProducto: (mesa: Mesa, producto: Producto): Mesa => {
-        const itemExistente = mesa.pedidos.find(p => p.id === producto.id);
+        const itemExistente = mesa.aConfirmar.find(p => p.id === producto.id);
             return {
                 ...mesa,
                 estado: 'ocupada',
-                pedidos: itemExistente ? mesa.pedidos.map(p => p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p)
-                : [...mesa.pedidos, { ...producto, cantidad: 1 }]
+                aConfirmar: itemExistente ? mesa.aConfirmar.map(p => p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p)
+                : [...mesa.aConfirmar, { ...producto, cantidad: 1 }]
             };
     },
+
+    confirmarPedido: (mesa: Mesa): Mesa => {
+        return {
+            ...mesa,
+            pedidos: [...mesa.pedidos, ...mesa.aConfirmar],
+            aConfirmar: [],
+            estado: 'ocupada'
+        };
+    }
   // ... resto de funciones
 };
