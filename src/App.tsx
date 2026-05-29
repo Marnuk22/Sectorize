@@ -1,4 +1,4 @@
-import  'react'
+import 'react'
 import { useState } from 'react';
 import NavBar from './Components/NavBar.tsx';
 import type { SeccionPDV as seccionPdv } from './Components/NavBar.tsx';
@@ -6,7 +6,7 @@ import Board from './Components/Board.tsx';
 import { SalonProvider, MenuProvider, VentasProvider } from './context';
 
 function App() {
-const [seccion, setSeccion] = useState<seccionPdv>('sectores');
+  const [seccion, setSeccion] = useState<seccionPdv>('sectores');
 
   return (
     <VentasProvider>

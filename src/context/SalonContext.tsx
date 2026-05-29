@@ -1,50 +1,82 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
-import type  { Mesa, Sector, Producto, ItemPedido, MetodoPago } from '../types';
+import { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react';
+import type { SectorUI as Sector, MesaUI as Mesa, ItemPedidoUI as ItemPedido, MetodoPago, Producto } from '../types';
 import { MesaService } from '../logic/MesaServices';
 import { useVentas } from './VentasContext';
-import { sectoresEjemplo } from '../Data/DataSet';
+import { useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 interface SalonContextType {
     sectores: Sector[];
     mesaSeleccionada: Mesa | null;
     sectorSeleccionado: Sector | null;
-    sectorBuscado: (idMesa: number) => number | null;
-    // --- Acciones de Selección ---
-    seleccionarSector: (idSector: number | null) => void;
-    seleccionarMesa: (idMesa: number | null) => void;
-    // --- Operaciones de Pedido ---
+    cargando: boolean;
+    sectorBuscado: (idMesa: string) => string | null;
+    seleccionarSector: (idSector: string | null) => void;
+    seleccionarMesa: (idMesa: string | null) => void;
     agregarProductoAMesa: (producto: Producto) => void;
-    cerrarMesa: (idMesa: number, metodoPago: MetodoPago) => void;
-    onAumentarProducto: (productoId: number) => void;
-    onAumentarAconfirmar: (productoId: number) => void;
-    onDisminuirProducto: (productoId: number) => void;
-    onDisminuirAConfirmar: (productoId: number) => void;
-    onEliminarProducto: (productoId: number) => void;
-    onEliminarAConfirmar: (productoId: number) => void;
-    // --- Gestión de Estructura ---
+    cerrarMesa: (idMesa: string, metodoPago: MetodoPago) => void;
+    onAumentarProducto: (productoId: string) => void;
+    onAumentarAconfirmar: (productoId: string) => void;
+    onDisminuirProducto: (productoId: string) => void;
+    onDisminuirAConfirmar: (productoId: string) => void;
+    onEliminarProducto: (productoId: string) => void;
+    onEliminarAConfirmar: (productoId: string) => void;
     agregarSector: (nombre: string) => void;
-    borrarSector: (idSector: number) => void;
-    agregarMesaASector: (idSector: number, nombreMesa: string) => void;
-    borrarMesa: (idMesa: number) => void;
-    //Funcionalidades adicionales podrían ir aquí, como CambiarMesa, etc.
-    confirmarPedidoMesa: (idMesa: number) => void;
-    transferirMesa: (idMesaOrigen: number, idMesaDestino: number) => void;
+    borrarSector: (idSector: string) => void;
+    agregarMesaASector: (idSector: string, nombreMesa: string) => void;
+    borrarMesa: (idMesa: string) => void;
+    confirmarPedidoMesa: (idMesa: string) => void;
+    transferirMesa: (idMesaOrigen: string, idMesaDestino: string) => void;
 }
 
 const SalonContext = createContext<SalonContextType | undefined>(undefined);
 
 export const SalonProvider = ({ children }: { children: ReactNode }) => {
     const { registrarVenta } = useVentas();
-    // Estado principal: Una lista de sectores, y cada sector tiene sus mesas
-    const [sectores, setSectores] = useState<Sector[]>([...sectoresEjemplo]);
-    // 1. Guardas solo el "puntero" (el ID)
-    const [idMesaSeleccionada, setIdMesaSeleccionada] = useState<number | null>(null);
-    const [idSectorSeleccionado, setIdSectorSeleccionado] = useState<number | null>(null);
+    const { localId } = useAuth();
+    const [sectores, setSectores] = useState<Sector[]>([]);
+    const [cargando, setCargando] = useState(true);
+    const [idMesaSeleccionada, setIdMesaSeleccionada] = useState<string | null>(null);
+    const [idSectorSeleccionado, setIdSectorSeleccionado] = useState<string | null>(null);
 
-    //SELECCIONAR SECTOR 
+    useEffect(() => {
+        if (!localId) return;
+        cargarSalon();
+    }, [localId]);
 
-    // Helper para encontrar la mesa actual en el árbol de sectores
-    const buscarMesa = (id: number): Mesa | null => {
+    const cargarSalon = async () => {
+        setCargando(true);
+        try {
+            const [{ data: sectoresDB, error: errorSectores }, { data: mesasDB, error: errorMesas }] = await Promise.all([
+                supabase.from('sectores').select('*').eq('local_id', localId).order('creado_at'),
+                supabase.from('mesas').select('*').eq('local_id', localId).order('creado_at'),
+            ]);
+            if (errorSectores) throw errorSectores;
+            if (errorMesas) throw errorMesas;
+
+            const sectoresUI: Sector[] = (sectoresDB ?? []).map(sector => ({
+                id: sector.id,
+                nombre: sector.nombre,
+                mesas: (mesasDB ?? [])
+                    .filter(m => m.sector_id === sector.id)
+                    .map(m => ({
+                        id: m.id,
+                        nombre: m.nombre,
+                        capacidad: m.capacidad ?? undefined,
+                        estado: m.estado === 'ocupado' ? 'ocupada' : m.estado === 'reservado' ? 'reservada' : 'libre',
+                        aConfirmar: [],
+                        pedidos: [],
+                    }))
+            }));
+            setSectores(sectoresUI);
+        } catch (err) {
+            console.error('Error cargando salón:', err);
+        } finally {
+            setCargando(false);
+        }
+    };
+
+    const buscarMesa = (id: string): Mesa | null => {
         for (const sector of sectores) {
             const mesa = sector.mesas.find(m => m.id === id);
             if (mesa) return mesa;
@@ -52,14 +84,13 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         return null;
     };
 
-    const sectorBuscado = (idMesa: number): number | null => {
+    const sectorBuscado = (idMesa: string): string | null => {
         for (const sector of sectores) {
             const mesa = sector.mesas.find(m => m.id === idMesa);
             if (mesa) return sector.id;
         }
         return null;
     };
-
 
     const mesaSeleccionada = useMemo(() => {
         if (!idMesaSeleccionada) return null;
@@ -71,245 +102,204 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         return sectores.find(s => s.id === idSectorSeleccionado) || null;
     }, [idSectorSeleccionado, sectores]);
 
-    // --- Acciones de Selección (Limpias) ---
-    const seleccionarSector = (id: number | null) => {
+    const seleccionarSector = (id: string | null) => {
         setIdSectorSeleccionado(id);
-        setIdMesaSeleccionada(null); // Reset de mesa al cambiar de sector
+        setIdMesaSeleccionada(null);
     };
 
-    const seleccionarMesa = (id: number | null) => {
-        setIdMesaSeleccionada(id);
-    };
-///////////////////////////////////////
-    // --- LÓGICA DE GESTIÓN ---
-    const agregarSector = (nombre: string) => {
-        const nuevoSector: Sector = { id: Date.now(), nombre, mesas: [] };
-        setSectores(prev => [...prev, nuevoSector]);
+    const seleccionarMesa = (id: string | null) => setIdMesaSeleccionada(id);
+
+    const agregarSector = async (nombre: string) => {
+        if (!localId) return;
+        const { data, error } = await supabase
+            .from('sectores')
+            .insert({ nombre, local_id: localId })
+            .select()
+            .single();
+        if (error) { console.error('Error creando sector:', error); return; }
+        setSectores(prev => [...prev, { id: data.id, nombre: data.nombre, mesas: [] }]);
     };
 
-    const agregarMesaASector = (idSector: number, nombreMesa: string) => {
-        setSectores(prev => prev.map(sector => {
-            if (sector.id === idSector) {
-                return MesaService.agregarMesa(sector, nombreMesa);;
-            }
-            return sector;
-        }));
+    const borrarSector = async (idSector: string) => {
+        const { error } = await supabase.from('sectores').delete().eq('id', idSector);
+        if (error) { console.error('Error borrando sector:', error); return; }
+        setSectores(prev => prev.filter(s => s.id !== idSector));
+        if (mesaSeleccionada && sectores.find(s => s.id === idSector)?.mesas.some(m => m.id === mesaSeleccionada.id)) {
+            setIdMesaSeleccionada(null);
+        }
     };
 
-    // --- LÓGICA DE OPERACIÓN (USANDO MESASERVICE) ---
+    const agregarMesaASector = async (idSector: string, nombreMesa: string) => {
+        if (!localId) return;
+        const { data, error } = await supabase
+            .from('mesas')
+            .insert({ nombre: nombreMesa, sector_id: idSector, local_id: localId })
+            .select()
+            .single();
+        if (error) { console.error('Error creando mesa:', error); return; }
+        const nuevaMesa: Mesa = { id: data.id, nombre: data.nombre, estado: 'libre', aConfirmar: [], pedidos: [] };
+        setSectores(prev => prev.map(sector =>
+            sector.id === idSector ? { ...sector, mesas: [...sector.mesas, nuevaMesa] } : sector
+        ));
+    };
+
+    const borrarMesa = async (idMesa: string) => {
+        const { error } = await supabase.from('mesas').delete().eq('id', idMesa);
+        if (error) { console.error('Error borrando mesa:', error); return; }
+        setSectores(prev => prev.map(sector => ({
+            ...sector,
+            mesas: sector.mesas.filter(m => m.id !== idMesa)
+        })));
+        if (idMesaSeleccionada === idMesa) setIdMesaSeleccionada(null);
+    };
 
     const agregarProductoAMesa = (producto: Producto) => {
         if (!idMesaSeleccionada) return;
-
+        const item: ItemPedido = {
+            id: producto.id,
+            nombre: producto.nombre,
+            precio: producto.precio_venta,
+            categoria: producto.categoria,
+            cantidad: 1,
+        };
         setSectores(prev => prev.map(sector => ({
             ...sector,
-            mesas: sector.mesas.map(mesa => 
-                mesa.id === idMesaSeleccionada 
-                    ? MesaService.agregarProducto(mesa, producto) 
-                    : mesa
+            mesas: sector.mesas.map(mesa =>
+                mesa.id === idMesaSeleccionada ? MesaService.agregarProducto(mesa, item) : mesa
             )
         })));
     };
 
-    const cerrarMesa = (idMesa: number, metodoPago: MetodoPago) => {
+    const cerrarMesa = (idMesa: string, metodoPago: MetodoPago) => {
         const mesa = buscarMesa(idMesa);
         if (mesa && mesa.pedidos.length > 0) {
             const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
             registrarVenta(mesa.pedidos, total, mesa, metodoPago);
-
-            // Limpiamos la mesa en el estado
             setSectores(prev => prev.map(sector => ({
                 ...sector,
-                mesas: sector.mesas.map(m => 
-                    m.id === idMesa ? { ...m, pedidos: [], estado: 'libre' } : m
+                mesas: sector.mesas.map(m =>
+                    m.id === idMesa ? { ...m, pedidos: [], aConfirmar: [], estado: 'libre' as const } : m
                 )
             })));
             setIdMesaSeleccionada(null);
         }
     };
 
-    const borrarSector = (idSector: number) => {
-        setSectores(prev => prev.filter(s => s.id !== idSector));
-        
-        // Tip Pro: Si la mesa seleccionada estaba en ese sector, la deseleccionamos
-        if (mesaSeleccionada && sectores.find(s => s.id === idSector)?.mesas.some(m => m.id === mesaSeleccionada.id)) {
-            setIdMesaSeleccionada(null);
-        }
-    };
-
-    const borrarMesa = (idMesa: number) => {
-        setSectores(prev => prev.map(sector => ({
-            ...sector,
-            // Filtramos las mesas de cada sector, quitando la que coincida con el ID
-            mesas: sector.mesas.filter(m => m.id !== idMesa)
-        })));
-
-        // Si el mozo estaba viendo esa mesa justo ahora, limpiamos la selección
-        if (idMesaSeleccionada === idMesa) {
-            setIdMesaSeleccionada(null);
-        }
-    };  
-
     const actualizarPedidoMesa = (nuevosPedidos: ItemPedido[]) => {
-        setSectores(prevSectores => 
-            prevSectores.map(sector => {
-                if (sector.id !== idSectorSeleccionado) return sector;
-                
-                return {
-                    ...sector,
-                    mesas: sector.mesas.map(mesa => 
-                        mesa.id === idMesaSeleccionada 
-                            ? { ...mesa, pedidos: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' : 'libre' } 
-                            : mesa
-                    )
-                };
-            })
-        );
-        // Aquí también podrías disparar el fetch(PUT/POST) a tu API
+        setSectores(prev => prev.map(sector => {
+            if (sector.id !== idSectorSeleccionado) return sector;
+            return {
+                ...sector,
+                mesas: sector.mesas.map(mesa =>
+                    mesa.id === idMesaSeleccionada
+                        ? { ...mesa, pedidos: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' as const : 'libre' as const }
+                        : mesa
+                )
+            };
+        }));
     };
 
     const actualizarConfirmadosMesa = (nuevosPedidos: ItemPedido[]) => {
-        setSectores(prevSectores => 
-            prevSectores.map(sector => {
-                if (sector.id !== idSectorSeleccionado) return sector;
-                
-                return {
-                    ...sector,
-                    mesas: sector.mesas.map(mesa => 
-                        mesa.id === idMesaSeleccionada 
-                            ? { ...mesa, aConfirmar: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' : 'libre' } 
-                            : mesa
-                    )
-                };
-            })
-        );
-        // Aquí también podrías disparar el fetch(PUT/POST) a tu API
+        setSectores(prev => prev.map(sector => {
+            if (sector.id !== idSectorSeleccionado) return sector;
+            return {
+                ...sector,
+                mesas: sector.mesas.map(mesa =>
+                    mesa.id === idMesaSeleccionada
+                        ? { ...mesa, aConfirmar: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' as const : 'libre' as const }
+                        : mesa
+                )
+            };
+        }));
     };
 
-    const onAumentarProducto = (productoId: number) => {
-        console.log("Intentando aumentar producto con ID:", productoId);
+    const onAumentarProducto = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.pedidos.map(item =>
+        actualizarPedidoMesa(mesa.pedidos.map(item =>
             item.id === productoId ? { ...item, cantidad: item.cantidad + 1 } : item
-        );
-        actualizarPedidoMesa(nuevosPedidos);
+        ));
     };
 
-    const onAumentarAconfirmar = (productoId: number) => {
-        console.log("Intentando aumentar producto con ID:", productoId);
+    const onAumentarAconfirmar = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.aConfirmar.map(item =>
+        actualizarConfirmadosMesa(mesa.aConfirmar.map(item =>
             item.id === productoId ? { ...item, cantidad: item.cantidad + 1 } : item
-        );
-        actualizarConfirmadosMesa(nuevosPedidos);
+        ));
     };
 
-    const onDisminuirProducto = (productoId: number) => {
-        console.log("Intentando disminuir producto con ID:", productoId);
+    const onDisminuirProducto = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.pedidos.map(item =>
+        actualizarPedidoMesa(mesa.pedidos.map(item =>
             item.id === productoId ? { ...item, cantidad: Math.max(0, item.cantidad - 1) } : item
-        );
-        actualizarPedidoMesa(nuevosPedidos);
+        ));
     };
 
-    const onDisminuirAConfirmar = (productoId: number) => {
-        console.log("Intentando disminuir producto con ID:", productoId);
+    const onDisminuirAConfirmar = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.aConfirmar.map(item =>
+        actualizarConfirmadosMesa(mesa.aConfirmar.map(item =>
             item.id === productoId ? { ...item, cantidad: Math.max(0, item.cantidad - 1) } : item
-        );
-        actualizarConfirmadosMesa(nuevosPedidos);
+        ));
     };
 
-    const onEliminarProducto = (productoId: number) => {
+    const onEliminarProducto = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.pedidos.filter(item => item.id !== productoId);
-        actualizarPedidoMesa(nuevosPedidos);
+        actualizarPedidoMesa(mesa.pedidos.filter(item => item.id !== productoId));
     };
 
-    const onEliminarAConfirmar = (productoId: number) => {
+    const onEliminarAConfirmar = (productoId: string) => {
         if (!idSectorSeleccionado || !idMesaSeleccionada) return;
         const mesa = buscarMesa(idMesaSeleccionada);
         if (!mesa) return;
-        const nuevosPedidos = mesa.aConfirmar.filter(item => item.id !== productoId);
-        actualizarConfirmadosMesa(nuevosPedidos);
+        actualizarConfirmadosMesa(mesa.aConfirmar.filter(item => item.id !== productoId));
     };
 
-    const transferirMesa = (idMesaOrigen: number, idMesaDestino: number) => {
+    const transferirMesa = (idMesaOrigen: string, idMesaDestino: string) => {
         const mesaOrigen = buscarMesa(idMesaOrigen);
         const mesaDestino = buscarMesa(idMesaDestino);
-
-        // Validaciones críticas
         if (!mesaOrigen || !mesaDestino) return;
-        if (mesaDestino.pedidos.length > 0) {
-            console.error("La mesa destino no está vacía");
-            return;
-        }
+        if (mesaDestino.pedidos.length > 0) { console.error("La mesa destino no está vacía"); return; }
         const pedidosAMover = mesaOrigen.pedidos;
+        setSectores(prev => prev.map(sector => ({
+            ...sector,
+            mesas: sector.mesas.map((mesa: Mesa) => {
+                if (mesa.id === idMesaOrigen) return { ...mesa, pedidos: [], estado: 'libre' as const };
+                if (mesa.id === idMesaDestino) return { ...mesa, pedidos: pedidosAMover, estado: 'ocupada' as const };
+                return mesa;
+            })
+        })));
+    };
 
-        setSectores(prevSectores => prevSectores.map(sector => ({
-        ...sector,
-        mesas: sector.mesas.map((mesa: Mesa) => {
-            // Si es la mesa de origen, la vaciamos
-            if (mesa.id === idMesaOrigen) {
-                return { ...mesa, pedidos: [], estado: 'libre' };
-            }
-            // Si es la mesa de destino, le pasamos los pedidos
-            if (mesa.id === idMesaDestino) {
-                return { ...mesa, pedidos: pedidosAMover, estado: 'ocupada' };
-            }
-            return mesa;
-        })
-    })));
-    }   
-
-    const confirmarPedidoMesa = (idMesa: number) => {
+    const confirmarPedidoMesa = (idMesa: string) => {
         const mesa = buscarMesa(idMesa);
         if (!mesa) return;
-        const nuevosPedidos = [...mesa.pedidos, ...mesa.aConfirmar];
-        actualizarPedidoMesa(nuevosPedidos);
+        actualizarPedidoMesa([...mesa.pedidos, ...mesa.aConfirmar]);
         actualizarConfirmadosMesa([]);
-        {/*imprimirComanda*/}
     };
 
     return (
         <SalonContext.Provider value={{
-            sectores,
-            mesaSeleccionada, 
-            sectorSeleccionado,
-            sectorBuscado,
-            seleccionarMesa,
-            seleccionarSector,
-            agregarProductoAMesa, 
-            cerrarMesa, 
-            agregarSector, 
-            agregarMesaASector,
-            borrarSector,
-            borrarMesa,
-            onAumentarProducto,
-            onAumentarAconfirmar,
-            onDisminuirProducto,
-            onDisminuirAConfirmar,
-            onEliminarProducto,
-            onEliminarAConfirmar,
-            confirmarPedidoMesa,
-            transferirMesa
+            sectores, mesaSeleccionada, sectorSeleccionado, cargando,
+            sectorBuscado, seleccionarMesa, seleccionarSector,
+            agregarProductoAMesa, cerrarMesa, agregarSector, agregarMesaASector,
+            borrarSector, borrarMesa, onAumentarProducto, onAumentarAconfirmar,
+            onDisminuirProducto, onDisminuirAConfirmar, onEliminarProducto,
+            onEliminarAConfirmar, confirmarPedidoMesa, transferirMesa
         }}>
             {children}
         </SalonContext.Provider>
     );
 };
+
 export const useSalon = () => {
     const context = useContext(SalonContext);
     if (!context) throw new Error("useSalon debe usarse dentro de SalonProvider");

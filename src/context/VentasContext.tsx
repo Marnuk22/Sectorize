@@ -1,42 +1,78 @@
+// src/context/VentasContext.tsx
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { type ItemPedido, type Mesa, type MetodoPago, type Venta} from '../types';
-import {MetodosPagoEjemplo, VentasEjemplo} from '../Data/DataSet';
-
+import type { ItemPedidoUI, MesaUI, MetodoPago, VentaUI, ArqueoUI } from '../types';
 
 interface VentasContextType {
-    historialVentas: Venta[];
-    registrarVenta: (items: ItemPedido[], total: number, mesa: Mesa, metodoPago: MetodoPago) => void;
-    MetodosPago: MetodoPago[]; // Aquí podrías cargar esto desde un servicio o definirlo estático
+    historialVentas: VentaUI[];
+    ArqueoSeleccionado: ArqueoUI | null;
+    ArqueosHistorial: ArqueoUI[];
+    MetodosPago: MetodoPago[];
+    registrarVenta: (items: ItemPedidoUI[], total: number, mesa: MesaUI, metodoPago: MetodoPago) => void;
+    abrirArqueo: (montoInicial: number) => void;
+    cerrarArqueo: (montoFinalReal: number) => void;
 }
 
 const VentasContext = createContext<VentasContextType | undefined>(undefined);
 
 export const VentasProvider = ({ children }: { children: ReactNode }) => {
-    const [historialVentas, setHistorialVentas] = useState<Venta[]>([...VentasEjemplo]);
-    const [metodosPago] = useState<MetodoPago[]>([...MetodosPagoEjemplo])
+    const [historialVentas, setHistorialVentas] = useState<VentaUI[]>([]);
+    const [idArqueoSeleccionado, setIdArqueoSeleccionado] = useState<string | null>(null);
+    const [ArqueosHistorial, setArqueosHistorial] = useState<ArqueoUI[]>([]);
 
-    const registrarVenta = (items: ItemPedido[], total: number, mesa: Mesa, metodoPago: MetodoPago) => {
-        const nuevaVenta: Venta = {
-            id: Date.now(),
+    const ArqueoSeleccionado = ArqueosHistorial.find(a => a.id === idArqueoSeleccionado) ?? null;
+
+    const registrarVenta = (items: ItemPedidoUI[], total: number, mesa: MesaUI, metodoPago: MetodoPago) => {
+        const nuevaVenta: VentaUI = {
+            id: crypto.randomUUID(),
             fecha: new Date(),
             items,
             total,
             mesa,
-            metodoPago // Aquí podrías hacer que el usuario elija el método de pago en la UI
+            metodoPago
         };
         setHistorialVentas(prev => [...prev, nuevaVenta]);
-        console.log("Venta registrada con éxito:", nuevaVenta);
+        console.log("Venta registrada:", nuevaVenta);
     };
+
+    const abrirArqueo = (montoInicial: number) => {
+        const nuevoArqueo: ArqueoUI = {
+            id: crypto.randomUUID(),
+            montoInicial,
+            montoFinalReal: null,
+            fechaApertura: new Date(),
+            fechaCierre: null,
+            estado: 'abierto',
+        };
+        setArqueosHistorial(prev => [...prev, nuevoArqueo]);
+        setIdArqueoSeleccionado(nuevoArqueo.id);
+    };
+
+    const cerrarArqueo = (montoFinalReal: number) => {
+        if (!idArqueoSeleccionado) return;
+        setArqueosHistorial(prev =>
+            prev.map(a =>
+                a.id === idArqueoSeleccionado
+                    ? { ...a, montoFinalReal, fechaCierre: new Date(), estado: 'cerrado' as const }
+                    : a
+            )
+        );
+    };
+
     return (
-        <VentasContext.Provider value={{ 
+        <VentasContext.Provider value={{
             historialVentas,
+            ArqueoSeleccionado,
+            ArqueosHistorial,
+            MetodosPago: ['efectivo', 'tarjeta', 'transferencia', 'otro'],
             registrarVenta,
-            MetodosPago: metodosPago
-            }}>
+            abrirArqueo,
+            cerrarArqueo,
+        }}>
             {children}
         </VentasContext.Provider>
     );
 };
+
 export const useVentas = () => {
     const context = useContext(VentasContext);
     if (!context) throw new Error("useVentas debe usarse dentro de VentasProvider");

@@ -1,8 +1,8 @@
-import type { Venta } from "../../types";
+import type { VentaUI } from "../../types";
 import { History } from "lucide-react";
 
 interface Props {
-    ventas: Venta[];
+    ventas: VentaUI[];
 }
 
 const HistorialVentas = ({ ventas }: Props) => {
@@ -30,7 +30,7 @@ const HistorialVentas = ({ ventas }: Props) => {
                                     <div className="text-right">
                                         <p className="font-black text-gray-900">${venta.total.toFixed(2)}</p>
                                         <p className="text-[10px] uppercase font-bold text-blue-500 tracking-tighter">
-                                            {venta.metodoPago?.nombre || 'Efectivo'}
+                                            {venta.metodoPago || 'Efectivo'}
                                         </p>
                                     </div>
                                 </div>
