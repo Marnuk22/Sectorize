@@ -52,7 +52,7 @@ console.log("Resultados filtrados:", resultados.length);
                                     <p className="text-xs text-gray-400 uppercase">{producto.categoria}</p>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="font-black text-indigo-600">${producto.precio}</span>
+                                    <span className="font-black text-indigo-600">${producto.precio_venta.toLocaleString()}</span>
                                     <Plus size={16} className="text-indigo-600" />
                                 </div>
                             </button>

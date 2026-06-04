@@ -14,7 +14,7 @@ interface SalonContextType {
     seleccionarSector: (idSector: string | null) => void;
     seleccionarMesa: (idMesa: string | null) => void;
     agregarProductoAMesa: (producto: Producto) => void;
-    cerrarMesa: (idMesa: string, metodoPago: MetodoPago) => void;
+    cerrarMesa: (idMesa: string, metodoPago: MetodoPago) => Promise<void>;
     onAumentarProducto: (productoId: string) => void;
     onAumentarAconfirmar: (productoId: string) => void;
     onDisminuirProducto: (productoId: string) => void;
@@ -41,40 +41,47 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         if (!localId) return;
-        cargarSalon();
+
+        let activo = true;
+
+        const cargar = async () => {
+            setCargando(true);
+            try {
+                const [{ data: sectoresDB, error: errorSectores }, { data: mesasDB, error: errorMesas }] = await Promise.all([
+                    supabase.from('sectores').select('*').eq('local_id', localId).order('creado_at'),
+                    supabase.from('mesas').select('*').eq('local_id', localId).order('creado_at'),
+                ]);
+
+                if (!activo) return;
+                if (errorSectores) throw errorSectores;
+                if (errorMesas) throw errorMesas;
+
+                const sectoresUI: Sector[] = (sectoresDB ?? []).map(sector => ({
+                    id: sector.id,
+                    nombre: sector.nombre,
+                    mesas: (mesasDB ?? [])
+                        .filter(m => m.sector_id === sector.id)
+                        .map(m => ({
+                            id: m.id,
+                            nombre: m.nombre,
+                            capacidad: m.capacidad ?? undefined,
+                            estado: m.estado === 'ocupado' ? 'ocupada' : m.estado === 'reservado' ? 'reservada' : 'libre' as const,
+                            aConfirmar: [],
+                            pedidos: [],
+                        }))
+                }));
+
+                setSectores(sectoresUI);
+            } catch (err) {
+                console.error('Error cargando salón:', err);
+            } finally {
+                if (activo) setCargando(false);
+            }
+        };
+
+        cargar();
+        return () => { activo = false; };
     }, [localId]);
-
-    const cargarSalon = async () => {
-        setCargando(true);
-        try {
-            const [{ data: sectoresDB, error: errorSectores }, { data: mesasDB, error: errorMesas }] = await Promise.all([
-                supabase.from('sectores').select('*').eq('local_id', localId).order('creado_at'),
-                supabase.from('mesas').select('*').eq('local_id', localId).order('creado_at'),
-            ]);
-            if (errorSectores) throw errorSectores;
-            if (errorMesas) throw errorMesas;
-
-            const sectoresUI: Sector[] = (sectoresDB ?? []).map(sector => ({
-                id: sector.id,
-                nombre: sector.nombre,
-                mesas: (mesasDB ?? [])
-                    .filter(m => m.sector_id === sector.id)
-                    .map(m => ({
-                        id: m.id,
-                        nombre: m.nombre,
-                        capacidad: m.capacidad ?? undefined,
-                        estado: m.estado === 'ocupado' ? 'ocupada' : m.estado === 'reservado' ? 'reservada' : 'libre',
-                        aConfirmar: [],
-                        pedidos: [],
-                    }))
-            }));
-            setSectores(sectoresUI);
-        } catch (err) {
-            console.error('Error cargando salón:', err);
-        } finally {
-            setCargando(false);
-        }
-    };
 
     const buscarMesa = (id: string): Mesa | null => {
         for (const sector of sectores) {
@@ -170,11 +177,12 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         })));
     };
 
-    const cerrarMesa = (idMesa: string, metodoPago: MetodoPago) => {
+    const cerrarMesa = async (idMesa: string, metodoPago: MetodoPago) => {
         const mesa = buscarMesa(idMesa);
-        if (mesa && mesa.pedidos.length > 0) {
-            const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
-            registrarVenta(mesa.pedidos, total, mesa, metodoPago);
+        if (!mesa || mesa.pedidos.length === 0) return;
+        const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
+        try {
+            await registrarVenta(mesa.pedidos, total, mesa, metodoPago);
             setSectores(prev => prev.map(sector => ({
                 ...sector,
                 mesas: sector.mesas.map(m =>
@@ -182,6 +190,8 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
                 )
             })));
             setIdMesaSeleccionada(null);
+        } catch (err) {
+            console.error('Error al cerrar mesa:', err);
         }
     };
 

@@ -1,40 +1,34 @@
 import type { SeccionPDV as seccionPdv } from './NavBar.tsx';
 import ContenedorSectores from './ContenedorSectores.tsx';
-import { useMenu } from '../context/MenuContext.tsx';
 import ContenedorVentas from './ContenedorVentas.tsx';
-
+import ContenedorInventario from './Inventario/ContenedorInventario.tsx';
 
 interface BoardProps {
     seccionActiva: seccionPdv;
 }
 
 const Board = ({ seccionActiva }: BoardProps) => {
-    const { productos } = useMenu();
-
     const renderContenido = () => {
         switch (seccionActiva) {
             case 'sectores':
-                return(
+                return (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <ContenedorSectores/>    
+                        <ContenedorSectores />
                     </div>
                 );
             case 'inventario':
-                return(
+                return (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <h2 className="text-3xl font-bold text-gray-800">Plano de Inventario</h2>
-                        <p className="text-gray-500 mt-2">Aquí podrás gestionar Los productos que vendas y que uses para producir.</p>
-                    {/* <Componenteinventario /> <- Próximamente */}
+                        <ContenedorInventario />
                     </div>
                 );
             case 'ventas':
-                return(
+                return (
                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                        <ContenedorVentas/>
+                        <ContenedorVentas />
                     </div>
                 );
         }
-        
     };
 
     return (

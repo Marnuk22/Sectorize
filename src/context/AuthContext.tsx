@@ -14,88 +14,108 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser]       = useState<User | null>(null);
-    const [perfil, setPerfil]   = useState<Perfil | null>(null);
+    const [user, setUser] = useState<User | null>(() => {
+        try {
+            const cachedUser = localStorage.getItem('vallis_user');
+            return cachedUser ? JSON.parse(cachedUser) as User : null;
+        } catch { return null; }
+    });
+
+    const [perfil, setPerfil] = useState<Perfil | null>(() => {
+        try {
+            const cached = localStorage.getItem('perfil');
+            return cached ? JSON.parse(cached) as Perfil : null;
+        } catch { return null; }
+    });
+
     const [localId, setLocalId] = useState<string | null>(() => {
         try {
             const cached = localStorage.getItem('perfil');
-            if (cached) return (JSON.parse(cached) as Perfil).local_id;
-        } catch { /* ignorar */ }
-        return null;
+            return cached ? (JSON.parse(cached) as Perfil).local_id : null;
+        } catch { return null; }
     });
-    const [loading, setLoading] = useState(true);
+
+    const [loading, setLoading] = useState(() => {
+        const hasUser = localStorage.getItem('vallis_user');
+        const hasPerfil = localStorage.getItem('perfil');
+        console.log("🔒 [Auth] Estado inicial Caché detectado:", { hasUser: !!hasUser, hasPerfil: !!hasPerfil });
+        return !(hasUser && hasPerfil);
+    });
 
     const cargarPerfil = async (authUser: User) => {
-        setUser(authUser);
-
-        // Aplicar cache inmediatamente si existe
+        console.log("📡 [Auth] Buscando perfil en DB para el usuario:", authUser.id);
         try {
-            const cached = localStorage.getItem('perfil');
-            if (cached) {
-                const perfilCacheado = JSON.parse(cached) as Perfil;
-                setPerfil(perfilCacheado);
-                setLocalId(perfilCacheado.local_id);
+            const { data, error } = await supabase
+                .from('perfiles')
+                .select('local_id, nombre_usuario, rol')
+                .eq('id', authUser.id)
+                .single();
+
+            if (error) throw error;
+
+            if (data) {
+                console.log("✅ [Auth] Perfil obtenido con éxito:", data.local_id);
+                setPerfil(data as Perfil);
+                setLocalId(data.local_id);
+                localStorage.setItem('perfil', JSON.stringify(data));
+                localStorage.setItem('vallis_user', JSON.stringify(authUser));
             }
-        } catch { /* ignorar */ }
-
-        // Verificar con DB en segundo plano
-        const { data, error } = await supabase
-            .from('perfiles')
-            .select('local_id, nombre_usuario, rol')
-            .eq('id', authUser.id)
-            .single();
-
-        if (error) {
-            console.warn('Sin perfil:', error.message);
-            return;
-        }
-
-        if (data) {
-            setUser(authUser);
-            setPerfil(data as Perfil);
-            setLocalId(data.local_id);
-            localStorage.setItem('perfil', JSON.stringify(data));
+        } catch (err) {
+            console.warn('⚠️ [Auth] Error en DB, manteniendo caché si existe:', err);
+        } finally {
+            setLoading(false);
         }
     };
 
     const limpiarEstado = () => {
+        console.log("🧹 [Auth] Ejecutando limpieza total de estados y localStorage...");
         setUser(null);
         setPerfil(null);
         setLocalId(null);
         localStorage.removeItem('perfil');
+        localStorage.removeItem('vallis_user');
     };
 
     useEffect(() => {
-        // Verificar sesión existente al arrancar
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                cargarPerfil(session.user).finally(() => setLoading(false));
-            } else {
-                setLoading(false);
-            }
-        });
+        console.log("🚀 [Auth] Inicializando AuthProvider Listener...");
 
-        // Escuchar cambios futuros
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (_event, session) => {
-                if (_event === 'INITIAL_SESSION') return;
+            (event, session) => {
+                console.log(`🔄 [Auth Event] Supabase dice: ${event}`, { sessionPresent: !!session });
+
                 if (session) {
-                    setLoading(true);
-                    await cargarPerfil(session.user);
-                    setLoading(false);
-                } else {
+                    setUser(session.user);
+                    localStorage.setItem('vallis_user', JSON.stringify(session.user));
+                    // 🔑 Diferir la llamada para evitar el deadlock del SDK de Supabase
+                    setTimeout(() => {
+                        cargarPerfil(session.user);
+                    }, 0);
+                } else if (event === 'SIGNED_OUT') {
                     limpiarEstado();
                     setLoading(false);
                 }
             }
         );
 
-        return () => subscription.unsubscribe();
+        const fallbackTimer = setTimeout(() => {
+            if (loading) {
+                console.log("⏱️ [Auth] Fallback activado. Liberando UI con datos locales.");
+                setLoading(false);
+            }
+        }, 1200);
+
+        return () => {
+            subscription.unsubscribe();
+            clearTimeout(fallbackTimer);
+        };
     }, []);
 
     const signOut = async () => {
+        console.log("🚪 [Auth] Cerrando sesión...");
         setLoading(true);
         await supabase.auth.signOut();
+        limpiarEstado();
+        setLoading(false);
     };
 
     return (

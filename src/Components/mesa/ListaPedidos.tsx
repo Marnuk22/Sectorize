@@ -52,9 +52,9 @@ const ListaPedidos = ({ aConfirmar }: ListaPedidosProps) => {
                                                 className="w-8 h-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 transition-colors"
                                                 >-</button>
 
-                                            <td className="px-4 py-3 font-medium text-red-600">
+                                            <span className="px-4 py-3 font-medium text-red-600">
                                                 {item.cantidad}x
-                                            </td>
+                                            </span>
                                             {/* Botón Aumentar */}
                                             <button 
                                                 onClick={() => onAumentar(item.id)}
