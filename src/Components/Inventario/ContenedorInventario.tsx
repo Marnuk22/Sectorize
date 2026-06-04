@@ -6,7 +6,7 @@ import ModalProducto from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, borrarProducto, toggleActivo, agregarCategoria, borrarCategoria } = useMenu();
+    const { productos, categorias, cargando, toggleActivo, agregarCategoria, borrarCategoria } = useMenu();
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
