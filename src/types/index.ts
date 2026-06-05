@@ -17,6 +17,7 @@ export interface Local {
     nombre:     string;
     tipo:       string;
     plan:       string;
+    modulos:    string[];
     creado_at:  string;
 }
 

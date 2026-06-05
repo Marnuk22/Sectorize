@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Lock } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
+import { usePlan } from '../../hooks/usePlan';
 import type { Producto, Categoria } from '../../types';
 
 interface Props {
@@ -22,6 +23,9 @@ const CAMPOS_INICIALES = {
 
 const ModalProducto = ({ producto, onCerrar }: Props) => {
     const { agregarProducto, editarProducto, categorias, agregarCategoria } = useMenu();
+    const { puede } = usePlan();
+    const puedeStock = puede('seguimiento_stock');
+
     const [form, setForm] = useState(CAMPOS_INICIALES);
     const [seguimientoStock, setSeguimientoStock] = useState(false);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
@@ -53,13 +57,15 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
         setCargando(true);
         setError('');
         try {
+            // Si el plan no permite stock, forzar valores en 0 sin importar el form
+            const usaStock = puedeStock && seguimientoStock;
             const datos = {
                 ...form,
                 nombre: form.nombre.trim(),
                 descripcion: form.descripcion || null,
                 categoria: form.categoria || null,
-                stock_minimo: seguimientoStock ? form.stock_minimo : 0,
-                stock_actual: seguimientoStock ? form.stock_actual : 0,
+                stock_minimo: usaStock ? form.stock_minimo : 0,
+                stock_actual: usaStock ? form.stock_actual : 0,
             };
 
             if (producto) {
@@ -68,7 +74,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                 await agregarProducto(datos);
             }
 
-            // Agregar categoría nueva si no existe
             if (form.categoria && !categorias.find(c => c.nombre === form.categoria)) {
                 await agregarCategoria(form.categoria);
             }
@@ -86,7 +91,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
             await agregarCategoria(nuevaCategoria.trim());
             setForm(prev => ({ ...prev, categoria: nuevaCategoria.trim() }));
             setNuevaCategoria('');
-
         }
     };
 
@@ -103,7 +107,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
-                    {/* Nombre y categoría */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
                             <label className="text-xs font-medium text-gray-500">Nombre *</label>
@@ -128,7 +131,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         </div>
                     </div>
 
-                    {/* Nueva categoría inline */}
                     {form.categoria === '__nueva__' && (
                         <div className="flex gap-2">
                             <input
@@ -147,7 +149,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         </div>
                     )}
 
-                    {/* Descripción */}
                     <div className="flex flex-col gap-1">
                         <label className="text-xs font-medium text-gray-500">Descripción (opcional)</label>
                         <textarea
@@ -159,7 +160,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         />
                     </div>
 
-                    {/* Precios */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
                             <label className="text-xs font-medium text-gray-500">Precio de venta ($) *</label>
@@ -186,23 +186,35 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         </div>
                     </div>
 
-                    {/* Toggle seguimiento de stock */}
-                    <div className="flex items-center justify-between p-3 border rounded-xl">
-                        <div>
-                            <p className="text-sm font-medium text-gray-700">Seguimiento de stock</p>
-                            <p className="text-xs text-gray-400">Descuenta al vender y alerta por email</p>
+                    {/* Toggle seguimiento de stock — gateado por plan */}
+                    {puedeStock ? (
+                        <div className="flex items-center justify-between p-3 border rounded-xl">
+                            <div>
+                                <p className="text-sm font-medium text-gray-700">Seguimiento de stock</p>
+                                <p className="text-xs text-gray-400">Descuenta al vender y alerta por email</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setSeguimientoStock(!seguimientoStock)}
+                                className={`w-10 h-6 rounded-full transition-colors relative ${seguimientoStock ? 'bg-blue-600' : 'bg-gray-200'}`}
+                            >
+                                <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${seguimientoStock ? 'left-5' : 'left-1'}`} />
+                            </button>
                         </div>
-                        <button
-                            type="button"
-                            onClick={() => setSeguimientoStock(!seguimientoStock)}
-                            className={`w-10 h-6 rounded-full transition-colors relative ${seguimientoStock ? 'bg-blue-600' : 'bg-gray-200'}`}
-                        >
-                            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${seguimientoStock ? 'left-5' : 'left-1'}`} />
-                        </button>
-                    </div>
+                    ) : (
+                        <div className="flex items-center justify-between p-3 border border-dashed rounded-xl bg-slate-50">
+                            <div className="flex items-center gap-2">
+                                <Lock size={16} className="text-slate-400" />
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Seguimiento de stock</p>
+                                    <p className="text-xs text-amber-600">Disponible en plan Básico</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                    {/* Stock fields */}
-                    {seguimientoStock && (
+                    {/* Stock fields — solo si el plan lo permite Y está activado */}
+                    {puedeStock && seguimientoStock && (
                         <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col gap-1">
                                 <label className="text-xs font-medium text-gray-500">Stock actual</label>
@@ -227,7 +239,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         </div>
                     )}
 
-                    {/* Toggle activo */}
                     <div className="flex items-center justify-between p-3 border rounded-xl">
                         <div>
                             <p className="text-sm font-medium text-gray-700">Producto activo</p>

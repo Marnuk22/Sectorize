@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, Banknote, CreditCard, ArrowLeftRight, DollarSign, RefreshCw } from 'lucide-react';
+import { History, Filter, ChevronDown, ChevronUp, Banknote, CreditCard, ArrowLeftRight, DollarSign, RefreshCw, Lock, Sparkles } from 'lucide-react';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
+import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
 
 const LABELS: Record<MetodoPago, string> = {
@@ -26,6 +27,9 @@ const COLORES: Record<MetodoPago, string> = {
 
 const HistorialVentas = () => {
     const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar } = useHistorialVentas();
+    const { puede } = usePlan();
+    const historialCompleto = puede('historial_completo');
+
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [arqueoExpandido, setArqueoExpandido] = useState<string | null>(null);
 
@@ -35,14 +39,33 @@ const HistorialVentas = () => {
         </div>
     );
 
+    // En plan gratis: solo ventas del arqueo abierto
+    const arqueoAbierto = arqueos.find(a => a.estado === 'abierto');
+    const ventasVisibles = historialCompleto
+        ? ventas
+        : ventas.filter(v => arqueoAbierto && v.arqueo_id === arqueoAbierto.id);
+
+    const totalVisible = historialCompleto
+        ? totalFiltrado
+        : ventasVisibles.reduce((acc, v) => acc + v.total, 0);
+
+    const porMetodoVisible = historialCompleto
+        ? porMetodoFiltrado
+        : ventasVisibles.reduce((acc, v) => {
+            acc[v.metodo_pago] = (acc[v.metodo_pago] ?? 0) + v.total;
+            return acc;
+        }, {} as Record<MetodoPago, number>);
+
     return (
         <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
 
             {/* Header con totales */}
             <div className="flex items-center justify-between">
                 <div>
-                    <p className="text-sm text-gray-400">{ventas.length} ventas</p>
-                    <p className="text-xl font-black text-gray-800">${totalFiltrado.toLocaleString()}</p>
+                    <p className="text-sm text-gray-400">
+                        {ventasVisibles.length} ventas {!historialCompleto && '(arqueo actual)'}
+                    </p>
+                    <p className="text-xl font-black text-gray-800">${totalVisible.toLocaleString()}</p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -52,19 +75,21 @@ const HistorialVentas = () => {
                     >
                         <RefreshCw size={16} className="text-gray-400" />
                     </button>
-                    <button
-                        onClick={() => setMostrarFiltros(!mostrarFiltros)}
-                        className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-sm font-medium transition-colors ${mostrarFiltros ? 'bg-blue-50 border-blue-200 text-blue-700' : 'hover:bg-gray-50 text-gray-600'}`}
-                    >
-                        <Filter size={14} /> Filtros
-                    </button>
+                    {historialCompleto && (
+                        <button
+                            onClick={() => setMostrarFiltros(!mostrarFiltros)}
+                            className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-sm font-medium transition-colors ${mostrarFiltros ? 'bg-blue-50 border-blue-200 text-blue-700' : 'hover:bg-gray-50 text-gray-600'}`}
+                        >
+                            <Filter size={14} /> Filtros
+                        </button>
+                    )}
                 </div>
             </div>
 
             {/* Resumen por método */}
-            {Object.keys(porMetodoFiltrado).length > 0 && (
+            {Object.keys(porMetodoVisible).length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
-                    {(Object.entries(porMetodoFiltrado) as [MetodoPago, number][]).map(([metodo, total]) => {
+                    {(Object.entries(porMetodoVisible) as [MetodoPago, number][]).map(([metodo, total]) => {
                         const Icono = ICONOS[metodo];
                         return (
                             <div key={metodo} className={`flex items-center gap-2 p-3 rounded-xl ${COLORES[metodo]}`}>
@@ -79,13 +104,11 @@ const HistorialVentas = () => {
                 </div>
             )}
 
-            {/* Panel de filtros */}
-            {mostrarFiltros && (
+            {/* Panel de filtros — solo plan básico+ */}
+            {historialCompleto && mostrarFiltros && (
                 <div className="bg-gray-50 rounded-2xl p-4 space-y-3 border">
                     <p className="text-xs font-medium text-gray-500 uppercase">Filtros</p>
-
                     <div className="grid grid-cols-2 gap-3">
-                        {/* Método de pago */}
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-400">Método de pago</label>
                             <select
@@ -99,8 +122,6 @@ const HistorialVentas = () => {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Arqueo */}
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-400">Arqueo</label>
                             <select
@@ -116,8 +137,6 @@ const HistorialVentas = () => {
                                 ))}
                             </select>
                         </div>
-
-                        {/* Fecha desde */}
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-400">Desde</label>
                             <input
@@ -127,8 +146,6 @@ const HistorialVentas = () => {
                                 onChange={e => setFiltros(f => ({ ...f, fecha_desde: e.target.value }))}
                             />
                         </div>
-
-                        {/* Fecha hasta */}
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-400">Hasta</label>
                             <input
@@ -139,7 +156,6 @@ const HistorialVentas = () => {
                             />
                         </div>
                     </div>
-
                     <button
                         onClick={() => setFiltros({ metodo: 'todos', arqueo_id: 'todos', fecha_desde: '', fecha_hasta: '' })}
                         className="text-xs text-blue-600 hover:underline"
@@ -149,8 +165,8 @@ const HistorialVentas = () => {
                 </div>
             )}
 
-            {/* Resumen por arqueo */}
-            {arqueos.length > 0 && (
+            {/* Resumen por arqueo — solo plan básico+ */}
+            {historialCompleto && arqueos.length > 0 && (
                 <div className="space-y-2">
                     <p className="text-xs font-medium text-gray-400 uppercase">Resumen por arqueo</p>
                     {arqueos.map(arqueo => (
@@ -178,7 +194,6 @@ const HistorialVentas = () => {
 
                             {arqueoExpandido === arqueo.id && (
                                 <div className="border-t bg-gray-50 p-4 space-y-2">
-                                    {/* Desglose por método */}
                                     {(Object.entries(arqueo.por_metodo) as [MetodoPago, number][]).map(([metodo, total]) => {
                                         const Icono = ICONOS[metodo];
                                         return (
@@ -191,8 +206,6 @@ const HistorialVentas = () => {
                                             </div>
                                         );
                                     })}
-
-                                    {/* Cierre del arqueo */}
                                     {arqueo.estado === 'cerrado' && arqueo.fecha_cierre && (
                                         <div className="pt-2 border-t mt-2 text-xs text-gray-400 text-right">
                                             Cerrado {arqueo.fecha_cierre.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
@@ -208,12 +221,12 @@ const HistorialVentas = () => {
             {/* Lista de ventas */}
             <div className="space-y-2">
                 <p className="text-xs font-medium text-gray-400 uppercase">Detalle de ventas</p>
-                {ventas.length === 0 ? (
+                {ventasVisibles.length === 0 ? (
                     <div className="text-center py-8 text-gray-400 text-sm">
-                        No hay ventas con los filtros seleccionados
+                        No hay ventas registradas
                     </div>
                 ) : (
-                    ventas.map(venta => {
+                    ventasVisibles.map(venta => {
                         const Icono = ICONOS[venta.metodo_pago];
                         return (
                             <div key={venta.id} className="flex items-center justify-between p-4 bg-white rounded-xl border hover:border-gray-200 transition-colors">
@@ -242,6 +255,23 @@ const HistorialVentas = () => {
                     })
                 )}
             </div>
+
+            {/* CTA upgrade para plan gratis */}
+            {!historialCompleto && (
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-100">
+                    <div className="p-2 bg-amber-100 rounded-xl">
+                        <Lock size={18} className="text-amber-600" />
+                    </div>
+                    <div className="flex-1">
+                        <p className="text-sm font-bold text-amber-800 flex items-center gap-1">
+                            <Sparkles size={14} /> Historial completo
+                        </p>
+                        <p className="text-xs text-amber-700">
+                            Accedé a todas tus ventas históricas, filtros por fecha y resumen por arqueo con el plan Básico.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

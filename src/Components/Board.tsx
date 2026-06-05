@@ -28,6 +28,20 @@ const Board = ({ seccionActiva }: BoardProps) => {
                         <ContenedorVentas />
                     </div>
                 );
+            case 'mostrador':
+                return (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-16 text-gray-400">
+                        <p className="text-lg font-medium">Venta rápida</p>
+                        <p className="text-sm">Próximamente</p>
+                    </div>
+                );
+            case 'socios':
+                return (
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-16 text-gray-400">
+                        <p className="text-lg font-medium">Gestión de socios</p>
+                        <p className="text-sm">Próximamente</p>
+                    </div>
+                );
         }
     };
 
@@ -38,4 +52,4 @@ const Board = ({ seccionActiva }: BoardProps) => {
     );
 };
 
-export default Board;
+export default Board;   

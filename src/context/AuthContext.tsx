@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { type User } from '@supabase/supabase-js';
-import { type Perfil } from '../types';
+import { type Perfil, type Local } from '../types';
 
 interface AuthContextType {
     user: User | null;
     perfil: Perfil | null;
+    local: Local | null;
     localId: string | null;
     loading: boolean;
     signOut: () => Promise<void>;
@@ -25,6 +26,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const cached = localStorage.getItem('perfil');
             return cached ? JSON.parse(cached) as Perfil : null;
+        } catch { return null; }
+    });
+
+    const [local, setLocal] = useState<Local | null>(() => {
+        try {
+            const cached = localStorage.getItem('local');
+            return cached ? JSON.parse(cached) as Local : null;
         } catch { return null; }
     });
 
@@ -59,6 +67,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 setLocalId(data.local_id);
                 localStorage.setItem('perfil', JSON.stringify(data));
                 localStorage.setItem('vallis_user', JSON.stringify(authUser));
+
+                // Cargar datos del local (incluyendo módulos y plan)
+                if (data.local_id) {
+                    const { data: localData, error: localError } = await supabase
+                        .from('locales')
+                        .select('*')
+                        .eq('id', data.local_id)
+                        .single();
+
+                    if (!localError && localData) {
+                        console.log("🏪 [Auth] Local obtenido:", localData.nombre, localData.modulos);
+                        setLocal(localData as Local);
+                        localStorage.setItem('local', JSON.stringify(localData));
+                    }
+                }
             }
         } catch (err) {
             console.warn('⚠️ [Auth] Error en DB, manteniendo caché si existe:', err);
@@ -71,9 +94,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("🧹 [Auth] Ejecutando limpieza total de estados y localStorage...");
         setUser(null);
         setPerfil(null);
+        setLocal(null);
         setLocalId(null);
         localStorage.removeItem('perfil');
         localStorage.removeItem('vallis_user');
+        localStorage.removeItem('local');
     };
 
     useEffect(() => {
@@ -86,7 +111,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 if (session) {
                     setUser(session.user);
                     localStorage.setItem('vallis_user', JSON.stringify(session.user));
-                    // 🔑 Diferir la llamada para evitar el deadlock del SDK de Supabase
                     setTimeout(() => {
                         cargarPerfil(session.user);
                     }, 0);
@@ -119,7 +143,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, perfil, localId, loading, signOut }}>
+        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut }}>
             {children}
         </AuthContext.Provider>
     );
