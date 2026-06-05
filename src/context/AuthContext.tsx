@@ -10,6 +10,7 @@ interface AuthContextType {
     localId: string | null;
     loading: boolean;
     signOut: () => Promise<void>;
+    actualizarLocal: (cambios: Partial<Local>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -68,7 +69,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.setItem('perfil', JSON.stringify(data));
                 localStorage.setItem('vallis_user', JSON.stringify(authUser));
 
-                // Cargar datos del local (incluyendo módulos y plan)
                 if (data.local_id) {
                     const { data: localData, error: localError } = await supabase
                         .from('locales')
@@ -87,6 +87,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.warn('⚠️ [Auth] Error en DB, manteniendo caché si existe:', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Actualiza campos del local en DB y refresca estado + cache
+    const actualizarLocal = async (cambios: Partial<Local>) => {
+        if (!localId) throw new Error('No hay local activo');
+
+        const { data, error } = await supabase
+            .from('locales')
+            .update(cambios)
+            .eq('id', localId)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        if (data) {
+            setLocal(data as Local);
+            localStorage.setItem('local', JSON.stringify(data));
         }
     };
 
@@ -143,7 +162,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut }}>
+        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut, actualizarLocal }}>
             {children}
         </AuthContext.Provider>
     );

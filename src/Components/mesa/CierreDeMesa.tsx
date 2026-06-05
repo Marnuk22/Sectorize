@@ -1,20 +1,23 @@
 import { useSalon, useVentas } from "../../context";
 import { useState } from "react";
 import { ChevronDown, Check, X, AlertTriangle } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 import type { MetodoPago } from "../../types";
+import { labelMetodo } from "../../config/metodosPago";
 
-const LABELS: Record<MetodoPago, string> = {
-    efectivo:      'Efectivo',
-    tarjeta:       'Tarjeta',
-    transferencia: 'Transferencia',
-    otro:          'Otro',
-};
 
 const CierreDeMesa = () => {
     const { mesaSeleccionada, cerrarMesa } = useSalon();
-    const { MetodosPago, arqueoActivo } = useVentas();
+    const { arqueoActivo } = useVentas();
+    const { local } = useAuth();
+
+    // Usar los métodos habilitados en la config; si no hay, caer a efectivo
+    const metodosHabilitados = (local?.metodos_pago && local.metodos_pago.length > 0
+        ? local.metodos_pago
+        : ['efectivo']) as MetodoPago[];
+
     const [confirmado, setConfirmado] = useState(false);
-    const [metodoElegido, setMetodoElegido] = useState<MetodoPago>(MetodosPago[0]);
+    const [metodoElegido, setMetodoElegido] = useState<MetodoPago>(metodosHabilitados[0]);
 
     if (!mesaSeleccionada) return null;
 
@@ -33,7 +36,6 @@ const CierreDeMesa = () => {
                     Cierre de Mesa
                 </button>
             ) : !arqueoActivo ? (
-                // Sin arqueo abierto — mostrar advertencia
                 <div className="bg-amber-50 p-4 rounded-lg border border-amber-200 animate-in fade-in zoom-in duration-200">
                     <div className="flex items-start gap-3">
                         <AlertTriangle className="text-amber-600 shrink-0 mt-0.5" size={20} />
@@ -52,7 +54,6 @@ const CierreDeMesa = () => {
                     </button>
                 </div>
             ) : (
-                // Con arqueo abierto — selector de método de pago
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 animate-in fade-in zoom-in duration-200">
                     <label className="block text-xs font-bold text-gray-500 uppercase mb-2">
                         Método de pago
@@ -63,9 +64,9 @@ const CierreDeMesa = () => {
                             onChange={e => setMetodoElegido(e.target.value as MetodoPago)}
                             className="w-full appearance-none bg-white border border-gray-300 rounded-md px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
                         >
-                            {MetodosPago.map(metodo => (
+                            {metodosHabilitados.map(metodo => (
                                 <option key={metodo} value={metodo}>
-                                    {LABELS[metodo]}
+                                    {labelMetodo(metodo)}
                                 </option>
                             ))}
                         </select>

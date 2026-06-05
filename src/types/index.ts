@@ -6,19 +6,22 @@
 export type RolUsuario    = 'admin' | 'empleado';
 export type EstadoArqueo  = 'abierto' | 'cerrado';
 export type EstadoVenta   = 'abierta' | 'cerrada' | 'cancelada';
-export type MetodoPago    = 'efectivo' | 'tarjeta' | 'transferencia' | 'otro';
+export type MetodoPago    = string
 export type EstadoPedido  = 'pendiente' | 'preparando' | 'listo' | 'entregado';
 
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
 // ============================================
 export interface Local {
-    id:         string;
-    nombre:     string;
-    tipo:       string;
-    plan:       string;
-    modulos:    string[];
-    creado_at:  string;
+    id:            string;
+    nombre:        string;
+    tipo:          string;
+    plan:          string;
+    modulos:       string[];
+    moneda:        string;
+    idioma:        string;
+    metodos_pago:  string[];
+    creado_at:     string;
 }
 
 export interface Perfil {

@@ -1,29 +1,10 @@
 import { useState } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, Banknote, CreditCard, ArrowLeftRight, DollarSign, RefreshCw, Lock, Sparkles } from 'lucide-react';
+import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles } from 'lucide-react';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
 import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
+import { labelMetodo, iconoMetodo, colorMetodo } from '../../config/metodosPago';
 
-const LABELS: Record<MetodoPago, string> = {
-    efectivo:      'Efectivo',
-    tarjeta:       'Tarjeta',
-    transferencia: 'Transferencia',
-    otro:          'Otro',
-};
-
-const ICONOS: Record<MetodoPago, typeof DollarSign> = {
-    efectivo:      Banknote,
-    tarjeta:       CreditCard,
-    transferencia: ArrowLeftRight,
-    otro:          DollarSign,
-};
-
-const COLORES: Record<MetodoPago, string> = {
-    efectivo:      'bg-green-50 text-green-700',
-    tarjeta:       'bg-blue-50 text-blue-700',
-    transferencia: 'bg-purple-50 text-purple-700',
-    otro:          'bg-gray-50 text-gray-700',
-};
 
 const HistorialVentas = () => {
     const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar } = useHistorialVentas();
@@ -90,12 +71,12 @@ const HistorialVentas = () => {
             {Object.keys(porMetodoVisible).length > 0 && (
                 <div className="grid grid-cols-2 gap-2">
                     {(Object.entries(porMetodoVisible) as [MetodoPago, number][]).map(([metodo, total]) => {
-                        const Icono = ICONOS[metodo];
+                        const Icono = iconoMetodo(metodo);
                         return (
-                            <div key={metodo} className={`flex items-center gap-2 p-3 rounded-xl ${COLORES[metodo]}`}>
+                            <div key={metodo} className={`flex items-center gap-2 p-3 rounded-xl ${colorMetodo(metodo)}`}>
                                 <Icono size={15} />
                                 <div>
-                                    <p className="text-xs font-medium">{LABELS[metodo]}</p>
+                                    <p className="text-xs font-medium">{labelMetodo(metodo)}</p>
                                     <p className="font-black text-sm">${total.toLocaleString()}</p>
                                 </div>
                             </div>
@@ -117,8 +98,8 @@ const HistorialVentas = () => {
                                 onChange={e => setFiltros(f => ({ ...f, metodo: e.target.value as MetodoPago | 'todos' }))}
                             >
                                 <option value="todos">Todos</option>
-                                {(Object.keys(LABELS) as MetodoPago[]).map(m => (
-                                    <option key={m} value={m}>{LABELS[m]}</option>
+                                {Array.from(new Set(ventas.map(v => v.metodo_pago))).map(m => (
+                                <option key={m} value={m}>{labelMetodo(m)}</option>
                                 ))}
                             </select>
                         </div>
@@ -195,12 +176,12 @@ const HistorialVentas = () => {
                             {arqueoExpandido === arqueo.id && (
                                 <div className="border-t bg-gray-50 p-4 space-y-2">
                                     {(Object.entries(arqueo.por_metodo) as [MetodoPago, number][]).map(([metodo, total]) => {
-                                        const Icono = ICONOS[metodo];
+                                        const Icono = iconoMetodo(metodo);
                                         return (
                                             <div key={metodo} className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <Icono size={13} className="text-gray-400" />
-                                                    <span className="text-sm text-gray-500">{LABELS[metodo]}</span>
+                                                    <span className="text-sm text-gray-500">{labelMetodo(metodo)}</span>
                                                 </div>
                                                 <span className="font-bold text-gray-700">${total.toLocaleString()}</span>
                                             </div>
@@ -227,7 +208,8 @@ const HistorialVentas = () => {
                     </div>
                 ) : (
                     ventasVisibles.map(venta => {
-                        const Icono = ICONOS[venta.metodo_pago];
+                        const Icono = iconoMetodo(venta.metodo_pago)
+;
                         return (
                             <div key={venta.id} className="flex items-center justify-between p-4 bg-white rounded-xl border hover:border-gray-200 transition-colors">
                                 <div className="flex items-center gap-3">
@@ -244,9 +226,9 @@ const HistorialVentas = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${COLORES[venta.metodo_pago]}`}>
+                                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
                                         <Icono size={11} />
-                                        {LABELS[venta.metodo_pago]}
+                                        {labelMetodo(venta.metodo_pago)}
                                     </span>
                                     <p className="font-black text-gray-900">${venta.total.toLocaleString()}</p>
                                 </div>

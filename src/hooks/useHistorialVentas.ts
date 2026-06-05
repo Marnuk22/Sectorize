@@ -20,7 +20,7 @@ export interface ArqueoResumen {
     estado: 'abierto' | 'cerrado';
     total_ventas: number;
     cantidad_ventas: number;
-    por_metodo: Record<MetodoPago, number>;
+    por_metodo: Record<string, number>;
 }
 
 interface Filtros {
@@ -85,7 +85,7 @@ export const useHistorialVentas = () => {
                 const por_metodo = ventasArqueo.reduce((acc, v) => {
                     acc[v.metodo_pago] = (acc[v.metodo_pago] ?? 0) + v.total;
                     return acc;
-                }, {} as Record<MetodoPago, number>);
+                }, {} as Record<string, number>);
 
                 return {
                     id: a.id,

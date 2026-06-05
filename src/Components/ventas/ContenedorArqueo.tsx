@@ -1,21 +1,7 @@
 import { useState } from 'react';
 import { useVentas } from '../../context/VentasContext';
-import { DollarSign, Lock, Unlock, TrendingUp, ShoppingBag, CreditCard, Banknote, ArrowLeftRight } from 'lucide-react';
-import type { MetodoPago } from '../../types';
-
-const LABELS: Record<MetodoPago, string> = {
-    efectivo:      'Efectivo',
-    tarjeta:       'Tarjeta',
-    transferencia: 'Transferencia',
-    otro:          'Otro',
-};
-
-const ICONOS: Record<MetodoPago, typeof DollarSign> = {
-    efectivo:      Banknote,
-    tarjeta:       CreditCard,
-    transferencia: ArrowLeftRight,
-    otro:          DollarSign,
-};
+import { Lock, Unlock, TrendingUp, ShoppingBag } from 'lucide-react';
+import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
 
 const ContenedorArqueo = () => {
     const { arqueoActivo, historialVentas, abrirArqueo, cerrarArqueo } = useVentas();
@@ -32,7 +18,7 @@ const ContenedorArqueo = () => {
     const ventasPorMetodo = historialVentas.reduce((acc, v) => {
         acc[v.metodoPago] = (acc[v.metodoPago] ?? 0) + v.total;
         return acc;
-    }, {} as Record<MetodoPago, number>);
+    }, {} as Record<string, number>);
 
     const montoEsperado = arqueoActivo ? arqueoActivo.montoInicial + totalVentas : 0;
     const diferencia = parseFloat(montoReal || '0') - montoEsperado;
@@ -147,13 +133,13 @@ const ContenedorArqueo = () => {
             {Object.keys(ventasPorMetodo).length > 0 && (
                 <div className="bg-white border rounded-2xl p-4 space-y-2">
                     <p className="text-xs font-medium text-gray-400 uppercase mb-3">Por método de pago</p>
-                    {(Object.entries(ventasPorMetodo) as [MetodoPago, number][]).map(([metodo, total]) => {
-                        const Icono = ICONOS[metodo];
+                    {(Object.entries(ventasPorMetodo) as [string, number][]).map(([metodo, total]) => {
+                        const Icono = iconoMetodo(metodo);
                         return (
                             <div key={metodo} className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Icono size={15} className="text-gray-400" />
-                                    <span className="text-sm text-gray-600">{LABELS[metodo]}</span>
+                                    <span className="text-sm text-gray-600">{labelMetodo(metodo)}</span>
                                 </div>
                                 <span className="font-bold text-gray-800">${total.toLocaleString()}</span>
                             </div>
