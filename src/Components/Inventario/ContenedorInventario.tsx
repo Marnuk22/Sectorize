@@ -41,12 +41,12 @@ const ContenedorInventario = () => {
     return (
         <div className="space-y-4">
             {/* Topbar */}
-            <div className="flex items-center gap-3">
-                <h2 className="text-xl font-bold text-gray-800 flex-1">Inventario</h2>
-                <div className="relative">
+            <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-xl font-bold text-gray-800 w-full sm:flex-1 sm:w-auto">Inventario</h2>
+                <div className="relative flex-1 sm:flex-none">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
-                        className="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+                        className="w-full sm:w-48 pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Buscar producto..."
                         value={busqueda}
                         onChange={e => setBusqueda(e.target.value)}
@@ -54,28 +54,28 @@ const ContenedorInventario = () => {
                 </div>
                 <button
                     onClick={() => setModalProducto(null)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold"
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap"
                 >
                     <Plus size={16} /> Nuevo producto
                 </button>
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex flex-col lg:flex-row gap-4">
                 {/* Sidebar categorías */}
-                <div className="w-40 flex-shrink-0 space-y-1">
+                <div className="w-full lg:w-40 lg:flex-shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
                     <button
                         onClick={() => setCategoriaActiva(null)}
-                        className={`w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100' : 'text-gray-500 hover:bg-white'}`}
+                        className={`whitespace-nowrap lg:w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100' : 'text-gray-500 hover:bg-white'}`}
                     >
                         Todos ({productos.length})
                     </button>
                     {categorias.map(cat => (
-                        <div key={cat.id} className="flex items-center gap-1 group">
+                        <div key={cat.id} className="flex items-center gap-1 group shrink-0 lg:shrink">
                             <button
                                 onClick={() => setCategoriaActiva(cat.id === categoriaActiva ? null : cat.id)}
-                                className={`flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
-                                    categoriaActiva === cat.id 
-                                        ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100' 
+                                className={`whitespace-nowrap flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
+                                    categoriaActiva === cat.id
+                                        ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100'
                                         : 'text-gray-500 hover:bg-white'
                                 }`}
                             >
@@ -90,9 +90,8 @@ const ContenedorInventario = () => {
                         </div>
                     ))}
 
-                    {/* Agregar categoría */}
                     {agregandoCategoria ? (
-                        <div className="space-y-1">
+                        <div className="space-y-1 shrink-0">
                             <input
                                 autoFocus
                                 className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -109,7 +108,7 @@ const ContenedorInventario = () => {
                     ) : (
                         <button
                             onClick={() => setAgregandoCategoria(true)}
-                            className="w-full text-left px-3 py-2 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1"
+                            className="whitespace-nowrap lg:w-full text-left px-3 py-2 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 shrink-0"
                         >
                             <Plus size={12} /> Nueva categoría
                         </button>
@@ -122,13 +121,12 @@ const ContenedorInventario = () => {
                         {busqueda ? 'No se encontraron productos' : 'No hay productos en esta categoría'}
                     </div>
                 ) : (
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                         {productosFiltrados.map(prod => (
                             <div
                                 key={prod.id}
                                 className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-gray-100'}`}
                             >
-                                {/* Badge estado */}
                                 <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                                     {prod.activo ? 'Activo' : 'Inactivo'}
                                 </span>
@@ -137,7 +135,6 @@ const ContenedorInventario = () => {
                                 <p className="text-xs text-gray-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
                                 <p className="font-bold text-gray-900">${prod.precio_venta.toLocaleString()}</p>
 
-                                {/* Stock */}
                                 {tieneStock(prod) ? (
                                     <p className={`text-xs mt-1 flex items-center gap-1 ${stockBajo(prod) ? 'text-red-500' : 'text-green-600'}`}>
                                         <Package size={11} />
@@ -147,7 +144,6 @@ const ContenedorInventario = () => {
                                     <p className="text-xs mt-1 text-gray-400">Sin seguimiento</p>
                                 )}
 
-                                {/* Acciones */}
                                 <div className="flex gap-1 mt-3">
                                     <button
                                         onClick={() => setModalProducto(prod)}

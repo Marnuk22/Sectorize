@@ -8,12 +8,11 @@ import ConfirmarPedidos from "./ConfirmarPedidos";
 
 const PanelMesa = () => {
     const { mesaSeleccionada, agregarProductoAMesa } = useSalon();
-    
-    // Aquí defines la función "maestra"
+
     const handleSeleccionProducto = (producto: Producto) => {
-        console.log("El mozo eligió:", producto.nombre);
-        agregarProductoAMesa(producto); // <--- Aquí se ejecuta la magia del Contexto
+        agregarProductoAMesa(producto);
     };
+
     if (!mesaSeleccionada) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-gray-400 p-10 border-2 border-dashed border-gray-200 rounded-2xl">
@@ -21,30 +20,30 @@ const PanelMesa = () => {
             </div>
         );
     }
-return(
-    <div className="bg-gray-100 h-full w-full overflow-y-auto scroll-smooth">
-        <div className="flex flex-col h-full w-full">
-        {/*Cabecera*/}
-            <div className="bg-gray-50 p-4">
-                <h2 className="text-xl font-bold text-gray-800">Mesa {mesaSeleccionada.nombre}</h2>
+
+    return (
+        <div className="flex flex-col gap-4">
+            {/* Estado + acciones (el nombre ya lo muestra el header del drawer) */}
+            <div>
                 <span className={`px-2 py-1 text-xs font-semibold rounded ${mesaSeleccionada.estado === 'libre' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {mesaSeleccionada.estado}
                 </span>
-                <AccionesMesa/>
+                <div className="mt-3">
+                    <AccionesMesa />
+                </div>
             </div>
-            <div>
-                <MenuDisplay onSeleccionar={handleSeleccionProducto} />
-            </div>
-            <div>
+
+            <MenuDisplay onSeleccionar={handleSeleccionProducto} />
+
+            <div className="space-y-2">
                 <ListaPedidos aConfirmar={true} />
                 <ConfirmarPedidos />
                 <ListaPedidos aConfirmar={false} />
             </div>
-            <div> 
-                <CierreDeMesa />
-            </div>
-        </div>
-    </div>
 
-)}
+            <CierreDeMesa />
+        </div>
+    );
+};
+
 export default PanelMesa;
