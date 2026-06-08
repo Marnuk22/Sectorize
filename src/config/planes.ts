@@ -40,7 +40,7 @@ export const PLANES: Record<Plan, PlanInfo> = {
     basico: {
         id: 'basico',
         nombre: 'Básico',
-        precio: 9999,
+        precio: 20000,
         descripcion: 'Para locales en crecimiento',
         features: [
             'Todo lo del plan Gratis',
@@ -51,7 +51,7 @@ export const PLANES: Record<Plan, PlanInfo> = {
     premium: {
         id: 'premium',
         nombre: 'Premium',
-        precio: 19999,
+        precio: 30000,
         descripcion: 'Para máximo control',
         features: [
             'Todo lo del plan Básico',

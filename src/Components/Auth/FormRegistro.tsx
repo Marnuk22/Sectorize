@@ -4,7 +4,6 @@ import { Mail, Eye, EyeOff, Lock, Store, UtensilsCrossed, ShoppingBag, Dumbbell,
 import InputVallis from './InputVallis';
 import { NEGOCIOS, type TipoNegocio } from '../../config/modulos';
 import { PLANES, type Plan } from '../../config/planes';
-import { useAuth } from '../../context/AuthContext';
 
 const MENSAJES: Record<string, string> = {
     'User already registered': 'Ya existe una cuenta con ese email',
@@ -31,7 +30,7 @@ const FormRegistro = () => {
     const [verClave, setVerClave]       = useState(false);
     const [cargando, setCargando]       = useState(false);
     const [error, setError]             = useState('');
-    const { refrescar } = useAuth();
+    const [registroExitoso, setRegistroExitoso] = useState(false);
 
     const elegirTipo = (tipo: TipoNegocio) => {
         setTipoNegocio(tipo);
@@ -78,14 +77,34 @@ const FormRegistro = () => {
                 p_plan: planElegido,
             });
             if (fnError) throw fnError;
-
-            await refrescar();
+            setRegistroExitoso(true);
         } catch (err: any) {
             setError(MENSAJES[err.message] ?? err.message);
         } finally {
             setCargando(false);
         }
     };
+
+    // Pantalla de confirmación de email (Opción B: el local ya quedó creado)
+    if (registroExitoso) {
+        return (
+            <div className="text-center space-y-4 py-4">
+                <div className="inline-flex p-4 bg-green-100 rounded-full">
+                    <Mail className="text-green-600" size={32} />
+                </div>
+                <div>
+                    <h3 className="font-bold text-slate-800 text-lg">Revisá tu email</h3>
+                    <p className="text-sm text-slate-500 mt-2">
+                        Te enviamos un correo a <span className="font-medium text-slate-700">{email}</span> con
+                        un enlace para confirmar tu cuenta. Hacé click en él para activar tu local.
+                    </p>
+                </div>
+                <p className="text-xs text-slate-400">
+                    ¿No te llegó? Revisá la carpeta de spam.
+                </p>
+            </div>
+        );
+    }
 
     // PASO 1 — Tipo de negocio
     if (paso === 1) {
