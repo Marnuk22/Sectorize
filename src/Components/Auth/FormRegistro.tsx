@@ -4,6 +4,7 @@ import { Mail, Eye, EyeOff, Lock, Store, UtensilsCrossed, ShoppingBag, Dumbbell,
 import InputVallis from './InputVallis';
 import { NEGOCIOS, type TipoNegocio } from '../../config/modulos';
 import { PLANES, type Plan } from '../../config/planes';
+import { useAuth } from '../../context/AuthContext';
 
 const MENSAJES: Record<string, string> = {
     'User already registered': 'Ya existe una cuenta con ese email',
@@ -30,6 +31,7 @@ const FormRegistro = () => {
     const [verClave, setVerClave]       = useState(false);
     const [cargando, setCargando]       = useState(false);
     const [error, setError]             = useState('');
+    const { refrescar } = useAuth();
 
     const elegirTipo = (tipo: TipoNegocio) => {
         setTipoNegocio(tipo);
@@ -77,6 +79,7 @@ const FormRegistro = () => {
             });
             if (fnError) throw fnError;
 
+            await refrescar();
         } catch (err: any) {
             setError(MENSAJES[err.message] ?? err.message);
         } finally {

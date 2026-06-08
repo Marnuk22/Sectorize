@@ -11,6 +11,7 @@ interface AuthContextType {
     loading: boolean;
     signOut: () => Promise<void>;
     actualizarLocal: (cambios: Partial<Local>) => Promise<void>;
+    refrescar: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -161,8 +162,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(false);
     };
 
+    const refrescar = async () => {
+        if (user) {
+            await cargarPerfil(user);
+        } else {
+            const { data } = await supabase.auth.getUser();
+            if (data.user) await cargarPerfil(data.user);
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut, actualizarLocal }}>
+        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut, actualizarLocal, refrescar }}>
             {children}
         </AuthContext.Provider>
     );
