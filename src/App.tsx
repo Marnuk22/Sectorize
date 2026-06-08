@@ -6,6 +6,8 @@ import Board from './Components/Board.tsx';
 import PantallaInicio from './Components/PantallaInicio.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { SalonProvider, MenuProvider, VentasProvider } from './context';
+import { MostradorProvider } from './context/MostradorContext';
+import { AfiliadosProvider } from './context/AfiliadosContext';
 
 function AppContent() {
     const [seccion, setSeccion] = useState<seccionPdv>('sectores');
@@ -28,12 +30,16 @@ function AppContent() {
         <VentasProvider>
             <MenuProvider>
                 <SalonProvider>
-                    <div className="min-h-screen bg-gray-50 flex flex-col">
-                        <NavBar seccionActiva={seccion} setSeccionActiva={setSeccion} />
-                        <main className="flex-1">
-                            <Board seccionActiva={seccion} />
-                        </main>
-                    </div>
+                    <MostradorProvider>
+                        <AfiliadosProvider>
+                            <div className="min-h-screen bg-gray-50 flex flex-col">
+                                <NavBar seccionActiva={seccion} setSeccionActiva={setSeccion} />
+                                <main className="flex-1">
+                                    <Board seccionActiva={seccion} />
+                                </main>
+                            </div>
+                        </AfiliadosProvider>
+                    </MostradorProvider>
                 </SalonProvider>
             </MenuProvider>
         </VentasProvider>

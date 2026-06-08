@@ -8,6 +8,8 @@ export type EstadoArqueo  = 'abierto' | 'cerrado';
 export type EstadoVenta   = 'abierta' | 'cerrada' | 'cancelada';
 export type MetodoPago    = string
 export type EstadoPedido  = 'pendiente' | 'preparando' | 'listo' | 'entregado';
+export type TipoMembresia = 'por_tiempo' | 'por_asistencias' | 'clase_suelta';
+export type EstadoSuscripcion = 'activa' | 'vencida' | 'cancelada';
 
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
@@ -111,6 +113,62 @@ export interface DetalleVenta {
     precio_unitario: number;
     subtotal:        number;
 }
+export interface Socio {
+    id:                string;
+    local_id:          string;
+    nombre:            string;
+    apellido:          string | null;
+    telefono:          string | null;
+    email:             string | null;
+    dni:               string | null;
+    fecha_nacimiento:  string | null;
+    notas:             string | null;
+    activo:            boolean;
+    creado_at:         string;
+}
+export interface Membresia {
+    id:                    string;
+    local_id:              string;
+    nombre:                string;
+    precio:                number;
+    duracion_dias:         number;
+    tipo:                  TipoMembresia;
+    cantidad_asistencias:  number | null;
+    activo:                boolean;
+    creado_at:             string;
+}
+
+export interface Suscripcion {
+    id:                  string;
+    local_id:            string;
+    socio_id:            string;
+    membresia_id:        string;
+    venta_id:            string | null;
+    fecha_inicio:        string;
+    fecha_vencimiento:   string;
+    asistencias_usadas:  number;
+    estado:              EstadoSuscripcion;
+    creado_at:           string;
+}
+
+export interface Clase {
+    id:           string;
+    local_id:     string;
+    nombre:       string;
+    dia_semana:   number | null;
+    hora:         string | null;
+    cupo_maximo:  number;
+    activo:       boolean;
+    creado_at:    string;
+}
+
+export interface Asistencia {
+    id:         string;
+    local_id:   string;
+    socio_id:   string;
+    clase_id:   string | null;
+    fecha:      string;
+}
 
 // ============================================
 // TIPOS UI — solo frontend, nunca van a la DB
@@ -163,4 +221,11 @@ export interface ArqueoUI {
 export interface VentaConDetalle extends Venta {
     detalles: DetalleVenta[];
     sector?:  Sector;
+}
+
+export interface SocioConEstado extends Socio {
+    suscripcionActiva:  Suscripcion | null;
+    membresia:          Membresia | null;
+    diasRestantes:      number | null;
+    estadoMembresia:    'al_dia' | 'por_vencer' | 'vencido' | 'sin_membresia';
 }

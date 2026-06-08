@@ -107,7 +107,8 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
             .from('detalle_ventas')
             .insert(items.map(item => ({
                 venta_id: venta.id,
-                producto_id: item.id,
+                // Si el item no es un producto del inventario (ej: membresía), producto_id va null
+                producto_id: (item as any).esProductoInventario === false ? null : item.id,
                 cantidad: item.cantidad,
                 precio_unitario: item.precio,
             })));

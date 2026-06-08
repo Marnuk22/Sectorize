@@ -2,6 +2,8 @@ import type { SeccionPDV as seccionPdv } from './NavBar.tsx';
 import ContenedorSectores from './ContenedorSectores.tsx';
 import ContenedorVentas from './ContenedorVentas.tsx';
 import ContenedorInventario from './Inventario/ContenedorInventario.tsx';
+import ContenedorMostrador from './mostrador/ContenedorMostrador.tsx';
+import ContenedorAfiliados from './afiliados/ContenedorAfiliados.tsx';
 
 interface BoardProps {
     seccionActiva: seccionPdv;
@@ -30,16 +32,14 @@ const Board = ({ seccionActiva }: BoardProps) => {
                 );
             case 'mostrador':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-16 text-gray-400">
-                        <p className="text-lg font-medium">Venta rápida</p>
-                        <p className="text-sm">Próximamente</p>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <ContenedorMostrador />
                     </div>
                 );
             case 'socios':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 text-center py-16 text-gray-400">
-                        <p className="text-lg font-medium">Gestión de socios</p>
-                        <p className="text-sm">Próximamente</p>
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <ContenedorAfiliados />
                     </div>
                 );
         }
@@ -52,4 +52,4 @@ const Board = ({ seccionActiva }: BoardProps) => {
     );
 };
 
-export default Board;   
+export default Board;

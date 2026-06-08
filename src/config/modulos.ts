@@ -49,7 +49,7 @@ export const MODULOS: Record<ModuloId, ModuloConfig> = {
     },
     suscripciones: {
         id: 'suscripciones',
-        nombre: 'Socios',
+        nombre: 'Afiliados',
         descripcion: 'Membresías y asistencias',
         icono: Users,
         esNucleo: false,
