@@ -1,5 +1,8 @@
 import { useSalon } from "../../context";
+import { useAuth } from "../../context/AuthContext";
 import { type Producto } from "../../types"
+import { imprimirComanda } from "../../logic/imprimirComanda";
+import { Printer } from "lucide-react";
 import AccionesMesa from "./AccionesMesa";
 import ListaPedidos from "./ListaPedidos";
 import MenuDisplay from "./MenuDisplay";
@@ -8,6 +11,7 @@ import ConfirmarPedidos from "./ConfirmarPedidos";
 
 const PanelMesa = () => {
     const { mesaSeleccionada, agregarProductoAMesa } = useSalon();
+    const { local } = useAuth();
 
     const handleSeleccionProducto = (producto: Producto) => {
         agregarProductoAMesa(producto);
@@ -20,6 +24,14 @@ const PanelMesa = () => {
             </div>
         );
     }
+
+    const handleReimprimir = () => {
+        imprimirComanda({
+            local: local?.nombre ?? 'Vallis',
+            mesa: mesaSeleccionada.nombre,
+            items: mesaSeleccionada.pedidos,
+        });
+    };
 
     return (
         <div className="flex flex-col gap-4">
@@ -40,6 +52,16 @@ const PanelMesa = () => {
                 <ConfirmarPedidos />
                 <ListaPedidos aConfirmar={false} />
             </div>
+
+            {/* Reimprimir comanda: solo si hay pedidos confirmados */}
+            {mesaSeleccionada.pedidos.length > 0 && (
+                <button
+                    onClick={handleReimprimir}
+                    className="flex items-center justify-center gap-2 border border-gray-300 text-gray-600 hover:bg-gray-50 py-2 rounded-lg text-sm font-medium transition-colors"
+                >
+                    <Printer size={16} /> Reimprimir comanda
+                </button>
+            )}
 
             <CierreDeMesa />
         </div>

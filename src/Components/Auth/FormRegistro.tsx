@@ -77,7 +77,7 @@ const FormRegistro = () => {
                 p_plan: planElegido,
             });
             if (fnError) throw fnError;
-            setRegistroExitoso(true);// cambiarlo por refresh del perfil para mostrar la nueva info sin necesidad de confirmar email (opción A)
+            setRegistroExitoso(true);
         } catch (err: any) {
             setError(MENSAJES[err.message] ?? err.message);
         } finally {
