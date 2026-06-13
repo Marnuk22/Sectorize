@@ -1,7 +1,7 @@
 import { useSalon } from "../../context";
 import { useAuth } from "../../context/AuthContext";
 import { type Producto } from "../../types"
-import { imprimirComanda } from "../../logic/imprimirComanda";
+import { imprimirComanda } from "../../logic/impresion";
 import { Printer } from "lucide-react";
 import AccionesMesa from "./AccionesMesa";
 import ListaPedidos from "./ListaPedidos";
@@ -30,6 +30,7 @@ const PanelMesa = () => {
             local: local?.nombre ?? 'Vallis',
             mesa: mesaSeleccionada.nombre,
             items: mesaSeleccionada.pedidos,
+            impresora: 'Microsoft Print to PDF',
         });
     };
 

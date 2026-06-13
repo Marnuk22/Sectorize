@@ -33,20 +33,20 @@ const ContenedorInventario = () => {
     };
 
     if (cargando) return (
-        <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center h-full bg-white">
+            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
     );
 
     return (
-        <div className="space-y-4">
+        <div className="h-full flex flex-col bg-white overflow-hidden">
             {/* Topbar */}
-            <div className="flex flex-wrap items-center gap-3">
-                <h2 className="text-xl font-bold text-gray-800 w-full sm:flex-1 sm:w-auto">Inventario</h2>
+            <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 shrink-0">
+                <h2 className="text-lg font-bold text-stone-800 w-full sm:flex-1 sm:w-auto">Inventario</h2>
                 <div className="relative flex-1 sm:flex-none">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
-                        className="w-full sm:w-48 pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full sm:w-48 pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                         placeholder="Buscar producto..."
                         value={busqueda}
                         onChange={e => setBusqueda(e.target.value)}
@@ -54,18 +54,18 @@ const ContenedorInventario = () => {
                 </div>
                 <button
                     onClick={() => setModalProducto(null)}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap"
+                    className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap"
                 >
                     <Plus size={16} /> Nuevo producto
                 </button>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-4">
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-y-auto">
                 {/* Sidebar categorías */}
                 <div className="w-full lg:w-40 lg:flex-shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
                     <button
                         onClick={() => setCategoriaActiva(null)}
-                        className={`whitespace-nowrap lg:w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100' : 'text-gray-500 hover:bg-white'}`}
+                        className={`whitespace-nowrap lg:w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-violet-50 shadow-sm font-medium text-violet-700 border border-violet-100' : 'text-stone-500 hover:bg-stone-50'}`}
                     >
                         Todos ({productos.length})
                     </button>
@@ -75,8 +75,8 @@ const ContenedorInventario = () => {
                                 onClick={() => setCategoriaActiva(cat.id === categoriaActiva ? null : cat.id)}
                                 className={`whitespace-nowrap flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
                                     categoriaActiva === cat.id
-                                        ? 'bg-white shadow-sm font-medium text-blue-900 border border-gray-100'
-                                        : 'text-gray-500 hover:bg-white'
+                                        ? 'bg-violet-50 shadow-sm font-medium text-violet-700 border border-violet-100'
+                                        : 'text-stone-500 hover:bg-stone-50'
                                 }`}
                             >
                                 {cat.nombre} ({productos.filter(p => p.categoria === cat.nombre).length})
@@ -94,21 +94,21 @@ const ContenedorInventario = () => {
                         <div className="space-y-1 shrink-0">
                             <input
                                 autoFocus
-                                className="w-full px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                                 placeholder="Nombre..."
                                 value={nuevaCategoria}
                                 onChange={e => setNuevaCategoria(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleAgregarCategoria()}
                             />
                             <div className="flex gap-1">
-                                <button onClick={handleAgregarCategoria} className="flex-1 py-1 bg-blue-600 text-white rounded-lg text-xs">Ok</button>
-                                <button onClick={() => setAgregandoCategoria(false)} className="flex-1 py-1 border rounded-lg text-xs">×</button>
+                                <button onClick={handleAgregarCategoria} className="flex-1 py-1 bg-violet-600 text-white rounded-lg text-xs">Ok</button>
+                                <button onClick={() => setAgregandoCategoria(false)} className="flex-1 py-1 border border-stone-200 rounded-lg text-xs">×</button>
                             </div>
                         </div>
                     ) : (
                         <button
                             onClick={() => setAgregandoCategoria(true)}
-                            className="whitespace-nowrap lg:w-full text-left px-3 py-2 text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 shrink-0"
+                            className="whitespace-nowrap lg:w-full text-left px-3 py-2 text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 shrink-0"
                         >
                             <Plus size={12} /> Nueva categoría
                         </button>
@@ -117,23 +117,23 @@ const ContenedorInventario = () => {
 
                 {/* Grid productos */}
                 {productosFiltrados.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center h-48 text-gray-400 text-sm">
+                    <div className="flex-1 flex items-center justify-center h-48 text-stone-400 text-sm">
                         {busqueda ? 'No se encontraron productos' : 'No hay productos en esta categoría'}
                     </div>
                 ) : (
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
                         {productosFiltrados.map(prod => (
                             <div
                                 key={prod.id}
-                                className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-gray-100'}`}
+                                className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
                             >
-                                <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
                                     {prod.activo ? 'Activo' : 'Inactivo'}
                                 </span>
 
-                                <p className="font-medium text-gray-800 text-sm pr-12 truncate">{prod.nombre}</p>
-                                <p className="text-xs text-gray-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
-                                <p className="font-bold text-gray-900">${prod.precio_venta.toLocaleString()}</p>
+                                <p className="font-medium text-stone-800 text-sm pr-12 truncate">{prod.nombre}</p>
+                                <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
+                                <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
 
                                 {tieneStock(prod) ? (
                                     <p className={`text-xs mt-1 flex items-center gap-1 ${stockBajo(prod) ? 'text-red-500' : 'text-green-600'}`}>
@@ -141,27 +141,27 @@ const ContenedorInventario = () => {
                                         {stockBajo(prod) ? `Stock bajo: ${prod.stock_actual}` : `Stock: ${prod.stock_actual}`}
                                     </p>
                                 ) : (
-                                    <p className="text-xs mt-1 text-gray-400">Sin seguimiento</p>
+                                    <p className="text-xs mt-1 text-stone-400">Sin seguimiento</p>
                                 )}
 
                                 <div className="flex gap-1 mt-3">
                                     <button
                                         onClick={() => setModalProducto(prod)}
-                                        className="flex-1 py-1.5 border rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-gray-50"
+                                        className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
                                     >
                                         <Edit size={11} /> Editar
                                     </button>
                                     {tieneStock(prod) && (
                                         <button
                                             onClick={() => setModalStock(prod)}
-                                            className="flex-1 py-1.5 border rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-gray-50"
+                                            className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
                                         >
                                             <Package size={11} /> Stock
                                         </button>
                                     )}
                                     <button
                                         onClick={() => toggleActivo(prod.id, !prod.activo)}
-                                        className="py-1.5 px-2 border rounded-lg text-xs hover:bg-gray-50"
+                                        className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-stone-50"
                                         title={prod.activo ? 'Desactivar' : 'Activar'}
                                     >
                                         {prod.activo ? <EyeOff size={11} /> : <Eye size={11} />}

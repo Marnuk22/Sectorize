@@ -56,20 +56,23 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
 
     return (
         <>
-            <nav className="bg-white shadow-md px-6 py-4 flex justify-start items-center gap-6">
-                <MenuUsuario onAbrirPanel={setPanelAbierto} />
+            <nav className="bg-white border-b border-stone-200 px-6 py-3 flex justify-start items-center gap-5">
+                <div className="flex items-center pr-5 border-r border-stone-200">
+                    <MenuUsuario onAbrirPanel={setPanelAbierto} />
+                </div>
 
-                <div className="flex bg-gray-100 p-1 rounded-xl">
+                <div className="flex gap-1 bg-stone-100 p-1 rounded-xl">
                     {seccionesVisibles.map(({ modulo, seccion, config }) => {
                         const Icono = config?.icono;
+                        const activa = seccionActiva === seccion;
                         return (
                             <button
                                 key={modulo}
                                 onClick={() => setSeccionActiva(seccion)}
-                                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-all ${
-                                    seccionActiva === seccion
-                                        ? 'bg-white shadow-sm text-red-500'
-                                        : 'text-gray-500 hover:text-gray-700'
+                                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    activa
+                                        ? 'bg-white text-violet-700 shadow-sm'
+                                        : 'text-stone-500 hover:text-stone-700'
                                 }`}
                             >
                                 {Icono && <Icono size={16} />}

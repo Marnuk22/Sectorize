@@ -14,31 +14,31 @@ const Board = ({ seccionActiva }: BoardProps) => {
         switch (seccionActiva) {
             case 'sectores':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorSectores />
                     </div>
                 );
             case 'inventario':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorInventario />
                     </div>
                 );
             case 'ventas':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorVentas />
                     </div>
                 );
             case 'mostrador':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorMostrador />
                     </div>
                 );
             case 'socios':
                 return (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorAfiliados />
                     </div>
                 );
@@ -46,7 +46,7 @@ const Board = ({ seccionActiva }: BoardProps) => {
     };
 
     return (
-        <div className="p-4">
+        <div className="h-full">
             {renderContenido()}
         </div>
     );

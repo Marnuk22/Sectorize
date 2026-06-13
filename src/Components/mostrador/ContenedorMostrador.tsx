@@ -44,21 +44,21 @@ const ContenedorMostrador = () => {
     };
 
     if (cargando) return (
-        <div className="flex items-center justify-center h-64">
-            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center h-full bg-white">
+            <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
         </div>
     );
 
     return (
-        <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-140px)]">
+        <div className="h-full bg-white overflow-hidden flex flex-col lg:flex-row gap-4 p-4">
             {/* Columna productos */}
             <div className="flex-1 flex flex-col min-h-0">
                 {/* Buscador + categorías */}
-                <div className="space-y-3 mb-3">
+                <div className="space-y-3 mb-3 shrink-0">
                     <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         <input
-                            className="w-full pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                             placeholder="Buscar producto..."
                             value={busqueda}
                             onChange={e => setBusqueda(e.target.value)}
@@ -67,7 +67,7 @@ const ContenedorMostrador = () => {
                     <div className="flex gap-1 overflow-x-auto pb-1">
                         <button
                             onClick={() => setCategoriaActiva(null)}
-                            className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm transition-colors ${!categoriaActiva ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                            className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm transition-colors ${!categoriaActiva ? 'bg-violet-600 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
                         >
                             Todos
                         </button>
@@ -75,7 +75,7 @@ const ContenedorMostrador = () => {
                             <button
                                 key={cat.id}
                                 onClick={() => setCategoriaActiva(cat.id === categoriaActiva ? null : cat.id)}
-                                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm transition-colors ${categoriaActiva === cat.id ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                                className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-sm transition-colors ${categoriaActiva === cat.id ? 'bg-violet-600 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200'}`}
                             >
                                 {cat.nombre}
                             </button>
@@ -86,20 +86,20 @@ const ContenedorMostrador = () => {
                 {/* Grilla de productos */}
                 <div className="flex-1 overflow-y-auto">
                     {productosFiltrados.length === 0 ? (
-                        <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
+                        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
                             No hay productos disponibles
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
                             {productosFiltrados.map(prod => (
                                 <button
                                     key={prod.id}
                                     onClick={() => agregar(prod)}
-                                    className="bg-white border border-gray-100 rounded-2xl p-3 text-left hover:border-blue-300 hover:shadow-md transition-all active:scale-95"
+                                    className="bg-white border border-stone-200 rounded-2xl p-3 text-left hover:border-violet-300 hover:shadow-md transition-all active:scale-95"
                                 >
-                                    <p className="font-medium text-gray-800 text-sm truncate">{prod.nombre}</p>
-                                    <p className="text-xs text-gray-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
-                                    <p className="font-black text-gray-900">${prod.precio_venta.toLocaleString()}</p>
+                                    <p className="font-medium text-stone-800 text-sm truncate">{prod.nombre}</p>
+                                    <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
+                                    <p className="font-black text-stone-900">${prod.precio_venta.toLocaleString()}</p>
                                 </button>
                             ))}
                         </div>
@@ -108,11 +108,11 @@ const ContenedorMostrador = () => {
             </div>
 
             {/* Columna carrito */}
-            <div className="w-full lg:w-80 bg-white border rounded-2xl flex flex-col min-h-0 lg:h-full">
-                <div className="p-4 border-b flex items-center justify-between">
+            <div className="w-full lg:w-80 bg-stone-50 border border-stone-200 rounded-2xl flex flex-col min-h-0 lg:h-full">
+                <div className="p-4 border-b border-stone-200 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <ShoppingCart size={18} className="text-blue-600" />
-                        <h3 className="font-bold text-gray-800">Carrito</h3>
+                        <ShoppingCart size={18} className="text-violet-600" />
+                        <h3 className="font-bold text-stone-800">Carrito</h3>
                     </div>
                     {carrito.length > 0 && (
                         <button onClick={vaciar} className="text-xs text-red-400 hover:text-red-600">
@@ -124,27 +124,27 @@ const ContenedorMostrador = () => {
                 {/* Items */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-[120px]">
                     {carrito.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-full text-gray-300 text-sm py-8">
+                        <div className="flex flex-col items-center justify-center h-full text-stone-300 text-sm py-8">
                             <ShoppingCart size={32} className="mb-2" />
                             Tocá un producto para agregarlo
                         </div>
                     ) : (
                         carrito.map(item => (
-                            <div key={item.id} className="flex items-center gap-2 bg-gray-50 rounded-xl p-2">
+                            <div key={item.id} className="flex items-center gap-2 bg-white border border-stone-200 rounded-xl p-2">
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-gray-800 truncate">{item.nombre}</p>
-                                    <p className="text-xs text-gray-400">${item.precio.toLocaleString()} c/u</p>
+                                    <p className="text-sm font-medium text-stone-800 truncate">{item.nombre}</p>
+                                    <p className="text-xs text-stone-400">${item.precio.toLocaleString()} c/u</p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                    <button onClick={() => disminuir(item.id)} className="w-6 h-6 rounded-lg bg-white border flex items-center justify-center hover:bg-gray-100">
+                                    <button onClick={() => disminuir(item.id)} className="w-6 h-6 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center hover:bg-stone-100">
                                         <Minus size={12} />
                                     </button>
                                     <span className="w-6 text-center text-sm font-bold">{item.cantidad}</span>
-                                    <button onClick={() => aumentar(item.id)} className="w-6 h-6 rounded-lg bg-white border flex items-center justify-center hover:bg-gray-100">
+                                    <button onClick={() => aumentar(item.id)} className="w-6 h-6 rounded-lg bg-stone-50 border border-stone-200 flex items-center justify-center hover:bg-stone-100">
                                         <Plus size={12} />
                                     </button>
                                 </div>
-                                <button onClick={() => quitar(item.id)} className="text-gray-300 hover:text-red-500 p-1">
+                                <button onClick={() => quitar(item.id)} className="text-stone-300 hover:text-red-500 p-1">
                                     <Trash2 size={14} />
                                 </button>
                             </div>
@@ -153,10 +153,10 @@ const ContenedorMostrador = () => {
                 </div>
 
                 {/* Total + cobro */}
-                <div className="border-t p-4 space-y-3">
+                <div className="border-t border-stone-200 p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">Total</span>
-                        <span className="text-2xl font-black text-gray-900">${total.toLocaleString()}</span>
+                        <span className="text-sm text-stone-500">Total</span>
+                        <span className="text-2xl font-black text-stone-900">${total.toLocaleString()}</span>
                     </div>
 
                     {!cobrando ? (
@@ -185,13 +185,13 @@ const ContenedorMostrador = () => {
                                 <select
                                     value={metodoElegido}
                                     onChange={e => setMetodoElegido(e.target.value as MetodoPago)}
-                                    className="w-full appearance-none bg-white border rounded-xl px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    className="w-full appearance-none bg-white border border-stone-200 rounded-xl px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-violet-500 outline-none"
                                 >
                                     {metodosHabilitados.map(m => (
                                         <option key={m} value={m}>{labelMetodo(m)}</option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-3 top-2.5 text-gray-400 pointer-events-none" size={16} />
+                                <ChevronDown className="absolute right-3 top-2.5 text-stone-400 pointer-events-none" size={16} />
                             </div>
                             <div className="flex gap-2">
                                 <button
@@ -203,7 +203,7 @@ const ContenedorMostrador = () => {
                                 </button>
                                 <button
                                     onClick={() => setCobrando(false)}
-                                    className="bg-gray-200 text-gray-600 px-3 rounded-xl hover:bg-gray-300"
+                                    className="bg-stone-200 text-stone-600 px-3 rounded-xl hover:bg-stone-300"
                                 >
                                     <X size={16} />
                                 </button>

@@ -1,6 +1,6 @@
 import { useSalon } from '../../context/SalonContext';
 import { useAuth } from '../../context/AuthContext';
-import { imprimirComanda } from '../../logic/imprimirComanda';
+import { imprimirComanda } from '../../logic/impresion';
 
 const ConfirmarPedidos = () => {
     const { mesaSeleccionada, confirmarPedidoMesa } = useSalon();

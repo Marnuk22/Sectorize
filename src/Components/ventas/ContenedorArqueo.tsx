@@ -11,7 +11,6 @@ const ContenedorArqueo = () => {
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
 
-    // Calcular totales del arqueo activo
     const totalVentas = historialVentas.reduce((acc, v) => acc + v.total, 0);
     const cantidadVentas = historialVentas.length;
 
@@ -58,20 +57,20 @@ const ContenedorArqueo = () => {
     if (!arqueoActivo) return (
         <div className="space-y-4">
             <div className="text-center py-8">
-                <div className="inline-flex p-4 bg-gray-100 rounded-full mb-3">
-                    <Lock size={28} className="text-gray-400" />
+                <div className="inline-flex p-4 bg-stone-100 rounded-full mb-3">
+                    <Lock size={28} className="text-stone-400" />
                 </div>
-                <h3 className="font-bold text-gray-700 text-lg">Caja cerrada</h3>
-                <p className="text-gray-400 text-sm mt-1">Abrí la caja para comenzar a registrar ventas</p>
+                <h3 className="font-bold text-stone-700 text-lg">Caja cerrada</h3>
+                <p className="text-stone-400 text-sm mt-1">Abrí la caja para comenzar a registrar ventas</p>
             </div>
 
-            <div className="bg-white border rounded-2xl p-5 space-y-3">
-                <label className="text-sm font-medium text-gray-600">Monto inicial en caja ($)</label>
+            <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+                <label className="text-sm font-medium text-stone-600">Monto inicial en caja ($)</label>
                 <input
                     type="number"
                     min="0"
                     step="0.01"
-                    className="w-full border rounded-xl px-4 py-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-violet-500"
                     placeholder="0.00"
                     value={montoInicial}
                     onChange={e => setMontoInicial(e.target.value)}
@@ -81,7 +80,7 @@ const ContenedorArqueo = () => {
                 <button
                     onClick={handleAbrirArqueo}
                     disabled={cargando}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
+                    className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
                 >
                     <Unlock size={18} />
                     {cargando ? 'Abriendo...' : 'Abrir caja'}
@@ -113,35 +112,35 @@ const ContenedorArqueo = () => {
 
             {/* Resumen de ventas */}
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white border rounded-2xl p-4">
+                <div className="bg-white border border-stone-200 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp size={16} className="text-blue-500" />
-                        <p className="text-xs text-gray-400">Total vendido</p>
+                        <TrendingUp size={16} className="text-violet-500" />
+                        <p className="text-xs text-stone-400">Total vendido</p>
                     </div>
-                    <p className="text-2xl font-black text-gray-800">${totalVentas.toLocaleString()}</p>
+                    <p className="text-2xl font-black text-stone-800">${totalVentas.toLocaleString()}</p>
                 </div>
-                <div className="bg-white border rounded-2xl p-4">
+                <div className="bg-white border border-stone-200 rounded-2xl p-4">
                     <div className="flex items-center gap-2 mb-1">
-                        <ShoppingBag size={16} className="text-purple-500" />
-                        <p className="text-xs text-gray-400">Ventas</p>
+                        <ShoppingBag size={16} className="text-violet-500" />
+                        <p className="text-xs text-stone-400">Ventas</p>
                     </div>
-                    <p className="text-2xl font-black text-gray-800">{cantidadVentas}</p>
+                    <p className="text-2xl font-black text-stone-800">{cantidadVentas}</p>
                 </div>
             </div>
 
             {/* Ventas por método de pago */}
             {Object.keys(ventasPorMetodo).length > 0 && (
-                <div className="bg-white border rounded-2xl p-4 space-y-2">
-                    <p className="text-xs font-medium text-gray-400 uppercase mb-3">Por método de pago</p>
+                <div className="bg-white border border-stone-200 rounded-2xl p-4 space-y-2">
+                    <p className="text-xs font-medium text-stone-400 uppercase mb-3">Por método de pago</p>
                     {(Object.entries(ventasPorMetodo) as [string, number][]).map(([metodo, total]) => {
                         const Icono = iconoMetodo(metodo);
                         return (
                             <div key={metodo} className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <Icono size={15} className="text-gray-400" />
-                                    <span className="text-sm text-gray-600">{labelMetodo(metodo)}</span>
+                                    <Icono size={15} className="text-stone-400" />
+                                    <span className="text-sm text-stone-600">{labelMetodo(metodo)}</span>
                                 </div>
-                                <span className="font-bold text-gray-800">${total.toLocaleString()}</span>
+                                <span className="font-bold text-stone-800">${total.toLocaleString()}</span>
                             </div>
                         );
                     })}
@@ -149,9 +148,9 @@ const ContenedorArqueo = () => {
             )}
 
             {/* Monto esperado */}
-            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex justify-between items-center">
-                <p className="text-sm font-medium text-blue-700">Monto esperado en caja</p>
-                <p className="text-xl font-black text-blue-800">${montoEsperado.toLocaleString()}</p>
+            <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 flex justify-between items-center">
+                <p className="text-sm font-medium text-violet-700">Monto esperado en caja</p>
+                <p className="text-xl font-black text-violet-800">${montoEsperado.toLocaleString()}</p>
             </div>
 
             {/* Cierre de caja */}
@@ -165,12 +164,12 @@ const ContenedorArqueo = () => {
                 </button>
             ) : (
                 <div className="bg-white border-2 border-red-200 rounded-2xl p-5 space-y-3">
-                    <p className="font-bold text-gray-700">¿Cuánto hay físicamente en caja?</p>
+                    <p className="font-bold text-stone-700">¿Cuánto hay físicamente en caja?</p>
                     <input
                         type="number"
                         min="0"
                         step="0.01"
-                        className="w-full border rounded-xl px-4 py-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-red-400"
+                        className="w-full border border-stone-200 rounded-xl px-4 py-3 text-xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-red-400"
                         placeholder="0.00"
                         value={montoReal}
                         onChange={e => setMontoReal(e.target.value)}
@@ -180,7 +179,7 @@ const ContenedorArqueo = () => {
                     {/* Diferencia en tiempo real */}
                     {montoReal && (
                         <div className={`p-3 rounded-xl text-center ${diferencia >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                            <p className="text-xs text-gray-500 mb-1">Diferencia</p>
+                            <p className="text-xs text-stone-500 mb-1">Diferencia</p>
                             <p className={`text-xl font-black ${diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                                 {diferencia >= 0 ? '+' : ''}{diferencia.toLocaleString()}
                             </p>
@@ -192,7 +191,7 @@ const ContenedorArqueo = () => {
                     <div className="flex gap-2">
                         <button
                             onClick={() => { setConfirmandoCierre(false); setMontoReal(''); setError(''); }}
-                            className="flex-1 py-2.5 border rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
+                            className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-50"
                         >
                             Cancelar
                         </button>

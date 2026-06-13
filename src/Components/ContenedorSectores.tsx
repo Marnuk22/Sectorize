@@ -2,51 +2,62 @@ import ContenedorMesa from './ContendedorMesas.tsx';
 import { useState } from 'react';
 import { useSalon } from '../context/index.ts';
 import FormularioNuevoSector from './FormularioNuevoSector.tsx';
+import { Plus } from 'lucide-react';
 
 const ContenedorSectores = () => {
-    const  [isModalOpen, setIsModalOpen] = useState(false);// Estado para controlar la visibilidad del modal de nuevo sector
-    // estado con los datos que llegan por props
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const { sectores, sectorSeleccionado, seleccionarSector, agregarSector } = useSalon();
-    const  handleCrearSector = (nombreRecibido: string) => {
-        // El formulario ya se encargó de que 'nombreRecibido' no sea vacío
+
+    const handleCrearSector = (nombreRecibido: string) => {
         agregarSector(nombreRecibido);
         setIsModalOpen(false);
-} 
-    {/*
-    const [idSectorSeleccionado, setIdSectorSeleccionado] = useState<number | null>(null);
-    
-    const sectorSeleccionado = sectores.find(s => s.id === idSectorSeleccionado) || null;
-    */}
+    };
+
     return (
-        <>
-        <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar py-2">
-            {sectores.map((sector) => (
-                <button 
-                    key={sector.id} 
-                    onClick={() => seleccionarSector(sector.id)}
-                    className={`p-4 rounded-lg shadow-sm ${sectorSeleccionado?.id === sector.id ? 'bg-indigo-50 border-2 border-indigo-500' : 'bg-white'}`}
+        <div className="h-full flex flex-col bg-stone-200/60 overflow-hidden">
+            {/* Pestañas de sectores tipo explorador */}
+            <div className="flex items-end gap-0.5 px-2 pt-1.5 shrink-0">
+                {sectores.map((sector) => {
+                    const activo = sectorSeleccionado?.id === sector.id;
+                    return (
+                        <button
+                            key={sector.id}
+                            onClick={() => seleccionarSector(sector.id)}
+                            className={`text-xs font-medium whitespace-nowrap transition-colors rounded-t-lg
+                                ${activo
+                                    ? 'bg-white text-violet-700 text-sm px-4 py-2 relative top-px'
+                                    : 'bg-stone-300/70 text-stone-600 text-sm px-3.5 py-1.5 hover:bg-stone-300'}`}
+                        >
+                            {sector.nombre}
+                        </button>
+                    );
+                })}
+                <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="text-stone-500 hover:text-violet-600 px-2 py-1 transition-colors"
+                    title="Agregar sector"
                 >
-                    <h3 className="text-lg font-semibold text-gray-800">{sector.nombre}</h3>
+                    <Plus size={14} />
                 </button>
-            ))}
-            <button className="flex flex-col items-center gap-2 bg-white p-4 rounded-lg shadow-sm min-w-37.5"
-                onClick={()=> setIsModalOpen(true)}>
-                <h3 className="text-lg font-semibold text-gray-800">Agregar Sector</h3>
-            </button>
-        </nav>
+            </div>
+
+            {/* Contenido: mesas + panel (se conecta con la pestaña activa) */}
             {sectorSeleccionado ? (
-                <ContenedorMesa></ContenedorMesa>
+                <div className="flex-1 min-h-0 bg-white rounded-tr-xl overflow-hidden">
+                    <ContenedorMesa />
+                </div>
             ) : (
-                <div className="p-10 text-center text-gray-400 font-medium">
-                    Por favor, selecciona un sector para comenzar a gestionar las mesas.
+                <div className="flex-1 flex items-center justify-center bg-white rounded-tr-xl p-10 text-center text-stone-400 font-medium">
+                    Seleccioná un sector para gestionar las mesas.
                 </div>
             )}
+
             <FormularioNuevoSector
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onConfirmar={handleCrearSector}
             />
-        </>
+        </div>
     );
 };
 

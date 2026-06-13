@@ -9,11 +9,12 @@ const ContenedorVentas = () => {
     const [subSeccion, setSubSeccion] = useState<'historial' | 'arqueo'>('arqueo');
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-4">
-            <div className="flex items-center">
+        <div className="h-full flex flex-col bg-white overflow-hidden">
+            {/* Pestañas Arqueo / Historial */}
+            <div className="flex items-center bg-stone-50 border-b border-stone-200 shrink-0">
                 <button
                     onClick={() => setSubSeccion('arqueo')}
-                    className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${subSeccion === 'arqueo' ? 'bg-white text-blue-900 border-b-2 border-blue-900' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${subSeccion === 'arqueo' ? 'bg-white text-violet-700 border-b-2 border-violet-600' : 'text-stone-400 hover:text-stone-600'}`}
                 >
                     <Calculator size={16} />
                     Arqueo
@@ -23,19 +24,20 @@ const ContenedorVentas = () => {
                 </button>
                 <button
                     onClick={() => setSubSeccion('historial')}
-                    className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${subSeccion === 'historial' ? 'bg-white text-blue-900 border-b-2 border-blue-900' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 font-bold text-sm transition-colors ${subSeccion === 'historial' ? 'bg-white text-violet-700 border-b-2 border-violet-600' : 'text-stone-400 hover:text-stone-600'}`}
                 >
                     <History size={16} />
                     Historial
                     {historialVentas.length > 0 && (
-                        <span className="bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
+                        <span className="bg-violet-100 text-violet-700 text-xs px-1.5 py-0.5 rounded-full">
                             {historialVentas.length}
                         </span>
                     )}
                 </button>
             </div>
 
-            <div className="p-4">
+            {/* Contenido scrolleable */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 {subSeccion === 'arqueo' && <ContenedorArqueo />}
                 {subSeccion === 'historial' && <HistorialVentas/>}
             </div>

@@ -21,6 +21,7 @@ interface SalonContextType {
     onDisminuirAConfirmar: (productoId: string) => void;
     onEliminarProducto: (productoId: string) => void;
     onEliminarAConfirmar: (productoId: string) => void;
+    onNotaAConfirmar: (productoId: string, nota: string) => void;
     agregarSector: (nombre: string) => void;
     borrarSector: (idSector: string) => void;
     agregarMesaASector: (idSector: string, nombreMesa: string) => void;
@@ -202,7 +203,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
                 ...sector,
                 mesas: sector.mesas.map(mesa =>
                     mesa.id === idMesaSeleccionada
-                        ? { ...mesa, pedidos: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' as const : 'libre' as const }
+                        ? { ...mesa, pedidos: nuevosPedidos, estado: nuevosPedidos.length > 0 || mesa.aConfirmar.length > 0 ? 'ocupada' as const : 'libre' as const }
                         : mesa
                 )
             };
@@ -216,7 +217,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
                 ...sector,
                 mesas: sector.mesas.map(mesa =>
                     mesa.id === idMesaSeleccionada
-                        ? { ...mesa, aConfirmar: nuevosPedidos, estado: nuevosPedidos.length > 0 ? 'ocupada' as const : 'libre' as const }
+                        ? { ...mesa, aConfirmar: nuevosPedidos, estado: nuevosPedidos.length > 0 || mesa.pedidos.length > 0 ? 'ocupada' as const : 'libre' as const }
                         : mesa
                 )
             };
@@ -273,6 +274,15 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         actualizarConfirmadosMesa(mesa.aConfirmar.filter(item => item.id !== productoId));
     };
 
+    const onNotaAConfirmar = (productoId: string, nota: string) => {
+    if (!idSectorSeleccionado || !idMesaSeleccionada) return;
+    const mesa = buscarMesa(idMesaSeleccionada);
+    if (!mesa) return;
+    actualizarConfirmadosMesa(mesa.aConfirmar.map(item =>
+        item.id === productoId ? { ...item, notas: nota } : item
+    ));
+};
+
     const transferirMesa = (idMesaOrigen: string, idMesaDestino: string) => {
         const mesaOrigen = buscarMesa(idMesaOrigen);
         const mesaDestino = buscarMesa(idMesaDestino);
@@ -303,7 +313,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
             agregarProductoAMesa, cerrarMesa, agregarSector, agregarMesaASector,
             borrarSector, borrarMesa, onAumentarProducto, onAumentarAconfirmar,
             onDisminuirProducto, onDisminuirAConfirmar, onEliminarProducto,
-            onEliminarAConfirmar, confirmarPedidoMesa, transferirMesa
+            onEliminarAConfirmar, confirmarPedidoMesa, transferirMesa, onNotaAConfirmar
         }}>
             {children}
         </SalonContext.Provider>
