@@ -191,6 +191,9 @@ export interface MesaUI {
     capacidad?: number;
     aConfirmar: ItemPedidoUI[];
     pedidos:    ItemPedidoUI[];
+    pos_x?: number | null;
+    pos_y?: number | null;
+    
 }
 
 export interface SectorUI {

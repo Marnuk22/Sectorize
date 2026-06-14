@@ -15,6 +15,7 @@ interface SalonContextType {
     seleccionarMesa: (idMesa: string | null) => void;
     agregarProductoAMesa: (producto: Producto) => void;
     cerrarMesa: (idMesa: string, metodoPago: MetodoPago) => Promise<void>;
+    actualizarPosicionMesa: (idMesa: string, x: number, y: number) => Promise<void>;
     onAumentarProducto: (productoId: string) => void;
     onAumentarAconfirmar: (productoId: string) => void;
     onDisminuirProducto: (productoId: string) => void;
@@ -69,6 +70,8 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
                             estado: m.estado === 'ocupado' ? 'ocupada' : m.estado === 'reservado' ? 'reservada' : 'libre' as const,
                             aConfirmar: [],
                             pedidos: [],
+                            pos_x: m.pos_x,
+                            pos_y: m.pos_y, 
                         }))
                 }));
 
@@ -145,7 +148,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
             .select()
             .single();
         if (error) { console.error('Error creando mesa:', error); return; }
-        const nuevaMesa: Mesa = { id: data.id, nombre: data.nombre, estado: 'libre', aConfirmar: [], pedidos: [] };
+        const nuevaMesa: Mesa = { id: data.id, nombre: data.nombre, estado: 'libre', aConfirmar: [], pedidos: [], pos_x: null, pos_y: null };
         setSectores(prev => prev.map(sector =>
             sector.id === idSector ? { ...sector, mesas: [...sector.mesas, nuevaMesa] } : sector
         ));
@@ -208,6 +211,24 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
                 )
             };
         }));
+    };
+
+    const actualizarPosicionMesa = async (idMesa: string, x: number, y: number) => {
+        // Actualizar en memoria (inmediato, para que se vea fluido)
+        setSectores(prev => prev.map(sector => ({
+            ...sector,
+            mesas: sector.mesas.map(mesa =>
+                mesa.id === idMesa ? { ...mesa, pos_x: x, pos_y: y } : mesa
+            )
+        })));
+
+        // Guardar en la base de datos
+        const { error } = await supabase
+            .from('mesas')
+            .update({ pos_x: x, pos_y: y })
+            .eq('id', idMesa);
+
+        if (error) console.error('Error guardando posición de mesa:', error);
     };
 
     const actualizarConfirmadosMesa = (nuevosPedidos: ItemPedido[]) => {
@@ -310,7 +331,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         <SalonContext.Provider value={{
             sectores, mesaSeleccionada, sectorSeleccionado, cargando,
             sectorBuscado, seleccionarMesa, seleccionarSector,
-            agregarProductoAMesa, cerrarMesa, agregarSector, agregarMesaASector,
+            agregarProductoAMesa, cerrarMesa, agregarSector, actualizarPosicionMesa, agregarMesaASector,
             borrarSector, borrarMesa, onAumentarProducto, onAumentarAconfirmar,
             onDisminuirProducto, onDisminuirAConfirmar, onEliminarProducto,
             onEliminarAConfirmar, confirmarPedidoMesa, transferirMesa, onNotaAConfirmar
