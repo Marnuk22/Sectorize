@@ -4,11 +4,13 @@ import { useAuth } from '../../context/AuthContext';
 import { imprimirTicket } from '../../logic/impresion';
 import FormularioMoverMesa from './FormularioMoverMesa';
 import { useState } from 'react';
+import { useImpresoras } from '../../context/ImpresorasContext';
 
 const AccionesMesa = () => {    
     const [modalOpen, setModalOpen] = useState(false);
     const { mesaSeleccionada } = useSalon(); 
     const { local } = useAuth();
+    const { impresorasDeTickets } = useImpresoras();
 
     if (!mesaSeleccionada) return null;
 
@@ -21,7 +23,7 @@ const AccionesMesa = () => {
             items,
             subtotal: total,  // Por ahora el subtotal es igual al total, sin descuentos
             total,
-            impresora: 'Microsoft Print to PDF',  // temporal, para probar a PDF
+            impresoras: impresorasDeTickets().map(i => i.nombre_sistema),
         });
     };
     

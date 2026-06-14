@@ -45,6 +45,14 @@ export const imprimirTexto = async (texto: string, nombreImpresora?: string): Pr
     await qz.print(config, datos);
 };
 
+// Devuelve la lista de impresoras instaladas que detecta QZ Tray
+export const listarImpresoras = async (): Promise<string[]> => {
+    await conectar();
+    const impresoras = await qz.printers.find();
+    // qz.printers.find() puede devolver un string o un array
+    return Array.isArray(impresoras) ? impresoras : [impresoras];
+};
+
 // Imprime como HTML — compatible con cualquier impresora (PDF, láser, térmica)
 // Útil para probar sin térmica. El texto se muestra monoespaciado tipo ticket.
 export const imprimirHTML = async (texto: string, nombreImpresora?: string): Promise<void> => {

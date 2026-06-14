@@ -1,37 +1,44 @@
 import { generarComanda, generarTicket, type DatosComanda, type DatosTicket } from './comanda';
+import { imprimirHTML } from './qz';
 import type { ItemPedidoUI } from '../types';
-import {imprimirTexto, imprimirHTML} from "./qz";
 
-
-interface OpcionesImpresion {
+interface OpcionesComanda {
     local: string;
     mesa: string;
     sector?: string;
     items: ItemPedidoUI[];
     mozo?: string;
-    impresora?: string; // Nombre de la impresora a usar (opcional, por si queremos elegir entre varias)
+    impresoras: string[];   // nombres de sistema de las impresoras destino
 }
 
-// Por ahora "imprime" a la consola. Cuando integremos QZ Tray,
-// acá adentro se cambia el console.log por el envío a la impresora.
-export const imprimirComanda = async (opciones: OpcionesImpresion) => {
+export const imprimirComanda = async (opciones: OpcionesComanda) => {
     if (opciones.items.length === 0) {
         console.warn('No hay items para imprimir en la comanda');
         return;
     }
 
+    if (opciones.impresoras.length === 0) {
+        alert('No hay impresoras configuradas para comandas. Configurá una desde el menú → Impresoras.');
+        return;
+    }
     const datos: DatosComanda = {
-        ...opciones,
+        local: opciones.local,
+        mesa: opciones.mesa,
+        sector: opciones.sector,
+        items: opciones.items,
+        mozo: opciones.mozo,
         fecha: new Date(),
     };
-
     const texto = generarComanda(datos);
 
-    try {
-        await imprimirHTML(texto, opciones.impresora);
-    } catch (error) {
-        console.error('Error al imprimir la comanda:', error);
-        alert('No se pudo imprimir. Verificá que QZ Tray esté abierto.');
+    // Mandar a cada impresora configurada
+    for (const impresora of opciones.impresoras) {
+        try {
+            await imprimirHTML(texto, impresora);
+        } catch (err) {
+            console.error(`Error al imprimir comanda en ${impresora}:`, err);
+            alert(`No se pudo imprimir en "${impresora}". Verificá que QZ Tray esté abierto.`);
+        }
     }
 };
 
@@ -39,11 +46,11 @@ interface OpcionesTicket {
     local: string;
     mesa?: string;
     items: ItemPedidoUI[];
-    subtotal: number;      
-    descuento?: number;     
+    subtotal: number;
+    descuento?: number;
     total: number;
     metodoPago?: string;
-    impresora?: string;
+    impresoras: string[];
 }
 
 export const imprimirTicket = async (opciones: OpcionesTicket) => {
@@ -51,18 +58,28 @@ export const imprimirTicket = async (opciones: OpcionesTicket) => {
         console.warn('No hay items para el ticket');
         return;
     }
-
+    if (opciones.impresoras.length === 0) {
+        alert('No hay impresoras configuradas para tickets. Configurá una desde el menú → Impresoras.');
+        return;
+    }
     const datos: DatosTicket = {
-        ...opciones,
+        local: opciones.local,
+        mesa: opciones.mesa,
+        items: opciones.items,
+        subtotal: opciones.subtotal,
+        descuento: opciones.descuento,
+        total: opciones.total,
+        metodoPago: opciones.metodoPago,
         fecha: new Date(),
     };
-
     const texto = generarTicket(datos);
 
-    try {
-        await imprimirHTML(texto, opciones.impresora);
-    } catch (err) {
-        console.error('Error al imprimir el ticket:', err);
-        alert('No se pudo imprimir. Verificá que QZ Tray esté abierto.');
+    for (const impresora of opciones.impresoras) {
+        try {
+            await imprimirHTML(texto, impresora);
+        } catch (err) {
+            console.error(`Error al imprimir ticket en ${impresora}:`, err);
+            alert(`No se pudo imprimir en "${impresora}". Verificá que QZ Tray esté abierto.`);
+        }
     }
 };

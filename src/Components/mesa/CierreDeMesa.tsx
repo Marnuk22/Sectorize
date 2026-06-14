@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { MetodoPago } from "../../types";
 import { labelMetodo } from "../../config/metodosPago";
 import { imprimirTicket } from "../../logic/impresion";
+import { useImpresoras } from '../../context/ImpresorasContext';
 
 type TipoDescuento = 'monto' | 'porcentaje';
 
@@ -12,6 +13,7 @@ const CierreDeMesa = () => {
     const { mesaSeleccionada, cerrarMesa } = useSalon();
     const { arqueoActivo } = useVentas();
     const { local } = useAuth();
+    const { impresorasDeTickets } = useImpresoras();
 
     const metodosHabilitados = (local?.metodos_pago && local.metodos_pago.length > 0
         ? local.metodos_pago
@@ -47,7 +49,7 @@ const CierreDeMesa = () => {
         descuento: descuentoAplicado > 0 ? descuentoAplicado : undefined,
         total,
         metodoPago: labelMetodo(metodoElegido),
-        impresora: 'Microsoft Print to PDF',  // temporal, para probar a PDF
+        impresoras: impresorasDeTickets().map(i => i.nombre_sistema),
     });
 
     // Solo imprime, sin cobrar (para revisar antes)

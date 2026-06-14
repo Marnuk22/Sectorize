@@ -5,7 +5,7 @@ import type { SeccionPDV as seccionPdv } from './Components/NavBar.tsx';
 import Board from './Components/Board.tsx';
 import PantallaInicio from './Components/PantallaInicio.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { SalonProvider, MenuProvider, VentasProvider } from './context';
+import { SalonProvider, MenuProvider, VentasProvider, ImpresorasProvider } from './context';
 import { MostradorProvider } from './context/MostradorContext';
 import { AfiliadosProvider } from './context/AfiliadosContext';
 
@@ -32,12 +32,14 @@ function AppContent() {
                 <SalonProvider>
                     <MostradorProvider>
                         <AfiliadosProvider>
-                            <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
-                                <NavBar seccionActiva={seccion} setSeccionActiva={setSeccion} />
-                                <main className="flex-1 min-h-0 overflow-hidden">
-                                    <Board seccionActiva={seccion} />
-                                </main>
-                            </div>
+                            <ImpresorasProvider>
+                                <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+                                    <NavBar seccionActiva={seccion} setSeccionActiva={setSeccion} />
+                                    <main className="flex-1 min-h-0 overflow-hidden">
+                                        <Board seccionActiva={seccion} />
+                                    </main>
+                                </div>
+                            </ImpresorasProvider>
                         </AfiliadosProvider>
                     </MostradorProvider>
                 </SalonProvider>

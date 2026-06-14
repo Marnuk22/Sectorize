@@ -1,10 +1,12 @@
 import { useSalon } from '../../context/SalonContext';
 import { useAuth } from '../../context/AuthContext';
 import { imprimirComanda } from '../../logic/impresion';
+import { useImpresoras } from '../../context/ImpresorasContext';
 
 const ConfirmarPedidos = () => {
     const { mesaSeleccionada, confirmarPedidoMesa } = useSalon();
     const { local } = useAuth();
+    const { impresorasDeComandas } = useImpresoras();
 
     if (!mesaSeleccionada) return null;
 
@@ -20,6 +22,7 @@ const ConfirmarPedidos = () => {
             local: local?.nombre ?? 'Vallis',
             mesa: mesaSeleccionada.nombre,
             items: itemsNuevos,
+                impresoras: impresorasDeComandas().map(i => i.nombre_sistema),
         });
 
         // Confirmar (mueve aConfirmar -> pedidos)

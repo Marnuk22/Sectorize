@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, CreditCard, Store, Settings, HelpCircle, LogOut } from 'lucide-react';
+import { ChevronDown, CreditCard, Store, Settings, HelpCircle, LogOut, Printer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 
-export type PanelUsuario = 'plan' | 'local' | 'config' | 'ayuda';
+export type PanelUsuario = 'plan' | 'local' | 'config' | 'impresoras' | 'ayuda';
 
 interface Props {
     onAbrirPanel: (panel: PanelUsuario) => void;
@@ -32,6 +32,7 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
         { id: 'plan' as const, label: 'Mi plan', icono: CreditCard, extra: planInfo.nombre },
         { id: 'local' as const, label: 'Datos del local', icono: Store },
         { id: 'config' as const, label: 'Configuración', icono: Settings },
+        { id: 'impresoras' as const, label: 'Impresoras', icono: Printer },
         { id: 'ayuda' as const, label: 'Ayuda y soporte', icono: HelpCircle },
     ];
 
