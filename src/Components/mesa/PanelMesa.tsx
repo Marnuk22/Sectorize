@@ -8,10 +8,12 @@ import ListaPedidos from "./ListaPedidos";
 import MenuDisplay from "./MenuDisplay";
 import CierreDeMesa from "./CierreDeMesa";
 import ConfirmarPedidos from "./ConfirmarPedidos";
+import { useImpresoras } from '../../context/ImpresorasContext';
 
 const PanelMesa = () => {
     const { mesaSeleccionada, agregarProductoAMesa } = useSalon();
     const { local } = useAuth();
+    const { impresorasDeComandas } = useImpresoras();
 
     const handleSeleccionProducto = (producto: Producto) => {
         agregarProductoAMesa(producto);
@@ -30,7 +32,7 @@ const PanelMesa = () => {
             local: local?.nombre ?? 'Vallis',
             mesa: mesaSeleccionada.nombre,
             items: mesaSeleccionada.pedidos,
-            impresora: 'Microsoft Print to PDF',
+            impresoras: impresorasDeComandas().map(i => i.nombre_sistema),
         });
     };
 
