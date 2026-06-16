@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Printer, Plus, Trash2, RefreshCw, Check, X, AlertCircle } from 'lucide-react';
+import { Printer, Plus, Trash2, RefreshCw, Check, X, AlertCircle, Download, Info } from 'lucide-react';
 import { useImpresoras, type Impresora } from '../../context/ImpresorasContext';
 import { listarImpresoras } from '../../logic/qz';
 
@@ -17,7 +17,6 @@ const PanelImpresoras = () => {
     const [impComandas, setImpComandas] = useState(true);
     const [impTickets, setImpTickets] = useState(true);
 
-    // Detectar impresoras al abrir
     const detectar = async () => {
         setDetectando(true);
         setErrorQZ('');
@@ -62,9 +61,19 @@ const PanelImpresoras = () => {
                     <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={16} />
                     <div className="flex-1">
                         <p className="text-xs text-amber-700">{errorQZ}</p>
-                        <button onClick={detectar} className="text-xs font-bold text-amber-700 underline mt-1">
-                            Reintentar
-                        </button>
+                        <div className="flex items-center gap-3 mt-2">
+                            <a
+                                href="https://qz.io/download/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-bold text-violet-600 hover:text-violet-700 inline-flex items-center gap-1"
+                            >
+                                <Download size={12} /> Descargar QZ Tray
+                            </a>
+                            <button onClick={detectar} className="text-xs font-bold text-amber-700 underline">
+                                Reintentar
+                            </button>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -161,6 +170,22 @@ const PanelImpresoras = () => {
                     <Plus size={16} /> Agregar impresora
                 </button>
             )}
+
+            {/* Ayuda: QZ Tray (siempre visible) */}
+            <div className="flex items-start gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200">
+                <Info className="text-stone-400 shrink-0 mt-0.5" size={14} />
+                <p className="text-[11px] text-stone-500">
+                    Para imprimir necesitás tener QZ Tray instalado y abierto en esta computadora.{' '}
+                    <a
+                        href="https://qz.io/download/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-violet-600 hover:underline"
+                    >
+                        Descargar QZ Tray
+                    </a>
+                </p>
+            </div>
         </div>
     );
 };
