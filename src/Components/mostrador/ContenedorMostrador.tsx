@@ -6,12 +6,15 @@ import { useVentas } from '../../context/VentasContext';
 import { useAuth } from '../../context/AuthContext';
 import { labelMetodo } from '../../config/metodosPago';
 import type { MetodoPago } from '../../types';
+import TecladoCantidad from './TecladoCantidad';
+import type { Producto } from '../../types';
 
 const ContenedorMostrador = () => {
     const { productos, categorias, cargando } = useMenu();
     const { carrito, total, agregar, quitar, aumentar, disminuir, vaciar, cobrar } = useMostrador();
     const { arqueoActivo } = useVentas();
     const { local } = useAuth();
+    const [productoGranel, setProductoGranel] = useState<Producto | null>(null);
 
     const metodosHabilitados = (local?.metodos_pago && local.metodos_pago.length > 0
         ? local.metodos_pago
@@ -94,7 +97,13 @@ const ContenedorMostrador = () => {
                             {productosFiltrados.map(prod => (
                                 <button
                                     key={prod.id}
-                                    onClick={() => agregar(prod)}
+                                    onClick={() => {
+                                        if (prod.tipo_venta === 'granel') {
+                                            setProductoGranel(prod);   // abre el teclado
+                                        } else {
+                                            agregar(prod);              // suma 1 como siempre
+                                        }
+                                    }}
                                     className="bg-white border border-stone-200 rounded-2xl p-3 text-left hover:border-violet-300 hover:shadow-md transition-all active:scale-95"
                                 >
                                     <p className="font-medium text-stone-800 text-sm truncate">{prod.nombre}</p>
@@ -212,6 +221,13 @@ const ContenedorMostrador = () => {
                     )}
                 </div>
             </div>
+            {productoGranel && (
+                <TecladoCantidad
+                    producto={productoGranel}
+                    onConfirmar={(cantidad) => agregar(productoGranel, cantidad)}
+                    onCerrar={() => setProductoGranel(null)}
+                />
+            )}
         </div>
     );
 };

@@ -1,5 +1,7 @@
 // src/types/index.ts
 
+import type { UnidadMedida } from "../config/unidades";
+
 // ============================================
 // ENUMS — espejo exacto de los CHECK de la DB
 // ============================================
@@ -79,6 +81,8 @@ export interface Producto {
     activo:        boolean;
     creado_at:     string;
     updated_at:    string;
+    tipo_venta: 'unidad' | 'granel';
+    unidad_medida: 'unidad' | 'kg' | 'g' | 'l' | 'ml';
 }
 
 export interface Arqueo {
@@ -182,6 +186,8 @@ export interface ItemPedidoUI {
     categoria: string | null;
     cantidad:  number;
     notas?:    string;
+    tipo_venta?: 'unidad' | 'granel';  
+    unidad_medida?: UnidadMedida;
 }
 
 export interface MesaUI {
