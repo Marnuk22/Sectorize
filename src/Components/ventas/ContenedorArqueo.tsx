@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { useVentas } from '../../context/VentasContext';
 import { Lock, Unlock, TrendingUp, ShoppingBag } from 'lucide-react';
 import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
+import { useImpresoras } from '../../context/ImpresorasContext';
+import { useAuth } from '../../context/AuthContext';
+import { imprimirArqueo } from '../../logic/impresion';
 
 const ContenedorArqueo = () => {
     const { arqueoActivo, historialVentas, abrirArqueo, cerrarArqueo } = useVentas();
@@ -10,6 +13,8 @@ const ContenedorArqueo = () => {
     const [confirmandoCierre, setConfirmandoCierre] = useState(false);
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
+    const { impresorasDeTickets } = useImpresoras();
+    const { local } = useAuth();
 
     const totalVentas = historialVentas.reduce((acc, v) => acc + v.total, 0);
     const cantidadVentas = historialVentas.length;
@@ -38,11 +43,29 @@ const ContenedorArqueo = () => {
     };
 
     const handleCerrarArqueo = async () => {
+        if (!arqueoActivo) return;
         const monto = parseFloat(montoReal);
         if (isNaN(monto) || monto < 0) { setError('Ingresá un monto válido'); return; }
         setCargando(true);
         setError('');
         try {
+            // Imprimir el reporte de cierre ANTES de cerrar (capturando los datos actuales)
+            imprimirArqueo({
+                local: local?.nombre ?? 'Vallis',
+                fechaApertura: arqueoActivo.fechaApertura,
+                fechaCierre: new Date(),
+                montoInicial: arqueoActivo.montoInicial,
+                totalVentas: totalVentas,
+                cantidadVentas: cantidadVentas,
+                porMetodo: Object.fromEntries(
+                    Object.entries(ventasPorMetodo).map(([m, v]) => [labelMetodo(m), v])
+                ),
+                montoEsperado: montoEsperado,
+                montoReal: monto,
+                diferencia: monto - montoEsperado,
+                impresoras: impresorasDeTickets().map(i => i.nombre_sistema),
+            });
+
             await cerrarArqueo(monto);
             setMontoReal('');
             setConfirmandoCierre(false);

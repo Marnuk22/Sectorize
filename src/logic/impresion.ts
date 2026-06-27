@@ -1,4 +1,4 @@
-import { generarComanda, generarTicket, type DatosComanda, type DatosTicket } from './comanda';
+import { generarComanda, generarTicket, generarReporteArqueo, type DatosComanda, type DatosTicket, type DatosArqueo } from './comanda';
 import { imprimirHTML } from './qz';
 import type { ItemPedidoUI } from '../types';
 
@@ -79,6 +79,29 @@ export const imprimirTicket = async (opciones: OpcionesTicket) => {
             await imprimirHTML(texto, impresora);
         } catch (err) {
             console.error(`Error al imprimir ticket en ${impresora}:`, err);
+            alert(`No se pudo imprimir en "${impresora}". Verificá que QZ Tray esté abierto.`);
+        }
+    }
+};
+
+interface OpcionesArqueo extends Omit<DatosArqueo, never> {
+    impresoras: string[];
+}
+
+export const imprimirArqueo = async (opciones: OpcionesArqueo) => {
+    if (opciones.impresoras.length === 0) {
+        alert('No hay impresoras configuradas para tickets. Configurá una desde el menú → Impresoras.');
+        return;
+    }
+
+    const { impresoras, ...datos } = opciones;
+    const texto = generarReporteArqueo(datos as DatosArqueo);
+
+    for (const impresora of impresoras) {
+        try {
+            await imprimirHTML(texto, impresora);
+        } catch (err) {
+            console.error(`Error al imprimir arqueo en ${impresora}:`, err);
             alert(`No se pudo imprimir en "${impresora}". Verificá que QZ Tray esté abierto.`);
         }
     }

@@ -118,3 +118,62 @@ export const generarTicket = (datos: DatosTicket): string => {
 
     return lineas.join('\n');
 };
+
+export interface DatosArqueo {
+    local: string;
+    fechaApertura: Date;
+    fechaCierre?: Date;
+    montoInicial: number;
+    totalVentas: number;
+    cantidadVentas: number;
+    porMetodo: Record<string, number>;
+    montoEsperado: number;
+    montoReal?: number;       // lo contado físicamente (solo en cierre)
+    diferencia?: number;      // montoReal - montoEsperado (solo en cierre)
+}
+
+export const generarReporteArqueo = (datos: DatosArqueo): string => {
+    const lineas: string[] = [];
+
+    lineas.push(centrar(datos.local));
+    lineas.push(centrar('CIERRE DE CAJA'));
+    lineas.push(linea());
+
+    const fmtFecha = (f: Date) =>
+        `${f.toLocaleDateString('es-AR')} ${f.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+
+    lineas.push(`Apertura: ${fmtFecha(datos.fechaApertura)}`);
+    if (datos.fechaCierre) {
+        lineas.push(`Cierre:   ${fmtFecha(datos.fechaCierre)}`);
+    }
+
+    lineas.push(linea());
+
+    lineas.push(filaPrecio('Monto inicial', datos.montoInicial));
+    lineas.push(filaPrecio('Total vendido', datos.totalVentas));
+    lineas.push(`Cantidad de ventas: ${datos.cantidadVentas}`);
+
+    lineas.push(linea());
+    lineas.push('Por método de pago:');
+    Object.entries(datos.porMetodo).forEach(([metodo, monto]) => {
+        lineas.push(filaPrecio(`  ${metodo}`, monto));
+    });
+
+    lineas.push(linea());
+    lineas.push(filaPrecio('Esperado en caja', datos.montoEsperado));
+
+    // Si es un cierre con conteo físico
+    if (datos.montoReal != null) {
+        lineas.push(filaPrecio('Contado', datos.montoReal));
+        const dif = datos.diferencia ?? 0;
+        const signo = dif >= 0 ? '+' : '';
+        lineas.push(filaPrecio('Diferencia', dif));
+        lineas.push('');
+        lineas.push(centrar(dif === 0 ? 'Caja exacta' : dif > 0 ? `Sobrante ${signo}${dif}` : `Faltante ${dif}`));
+    }
+
+    lineas.push(linea());
+    lineas.push(centrar('Vallis'));
+
+    return lineas.join('\n');
+};

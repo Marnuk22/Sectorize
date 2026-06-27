@@ -10,7 +10,7 @@ interface MostradorContextType {
     aumentar: (productoId: string) => void;
     disminuir: (productoId: string) => void;
     vaciar: () => void;
-    cobrar: (metodoPago: MetodoPago) => Promise<void>;
+    cobrar: (metodoPago: MetodoPago, totalFinal?: number) => Promise<void>;
 }
 
 const MostradorContext = createContext<MostradorContextType | undefined>(undefined);
@@ -99,18 +99,19 @@ export const MostradorProvider = ({ children }: { children: ReactNode }) => {
 
     const vaciar = () => setCarrito([]);
 
-    const cobrar = async (metodoPago: MetodoPago) => {
-        if (carrito.length === 0) return;
-        const mesaVirtual: MesaUI = {
-            id: 'mostrador',
-            nombre: 'Mostrador',
-            estado: 'libre',
-            aConfirmar: [],
-            pedidos: carrito,
-        };
-        await registrarVenta(carrito, total, mesaVirtual, metodoPago);
-        vaciar();
+    const cobrar = async (metodoPago: MetodoPago, totalFinal?: number) => {
+    if (carrito.length === 0) return;
+    const totalACobrar = totalFinal ?? total;
+    const mesaVirtual: MesaUI = {
+        id: 'mostrador',
+        nombre: 'Mostrador',
+        estado: 'libre',
+        aConfirmar: [],
+        pedidos: carrito,
     };
+    await registrarVenta(carrito, totalACobrar, mesaVirtual, metodoPago);
+    vaciar();
+};
 
     return (
         <MostradorContext.Provider value={{ carrito, total, agregar, quitar, aumentar, disminuir, vaciar, cobrar }}>
