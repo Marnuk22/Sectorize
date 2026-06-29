@@ -59,12 +59,12 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
 
     return (
         <>
-            <nav className="bg-white border-b border-stone-200 px-6 py-3 flex justify-start items-center gap-5">
-                <div className="flex items-center pr-5 border-r border-stone-200">
+            <nav className="bg-white border-b border-stone-200 px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-5">
+                <div className="flex items-center pr-3 sm:pr-5 border-r border-stone-200 shrink-0">
                     <MenuUsuario onAbrirPanel={setPanelAbierto} />
                 </div>
 
-                <div className="flex gap-1 bg-stone-100 p-1 rounded-xl">
+                <div className="flex gap-1 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
                     {seccionesVisibles.map(({ modulo, seccion, config }) => {
                         const Icono = config?.icono;
                         const activa = seccionActiva === seccion;
