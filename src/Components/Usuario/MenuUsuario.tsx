@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, CreditCard, Store, Settings, HelpCircle, LogOut, Printer } from 'lucide-react';
+import { ChevronDown, Store, Settings, HelpCircle, LogOut, Printer } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { usePlan } from '../../hooks/usePlan';
 
-export type PanelUsuario = 'plan' | 'local' | 'config' | 'impresoras' | 'ayuda';
+export type PanelUsuario = 'local' | 'config' | 'impresoras' | 'ayuda';
 
 interface Props {
     onAbrirPanel: (panel: PanelUsuario) => void;
@@ -11,11 +10,9 @@ interface Props {
 
 const MenuUsuario = ({ onAbrirPanel }: Props) => {
     const { local, perfil, signOut } = useAuth();
-    const { planInfo } = usePlan();
     const [abierto, setAbierto] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Cerrar al hacer click fuera
     useEffect(() => {
         const handler = (e: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -29,7 +26,6 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
     const iniciales = (local?.nombre ?? 'V').charAt(0).toUpperCase();
 
     const opciones = [
-        { id: 'plan' as const, label: 'Mi plan', icono: CreditCard, extra: planInfo.nombre },
         { id: 'local' as const, label: 'Datos del local', icono: Store },
         { id: 'config' as const, label: 'Configuración', icono: Settings },
         { id: 'impresoras' as const, label: 'Impresoras', icono: Printer },
@@ -45,25 +41,25 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
         <div className="relative" ref={menuRef}>
             <button
                 onClick={() => setAbierto(!abierto)}
-                className="flex items-center gap-2 hover:bg-gray-50 rounded-xl p-1 pr-2 transition-colors"
+                className="flex items-center gap-2 hover:bg-stone-50 rounded-xl p-1 sm:pr-2 transition-colors"
             >
-                <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
                     {iniciales}
                 </div>
-                <span className="text-xl font-bold tracking-tight text-gray-800 truncate max-w-[160px]">
+                <span className="hidden sm:block text-xl font-bold tracking-tight text-stone-800 truncate max-w-[160px]">
                     {local?.nombre ?? 'Vallis'}
                 </span>
-                <ChevronDown size={18} className={`text-gray-400 transition-transform ${abierto ? 'rotate-180' : ''}`} />
+                <ChevronDown size={18} className={`hidden sm:block text-stone-400 transition-transform ${abierto ? 'rotate-180' : ''}`} />
             </button>
 
             {abierto && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-stone-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* Header del menú */}
-                    <div className="p-4 border-b bg-gray-50">
-                        <p className="font-bold text-gray-800 truncate">{local?.nombre}</p>
-                        <p className="text-xs text-gray-400 truncate">{perfil?.nombre_usuario}</p>
-                        <span className="inline-block mt-2 text-xs font-medium px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                            Plan {planInfo.nombre}
+                    <div className="p-4 border-b border-stone-100 bg-stone-50">
+                        <p className="font-bold text-stone-800 truncate">{local?.nombre}</p>
+                        <p className="text-xs text-stone-400 truncate">{perfil?.nombre_usuario}</p>
+                        <span className="inline-block mt-2 text-xs font-medium px-2 py-0.5 bg-violet-100 text-violet-700 rounded-full">
+                            Fase de prueba
                         </span>
                     </div>
 
@@ -75,26 +71,23 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
                                 <button
                                     key={op.id}
                                     onClick={() => abrirPanel(op.id)}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-stone-50 transition-colors text-left"
                                 >
-                                    <Icono size={18} className="text-gray-400" />
-                                    <span className="text-sm text-gray-700 flex-1">{op.label}</span>
-                                    {op.extra && (
-                                        <span className="text-xs text-gray-400">{op.extra}</span>
-                                    )}
+                                    <Icono size={18} className="text-stone-400" />
+                                    <span className="text-sm text-stone-700 flex-1">{op.label}</span>
                                 </button>
                             );
                         })}
                     </div>
 
                     {/* Cerrar sesión */}
-                    <div className="border-t py-1">
+                    <div className="border-t border-stone-100 py-1">
                         <button
                             onClick={() => { setAbierto(false); signOut(); }}
                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left group"
                         >
-                            <LogOut size={18} className="text-gray-400 group-hover:text-red-500" />
-                            <span className="text-sm text-gray-700 group-hover:text-red-600">Cerrar sesión</span>
+                            <LogOut size={18} className="text-stone-400 group-hover:text-red-500" />
+                            <span className="text-sm text-stone-700 group-hover:text-red-600">Cerrar sesión</span>
                         </button>
                     </div>
                 </div>

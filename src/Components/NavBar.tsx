@@ -3,7 +3,6 @@ import { useModulos } from '../hooks/useModulos';
 import { MODULOS } from '../config/modulos';
 import MenuUsuario, { type PanelUsuario } from './Usuario/MenuUsuario';
 import PanelLateral from './Usuario/PanelLateral';
-import PanelMiPlan from './Usuario/PanelMiPlan';
 import PanelDatosLocal from './Usuario/PanelDatosLocal';
 import PanelConfiguracion from './Usuario/PanelConfiguracion';
 import PanelAyuda from './Usuario/PanelAyuda';
@@ -25,11 +24,10 @@ const SECCION_POR_MODULO: Record<string, SeccionPDV> = {
 };
 
 const TITULOS_PANEL: Record<PanelUsuario, string> = {
-    plan:   'Mi plan',
-    local:  'Datos del local',
-    config: 'Configuración',
+    local:      'Datos del local',
+    config:     'Configuración',
     impresoras: 'Impresoras',
-    ayuda:  'Ayuda y soporte',
+    ayuda:      'Ayuda y soporte',
 };
 
 const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
@@ -48,12 +46,11 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
 
     const renderPanel = () => {
         switch (panelAbierto) {
-            case 'plan':   return <PanelMiPlan />;
-            case 'local':  return <PanelDatosLocal onCerrar={() => setPanelAbierto(null)} />;
-            case 'config': return <PanelConfiguracion onCerrar={() => setPanelAbierto(null)} />;
-            case 'impresoras': return <PanelImpresoras/>;
-            case 'ayuda':  return <PanelAyuda />;
-            default:       return null;
+            case 'local':      return <PanelDatosLocal onCerrar={() => setPanelAbierto(null)} />;
+            case 'config':     return <PanelConfiguracion onCerrar={() => setPanelAbierto(null)} />;
+            case 'impresoras': return <PanelImpresoras />;
+            case 'ayuda':      return <PanelAyuda />;
+            default:           return null;
         }
     };
 
@@ -72,7 +69,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
                             <button
                                 key={modulo}
                                 onClick={() => setSeccionActiva(seccion)}
-                                className={`flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-medium transition-all ${
+                                className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
                                     activa
                                         ? 'bg-white text-violet-700 shadow-sm'
                                         : 'text-stone-500 hover:text-stone-700'
