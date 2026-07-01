@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Lock } from 'lucide-react';
+import { X, Lock, Barcode, Check } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { usePlan } from '../../hooks/usePlan';
 import type { Producto, Categoria } from '../../types';
@@ -24,7 +24,6 @@ const CAMPOS_INICIALES = {
     unidad_medida: 'unidad' as UnidadMedida,
 };
 
-// Unidades que se pueden elegir cuando el producto es a granel (excluye 'unidad')
 const UNIDADES_GRANEL = (Object.keys(UNIDADES) as UnidadMedida[]).filter(u => u !== 'unidad');
 
 const ModalProducto = ({ producto, onCerrar }: Props) => {
@@ -57,12 +56,11 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
         }
     }, [producto]);
 
-    // Cuando cambia el tipo de venta, ajustar la unidad por defecto
     const cambiarTipoVenta = (tipo: 'unidad' | 'granel') => {
         setForm(p => ({
             ...p,
             tipo_venta: tipo,
-            unidad_medida: tipo === 'unidad' ? 'unidad' : 'kg', // default a kg si es granel
+            unidad_medida: tipo === 'unidad' ? 'unidad' : 'kg',
         }));
     };
 
@@ -83,6 +81,7 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                 nombre: form.nombre.trim(),
                 descripcion: form.descripcion || null,
                 categoria: form.categoria || null,
+                codigo_barras: form.codigo_barras?.trim() || null,
                 stock_minimo: usaStock ? form.stock_minimo : 0,
                 stock_actual: usaStock ? form.stock_actual : 0,
             };
@@ -113,7 +112,6 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
         }
     };
 
-    // Etiqueta del precio según el tipo
     const labelPrecio = form.tipo_venta === 'granel'
         ? `Precio por ${UNIDADES[form.unidad_medida].label} ($) *`
         : 'Precio de venta ($) *';
@@ -184,6 +182,23 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         />
                     </div>
 
+                    {/* Código de barras */}
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-stone-500">Código de barras (opcional)</label>
+                        <div className="relative">
+                            <Barcode size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                            <input
+                                className="w-full border border-stone-200 rounded-xl pl-9 pr-9 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                value={form.codigo_barras ?? ''}
+                                onChange={e => setForm(p => ({ ...p, codigo_barras: e.target.value }))}
+                                placeholder="Escaneá o escribí el código"
+                            />
+                            {form.codigo_barras && form.codigo_barras.trim() && (
+                                <Check size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500" />
+                            )}
+                        </div>
+                    </div>
+
                     {/* Tipo de venta: unidad o granel */}
                     <div className="flex flex-col gap-1">
                         <label className="text-xs font-medium text-stone-500">¿Cómo se vende?</label>
@@ -222,8 +237,9 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                                 min="0"
                                 step="0.01"
                                 className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                value={form.precio_venta}
+                                value={form.precio_venta || ''}
                                 onChange={e => setForm(p => ({ ...p, precio_venta: parseFloat(e.target.value) || 0 }))}
+                                placeholder="0"
                             />
                         </div>
                         {form.tipo_venta === 'granel' ? (
@@ -255,7 +271,7 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         )}
                     </div>
 
-                    {/* Precio de costo en su propia fila cuando es granel (para no perderlo) */}
+                    {/* Precio de costo en su propia fila cuando es granel */}
                     {form.tipo_venta === 'granel' && (
                         <div className="flex flex-col gap-1">
                             <label className="text-xs font-medium text-stone-500">Precio de costo ($)</label>
@@ -271,7 +287,7 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                         </div>
                     )}
 
-                    {/* Toggle seguimiento de stock — gateado por plan */}
+                    {/* Toggle seguimiento de stock */}
                     {puedeStock ? (
                         <div className="flex items-center justify-between p-3 border border-stone-200 rounded-xl">
                             <div>
@@ -310,8 +326,9 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                                     min="0"
                                     step={form.tipo_venta === 'granel' ? '0.001' : '1'}
                                     className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                    value={form.stock_actual}
+                                    value={form.stock_actual || ''}
                                     onChange={e => setForm(p => ({ ...p, stock_actual: parseFloat(e.target.value) || 0 }))}
+                                    placeholder="0"
                                 />
                             </div>
                             <div className="flex flex-col gap-1">
@@ -321,8 +338,9 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                                     min="0"
                                     step={form.tipo_venta === 'granel' ? '0.001' : '1'}
                                     className="border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                                    value={form.stock_minimo}
+                                    value={form.stock_minimo || ''}
                                     onChange={e => setForm(p => ({ ...p, stock_minimo: parseFloat(e.target.value) || 0 }))}
+                                    placeholder="0"
                                 />
                             </div>
                         </div>

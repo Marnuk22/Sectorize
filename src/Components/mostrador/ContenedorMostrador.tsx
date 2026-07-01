@@ -11,6 +11,7 @@ import type { Producto } from '../../types';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { imprimirTicket } from '../../logic/impresion';
 import { UNIDADES } from '../../config/unidades';
+import { useEscaner } from '../../hooks/useEscaner';
 
 type TipoDescuento = 'monto' | 'porcentaje';
 
@@ -39,6 +40,35 @@ const ContenedorMostrador = () => {
     const [pagaCon, setPagaCon] = useState('');
     // Confirmación visual
     const [exito, setExito] = useState<{ vuelto: number } | null>(null);
+
+    // Escaneo de código de barras
+    const [avisoEscaner, setAvisoEscaner] = useState<string | null>(null);
+
+    const handleEscaneo = (codigo: string) => {
+        const prod = productos.find(p => p.codigo_barras === codigo);
+        if (!prod) {
+            setAvisoEscaner(`No se encontró un producto con el código ${codigo}`);
+            setTimeout(() => setAvisoEscaner(null), 3000);
+            return;
+        }
+        if (!prod.activo) {
+            setAvisoEscaner(`"${prod.nombre}" está inactivo`);
+            setTimeout(() => setAvisoEscaner(null), 3000);
+            return;
+        }
+        // Producto a granel: no se puede escanear directo (necesita peso), abrir teclado
+        if (prod.tipo_venta === 'granel') {
+            setProductoGranel(prod);
+            return;
+        }
+        // Producto por unidad: sumar al carrito
+        agregar(prod);
+        setAvisoEscaner(`✓ ${prod.nombre} agregado`);
+        setTimeout(() => setAvisoEscaner(null), 1500);
+    };
+
+    // Activar el escáner solo cuando no se está cobrando
+    useEscaner(handleEscaneo, !cobrando);
 
     const productosFiltrados = productos.filter(p => {
         if (!p.activo) return false;
@@ -381,6 +411,12 @@ const ContenedorMostrador = () => {
                     onConfirmar={(cantidad) => agregar(productoGranel, cantidad)}
                     onCerrar={() => setProductoGranel(null)}
                 />
+            )}
+
+            {avisoEscaner && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-stone-800 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-medium animate-in fade-in slide-in-from-bottom-2">
+                    {avisoEscaner}
+                </div>
             )}
         </div>
     );
