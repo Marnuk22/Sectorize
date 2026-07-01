@@ -60,17 +60,17 @@ const ContenedorInventario = () => {
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-y-auto">
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
                 {/* Sidebar categorías */}
-                <div className="w-full lg:w-40 lg:flex-shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible pb-2 lg:pb-0">
+                <div className="w-full lg:w-44 lg:flex-shrink-0 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-y-auto no-scrollbar pb-2 lg:pb-0 shrink-0">
                     <button
                         onClick={() => setCategoriaActiva(null)}
-                        className={`whitespace-nowrap lg:w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-violet-50 shadow-sm font-medium text-violet-700 border border-violet-100' : 'text-stone-500 hover:bg-stone-50'}`}
+                        className={`whitespace-nowrap shrink-0 lg:w-full text-left px-3 py-2 rounded-xl text-sm transition-colors ${!categoriaActiva ? 'bg-violet-50 shadow-sm font-medium text-violet-700 border border-violet-100' : 'text-stone-500 hover:bg-stone-50'}`}
                     >
                         Todos ({productos.length})
                     </button>
                     {categorias.map(cat => (
-                        <div key={cat.id} className="flex items-center gap-1 group shrink-0 lg:shrink">
+                        <div key={cat.id} className="flex items-center gap-1 group shrink-0 lg:w-full">
                             <button
                                 onClick={() => setCategoriaActiva(cat.id === categoriaActiva ? null : cat.id)}
                                 className={`whitespace-nowrap flex-1 text-left px-3 py-2 rounded-xl text-sm transition-colors ${
@@ -83,7 +83,7 @@ const ContenedorInventario = () => {
                             </button>
                             <button
                                 onClick={() => borrarCategoria(cat.id)}
-                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 text-xs px-1"
+                                className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 text-xs px-1 shrink-0"
                             >
                                 ×
                             </button>
@@ -91,24 +91,24 @@ const ContenedorInventario = () => {
                     ))}
 
                     {agregandoCategoria ? (
-                        <div className="space-y-1 shrink-0">
+                        <div className="flex lg:flex-col gap-1 shrink-0">
                             <input
                                 autoFocus
-                                className="w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                className="w-32 lg:w-full px-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                                 placeholder="Nombre..."
                                 value={nuevaCategoria}
                                 onChange={e => setNuevaCategoria(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleAgregarCategoria()}
                             />
                             <div className="flex gap-1">
-                                <button onClick={handleAgregarCategoria} className="flex-1 py-1 bg-violet-600 text-white rounded-lg text-xs">Ok</button>
-                                <button onClick={() => setAgregandoCategoria(false)} className="flex-1 py-1 border border-stone-200 rounded-lg text-xs">×</button>
+                                <button onClick={handleAgregarCategoria} className="flex-1 px-3 lg:px-0 py-1 bg-violet-600 text-white rounded-lg text-xs">Ok</button>
+                                <button onClick={() => setAgregandoCategoria(false)} className="flex-1 px-3 lg:px-0 py-1 border border-stone-200 rounded-lg text-xs">×</button>
                             </div>
                         </div>
                     ) : (
                         <button
                             onClick={() => setAgregandoCategoria(true)}
-                            className="whitespace-nowrap lg:w-full text-left px-3 py-2 text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 shrink-0"
+                            className="whitespace-nowrap shrink-0 lg:w-full text-left px-3 py-2 text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1"
                         >
                             <Plus size={12} /> Nueva categoría
                         </button>
@@ -116,61 +116,63 @@ const ContenedorInventario = () => {
                 </div>
 
                 {/* Grid productos */}
-                {productosFiltrados.length === 0 ? (
-                    <div className="flex-1 flex items-center justify-center h-48 text-stone-400 text-sm">
-                        {busqueda ? 'No se encontraron productos' : 'No hay productos en esta categoría'}
-                    </div>
-                ) : (
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
-                        {productosFiltrados.map(prod => (
-                            <div
-                                key={prod.id}
-                                className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
-                            >
-                                <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
-                                    {prod.activo ? 'Activo' : 'Inactivo'}
-                                </span>
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                    {productosFiltrados.length === 0 ? (
+                        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
+                            {busqueda ? 'No se encontraron productos' : 'No hay productos en esta categoría'}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
+                            {productosFiltrados.map(prod => (
+                                <div
+                                    key={prod.id}
+                                    className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
+                                >
+                                    <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
+                                        {prod.activo ? 'Activo' : 'Inactivo'}
+                                    </span>
 
-                                <p className="font-medium text-stone-800 text-sm pr-12 truncate">{prod.nombre}</p>
-                                <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
-                                <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
+                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate">{prod.nombre}</p>
+                                    <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
+                                    <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
 
-                                {tieneStock(prod) ? (
-                                    <p className={`text-xs mt-1 flex items-center gap-1 ${stockBajo(prod) ? 'text-red-500' : 'text-green-600'}`}>
-                                        <Package size={11} />
-                                        {stockBajo(prod) ? `Stock bajo: ${prod.stock_actual}` : `Stock: ${prod.stock_actual}`}
-                                    </p>
-                                ) : (
-                                    <p className="text-xs mt-1 text-stone-400">Sin seguimiento</p>
-                                )}
+                                    {tieneStock(prod) ? (
+                                        <p className={`text-xs mt-1 flex items-center gap-1 ${stockBajo(prod) ? 'text-red-500' : 'text-green-600'}`}>
+                                            <Package size={11} />
+                                            {stockBajo(prod) ? `Stock bajo: ${prod.stock_actual}` : `Stock: ${prod.stock_actual}`}
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs mt-1 text-stone-400">Sin seguimiento</p>
+                                    )}
 
-                                <div className="flex gap-1 mt-3">
-                                    <button
-                                        onClick={() => setModalProducto(prod)}
-                                        className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
-                                    >
-                                        <Edit size={11} /> Editar
-                                    </button>
-                                    {tieneStock(prod) && (
+                                    <div className="flex gap-1 mt-3">
                                         <button
-                                            onClick={() => setModalStock(prod)}
+                                            onClick={() => setModalProducto(prod)}
                                             className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
                                         >
-                                            <Package size={11} /> Stock
+                                            <Edit size={11} /> Editar
                                         </button>
-                                    )}
-                                    <button
-                                        onClick={() => toggleActivo(prod.id, !prod.activo)}
-                                        className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-stone-50"
-                                        title={prod.activo ? 'Desactivar' : 'Activar'}
-                                    >
-                                        {prod.activo ? <EyeOff size={11} /> : <Eye size={11} />}
-                                    </button>
+                                        {tieneStock(prod) && (
+                                            <button
+                                                onClick={() => setModalStock(prod)}
+                                                className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
+                                            >
+                                                <Package size={11} /> Stock
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => toggleActivo(prod.id, !prod.activo)}
+                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-stone-50"
+                                            title={prod.activo ? 'Desactivar' : 'Activar'}
+                                        >
+                                            {prod.activo ? <EyeOff size={11} /> : <Eye size={11} />}
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Modales */}
