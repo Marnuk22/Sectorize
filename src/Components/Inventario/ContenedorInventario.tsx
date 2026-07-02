@@ -1,18 +1,23 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
 import ModalProducto from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
+import ModalImportar from '../Inventario/ModalImportar';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, toggleActivo, agregarCategoria, borrarCategoria } = useMenu();
+    const { productos, categorias, cargando, toggleActivo, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
     const [modalStock, setModalStock] = useState<Producto | null>(null);
+    const [modalImportar, setModalImportar] = useState(false);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [agregandoCategoria, setAgregandoCategoria] = useState(false);
+    const [confirmarBorrar, setConfirmarBorrar] = useState<Producto | null>(null);
+    const [borrando, setBorrando] = useState(false);
+    const [errorBorrar, setErrorBorrar] = useState('');
 
     const productosFiltrados = productos.filter(p => {
         const catActiva = categorias.find(c => c.id === categoriaActiva);
@@ -38,6 +43,24 @@ const ContenedorInventario = () => {
         </div>
     );
 
+    const handleBorrar = async () => {
+        if (!confirmarBorrar) return;
+        setBorrando(true);
+        setErrorBorrar('');
+        try {
+            await borrarProducto(confirmarBorrar.id);
+            setConfirmarBorrar(null);
+        } catch (err: any) {
+            if (err.message === 'TIENE_VENTAS') {
+                setErrorBorrar('Este producto tiene ventas registradas. No se puede borrar, pero podés desactivarlo.');
+            } else {
+                setErrorBorrar('No se pudo borrar el producto.');
+            }
+        } finally {
+            setBorrando(false);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
             {/* Topbar */}
@@ -52,6 +75,12 @@ const ContenedorInventario = () => {
                         onChange={e => setBusqueda(e.target.value)}
                     />
                 </div>
+                <button
+                    onClick={() => setModalImportar(true)}
+                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
+                >
+                    <Upload size={16} /> Importar
+                </button>
                 <button
                     onClick={() => setModalProducto(null)}
                     className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap"
@@ -167,6 +196,14 @@ const ContenedorInventario = () => {
                                         >
                                             {prod.activo ? <EyeOff size={11} /> : <Eye size={11} />}
                                         </button>
+
+                                        <button
+                                            onClick={() => { setConfirmarBorrar(prod); setErrorBorrar(''); }}
+                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-600"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 size={11} />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -187,6 +224,63 @@ const ContenedorInventario = () => {
                     producto={modalStock}
                     onCerrar={() => setModalStock(null)}
                 />
+            )}
+            {modalImportar && (
+                <ModalImportar onCerrar={() => setModalImportar(false)} />
+            )}
+
+            {confirmarBorrar && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5">
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="p-2 bg-red-50 rounded-xl shrink-0">
+                                <Trash2 size={20} className="text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-stone-800">Eliminar producto</h3>
+                                <p className="text-sm text-stone-500 mt-1">
+                                    ¿Seguro que querés eliminar <strong className="text-stone-700">{confirmarBorrar.nombre}</strong>? Esta acción no se puede deshacer.
+                                </p>
+                            </div>
+                        </div>
+
+                        {errorBorrar && (
+                            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 text-sm mb-3">
+                                <span>{errorBorrar}</span>
+                            </div>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => { setConfirmarBorrar(null); setErrorBorrar(''); }}
+                                className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-50"
+                            >
+                                Cancelar
+                            </button>
+                            {errorBorrar ? (
+                                // Si tiene ventas, ofrecer desactivar en vez de borrar
+                                <button
+                                    onClick={async () => {
+                                        await toggleActivo(confirmarBorrar.id, false);
+                                        setConfirmarBorrar(null);
+                                        setErrorBorrar('');
+                                    }}
+                                    className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-bold"
+                                >
+                                    Desactivar
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleBorrar}
+                                    disabled={borrando}
+                                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold"
+                                >
+                                    {borrando ? 'Eliminando...' : 'Eliminar'}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

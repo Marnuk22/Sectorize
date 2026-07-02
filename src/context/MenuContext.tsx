@@ -80,6 +80,20 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const borrarProducto = async (id: string) => {
+    // Verificar si el producto tiene ventas asociadas
+        const { count, error: errorConteo } = await supabase
+            .from('detalle_ventas')
+            .select('id', { count: 'exact', head: true })
+            .eq('producto_id', id);
+
+        if (errorConteo) throw errorConteo;
+
+        if (count && count > 0) {
+            // Tiene ventas: no se puede borrar, se protege el historial
+            throw new Error('TIENE_VENTAS');
+        }
+
+        // No tiene ventas: borrar
         const { error } = await supabase.from('productos').delete().eq('id', id);
         if (error) throw error;
         setProductos(prev => prev.filter(p => p.id !== id));
