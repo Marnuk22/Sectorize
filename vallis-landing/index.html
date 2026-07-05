@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vallis — Sistema para cobrar en verdulerías, dietéticas y kioscos</title>
+<meta name="description" content="Sistema para cobrar y controlar tu comercio desde el celular. Ideal para verdulerías, dietéticas, kioscos y almacenes de Argentina: cobrá por peso, controlá la caja y el stock. Gratis en fase de prueba.">
+<meta name="author" content="Vallis">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#7f22fe">
+<link rel="canonical" href="https://vallis.com.ar/">
+
+<!-- Favicon -->
+<link rel="icon" href="https://vallis.com.ar/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="https://vallis.com.ar/apple-touch-icon.png">
+
+<!-- Open Graph (WhatsApp, Facebook, Instagram) -->
+<meta property="og:title" content="Vallis — Cobrá rápido en tu comercio">
+<meta property="og:description" content="Cobrá, pesá y controlá tu negocio desde el celular. Para verdulerías, dietéticas, kioscos y almacenes de Argentina.">
+<meta property="og:image" content="https://vallis.com.ar/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Vallis — cobrar por peso desde el celular">
+<meta property="og:url" content="https://vallis.com.ar/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_AR">
+<meta property="og:site_name" content="Vallis">
+
+<!-- Twitter / X -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vallis — Cobrá rápido en tu comercio">
+<meta name="twitter:description" content="Cobrá, pesá y controlá tu negocio desde el celular. Para verdulerías, dietéticas, kioscos y almacenes.">
+<meta name="twitter:image" content="https://vallis.com.ar/preview.jpg">
+
+<!-- Datos estructurados para Google -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Vallis",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Web",
+  "url": "https://vallis.com.ar",
+  "description": "Sistema para cobrar y gestionar comercios desde el celular: verdulerías, dietéticas, fiambrerías, kioscos y almacenes en Argentina. Venta por peso, control de caja y de stock.",
+  "inLanguage": "es-AR",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "ARS"
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "Argentina"
+  }
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --papel: #f7f4ec;
+        --papel-hondo: #efe9db;
+        --tinta: #2b2823;
+        --tinta-suave: #6a635a;
+        --verde: #3f7d4f;
+        --verde-hondo: #2f6a3f;
+        --violeta: #7f22fe;
+        --violeta-hondo: #6a08e7;
+        --crema-tarjeta: #fffdf8;
+        --borde: #e3ddce;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--papel);
+        color: var(--tinta);
+        line-height: 1.55;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .envoltura { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+    h1, h2, h3 { font-family: 'Fraunces', serif; font-weight: 600; line-height: 1.08; }
+
+    /* ---------- Header ---------- */
+    header {
+        position: sticky; top: 0; z-index: 50;
+        background: rgba(247, 244, 236, 0.82);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--borde);
+    }
+    .barra {
+        display: flex; align-items: center; justify-content: space-between;
+        height: 66px;
+    }
+    .logo { display: flex; align-items: center; gap: 9px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 21px; color: var(--tinta); letter-spacing: -0.01em; }
+    .logo-marca {
+        width: 30px; height: 30px; border-radius: 8px;
+        background: var(--violeta); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 17px; font-weight: 700;
+    }
+
+    .boton {
+        display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        background: var(--violeta); color: #fff;
+        font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px;
+        padding: 11px 22px; border-radius: 11px;
+        text-decoration: none; border: none; cursor: pointer;
+        transition: transform 0.15s ease, background 0.15s ease;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    }
+    .boton:hover { background: var(--violeta-hondo); transform: translateY(-1px); }
+    .boton-grande { padding: 15px 32px; font-size: 17px; border-radius: 13px; }
+
+    /* ---------- Hero ---------- */
+    .hero { padding: 88px 0 64px; position: relative; }
+    .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 56px; align-items: center; }
+
+    .eyebrow {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 13px; font-weight: 600; color: var(--verde-hondo);
+        background: rgba(63, 125, 79, 0.1);
+        padding: 6px 13px; border-radius: 100px;
+        margin-bottom: 22px;
+    }
+    .hero h1 { font-size: clamp(2.6rem, 5.2vw, 4rem); letter-spacing: -0.02em; margin-bottom: 20px; }
+    .hero h1 em { font-style: normal; color: var(--verde); }
+    .hero-sub { font-size: 19px; color: var(--tinta-suave); max-width: 30ch; margin-bottom: 34px; }
+    .hero-acciones { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .sin-tarjeta { font-size: 14px; color: var(--tinta-suave); }
+
+    /* ---------- Ticket de balanza (signature) ---------- */
+    .ticket {
+        background: var(--crema-tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 16px;
+        padding: 4px;
+        box-shadow: 0 24px 48px -24px rgba(43, 40, 35, 0.28);
+        transform: rotate(-1.6deg);
+        position: relative;
+    }
+    .ticket-interno {
+        border: 1.5px dashed var(--borde);
+        border-radius: 12px;
+        padding: 26px 24px 28px;
+    }
+    .ticket-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .ticket-marca { display: flex; align-items: center; gap: 8px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 16px; }
+    .ticket-marca span { width: 22px; height: 22px; border-radius: 6px; background: var(--violeta); color: #fff; display:flex; align-items:center; justify-content:center; font-size:13px; }
+    .ticket-hora { font-size: 12px; color: var(--tinta-suave); font-variant-numeric: tabular-nums; }
+    .ticket-linea { border: none; border-top: 1.5px dashed var(--borde); margin: 14px 0; }
+    .ticket-item { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 11px; font-size: 15px; }
+    .ticket-item .det { color: var(--tinta-suave); font-size: 13px; }
+    .ticket-item .monto { font-variant-numeric: tabular-nums; font-weight: 600; }
+    .ticket-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; }
+    .ticket-total .lbl { font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+    .ticket-total .val { font-family: 'Fraunces', serif; font-weight: 700; font-size: 26px; color: var(--verde); font-variant-numeric: tabular-nums; }
+    .ticket-pie { text-align: center; font-size: 11px; color: var(--tinta-suave); margin-top: 16px; letter-spacing: 0.03em; }
+    .peso-chip {
+        position: absolute; top: -16px; right: -14px;
+        background: var(--verde); color: #fff;
+        font-size: 13px; font-weight: 600;
+        padding: 8px 14px; border-radius: 100px;
+        box-shadow: 0 8px 20px -6px rgba(47, 106, 63, 0.5);
+        transform: rotate(4deg);
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* ---------- Secciones ---------- */
+    section { padding: 72px 0; }
+    .titulo-seccion { font-size: clamp(1.9rem, 3.6vw, 2.6rem); letter-spacing: -0.02em; margin-bottom: 12px; }
+    .bajada-seccion { color: var(--tinta-suave); font-size: 17px; max-width: 52ch; margin-bottom: 44px; }
+
+    /* Beneficios */
+    .beneficios { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .tarjeta-benef {
+        background: var(--crema-tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 18px;
+        padding: 30px 26px;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .tarjeta-benef:hover { transform: translateY(-3px); box-shadow: 0 18px 36px -22px rgba(43,40,35,0.24); }
+    .benef-ico {
+        width: 46px; height: 46px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 23px; margin-bottom: 18px;
+    }
+    .tarjeta-benef h3 { font-size: 21px; margin-bottom: 9px; letter-spacing: -0.01em; }
+    .tarjeta-benef p { color: var(--tinta-suave); font-size: 15.5px; }
+
+    /* Para quién */
+    .para-quien { background: var(--papel-hondo); border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); }
+    .rubros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .rubro {
+        background: var(--crema-tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 15px;
+        padding: 24px;
+        display: flex; gap: 15px; align-items: flex-start;
+    }
+    .rubro-emoji { font-size: 27px; line-height: 1; flex-shrink: 0; }
+    .rubro h3 { font-size: 17px; margin-bottom: 4px; font-family: 'Inter', sans-serif; font-weight: 600; }
+    .rubro p { font-size: 14px; color: var(--tinta-suave); line-height: 1.45; }
+
+    /* Demo */
+    .demo-marco {
+        background: var(--crema-tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 22px;
+        padding: 14px;
+        box-shadow: 0 30px 60px -30px rgba(43,40,35,0.3);
+        max-width: 760px; margin: 0 auto;
+    }
+    .demo-pantalla {
+        background: var(--papel);
+        border-radius: 14px;
+        overflow: hidden;
+        border: 1px solid var(--borde);
+    }
+    .demo-barra { display: flex; gap: 6px; padding: 12px 16px; border-bottom: 1px solid var(--borde); }
+    .demo-punto { width: 11px; height: 11px; border-radius: 50%; background: var(--borde); }
+    .demo-cuerpo { padding: 28px 26px 34px; }
+    .demo-fila { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--crema-tarjeta); border: 1px solid var(--borde); border-radius: 12px; margin-bottom: 10px; }
+    .demo-fila-nom { font-weight: 600; font-size: 15px; }
+    .demo-fila-det { font-size: 13px; color: var(--tinta-suave); }
+    .demo-fila-monto { font-family: 'Fraunces', serif; font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums; }
+    .demo-teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; max-width: 240px; }
+    .demo-tecla { background: var(--papel-hondo); border: 1px solid var(--borde); border-radius: 10px; text-align: center; padding: 13px 0; font-weight: 600; font-size: 16px; }
+    .demo-tecla.ok { background: var(--verde); color: #fff; border-color: var(--verde); }
+    .demo-total { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 18px; border-top: 1.5px dashed var(--borde); }
+    .demo-total .lbl { color: var(--tinta-suave); font-size: 15px; }
+    .demo-total .val { font-family: 'Fraunces', serif; font-weight: 700; font-size: 30px; color: var(--verde); font-variant-numeric: tabular-nums; }
+    .demo-nota { text-align: center; color: var(--tinta-suave); font-size: 14px; margin-top: 24px; }
+
+    /* Prueba social */
+    .social { text-align: center; }
+    .social-linea { display: inline-flex; align-items: center; gap: 12px; font-size: 18px; color: var(--tinta); background: var(--crema-tarjeta); border: 1px solid var(--borde); padding: 16px 28px; border-radius: 100px; }
+    .social-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--verde); box-shadow: 0 0 0 4px rgba(63,125,79,0.16); }
+
+    /* Precio */
+    .precio { text-align: center; }
+    .precio-caja {
+        background: var(--crema-tarjeta);
+        border: 1.5px solid var(--verde);
+        border-radius: 22px;
+        padding: 48px 40px;
+        max-width: 560px; margin: 0 auto;
+        position: relative;
+    }
+    .precio-sello {
+        position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+        background: var(--verde); color: #fff; font-size: 13px; font-weight: 600;
+        padding: 7px 18px; border-radius: 100px; white-space: nowrap;
+    }
+    .precio-caja h2 { font-size: 2rem; margin: 10px 0 12px; }
+    .precio-caja p { color: var(--tinta-suave); font-size: 17px; margin-bottom: 30px; }
+
+    /* Cierre */
+    .cierre { text-align: center; padding: 90px 0 100px; }
+    .cierre h2 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.02em; margin-bottom: 16px; }
+    .cierre p { color: var(--tinta-suave); font-size: 18px; margin-bottom: 34px; }
+
+    footer { border-top: 1px solid var(--borde); padding: 30px 0; text-align: center; color: var(--tinta-suave); font-size: 14px; }
+
+    /* ---------- Responsive ---------- */
+    @media (max-width: 860px) {
+        .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+        .ticket { max-width: 360px; margin: 0 auto; }
+        .beneficios { grid-template-columns: 1fr; }
+        .rubros { grid-template-columns: 1fr; }
+        .hero { padding: 56px 0 40px; }
+        section { padding: 56px 0; }
+    }
+    @media (max-width: 520px) {
+        .barra { height: 60px; }
+        .boton { padding: 10px 18px; font-size: 14px; }
+        .hero h1 { font-size: 2.4rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { transition: none !important; scroll-behavior: auto; }
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <div class="envoltura barra">
+        <div class="logo"><span class="logo-marca" aria-hidden="true">V</span> Vallis</div>
+        <a href="#empezar" class="boton">Empezar gratis</a>
+    </div>
+</header>
+
+<!-- Hero -->
+<section class="hero" aria-labelledby="hero-titulo">
+    <div class="envoltura hero-grid">
+        <div>
+            <span class="eyebrow">● Hecho en Argentina, para comercios de acá</span>
+            <h1 id="hero-titulo">Cobrá en segundos y <em>enterate</em> cómo te fue en el día.</h1>
+            <p class="hero-sub">Sin papeles, sin cuentas a mano, sin dolores de cabeza.</p>
+            <div class="hero-acciones">
+                <a href="#empezar" class="boton boton-grande">Empezar gratis</a>
+                <span class="sin-tarjeta">No hace falta instalar nada</span>
+            </div>
+        </div>
+        <div class="ticket" role="img" aria-label="Ejemplo de un ticket de venta en Vallis: tomate 0,750 kg, manzana 1,2 kg y pan por unidad, con un total de 4.750 pesos.">
+            <div class="peso-chip" aria-hidden="true">0,750 kg</div>
+            <div class="ticket-interno" aria-hidden="true">
+                <div class="ticket-top">
+                    <div class="ticket-marca"><span>V</span> Verdulería La Esquina</div>
+                    <div class="ticket-hora">10:42</div>
+                </div>
+                <hr class="ticket-linea">
+                <div class="ticket-item">
+                    <div>Tomate <span class="det">0,750 kg × $1.800</span></div>
+                    <div class="monto">$1.350</div>
+                </div>
+                <div class="ticket-item">
+                    <div>Manzana <span class="det">1,2 kg × $1.500</span></div>
+                    <div class="monto">$1.800</div>
+                </div>
+                <div class="ticket-item">
+                    <div>Pan <span class="det">2 unidades</span></div>
+                    <div class="monto">$1.600</div>
+                </div>
+                <hr class="ticket-linea">
+                <div class="ticket-total">
+                    <div class="lbl">Total</div>
+                    <div class="val">$4.750</div>
+                </div>
+                <div class="ticket-pie">GRACIAS POR SU COMPRA · VALLIS</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Beneficios -->
+<section aria-labelledby="benef-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="benef-titulo">Lo que cambia en tu mostrador</h2>
+        <p class="bajada-seccion">Tres cosas que vas a sentir desde el primer día que lo usás.</p>
+        <div class="beneficios">
+            <div class="tarjeta-benef">
+                <div class="benef-ico" style="background: rgba(63,125,79,0.12);" aria-hidden="true">⚖️</div>
+                <h3>La cola avanza rápido</h3>
+                <p>Pesás, cobrás y das el vuelto en el mismo movimiento. Nadie se te queda esperando con la bolsa en la mano.</p>
+            </div>
+            <div class="tarjeta-benef">
+                <div class="benef-ico" style="background: rgba(127,34,254,0.12);" aria-hidden="true">🌙</div>
+                <h3>Cerrás la caja tranquilo</h3>
+                <p>Al final del día sabés cuánto entró, cómo te pagaron y si la caja da. Sin sentarte a sacar cuentas.</p>
+            </div>
+            <div class="tarjeta-benef">
+                <div class="benef-ico" style="background: rgba(63,125,79,0.12);" aria-hidden="true">📦</div>
+                <h3>Sabés qué se te está por acabar</h3>
+                <p>Cargás tus productos una vez y el sistema te avisa cuando algo está bajo. Comprás lo justo, no de más.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Para quién -->
+<section class="para-quien" aria-labelledby="paraquien-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="paraquien-titulo">¿Para quién es Vallis?</h2>
+        <p class="bajada-seccion">Si vendés de a poco, por peso o por unidad, esto es para vos.</p>
+        <div class="rubros">
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🥬</div>
+                <div>
+                    <h3>Verdulerías</h3>
+                    <p>Pesar y sacar la cuenta a mano frena la cola. Acá pesás y el precio sale solo.</p>
+                </div>
+            </div>
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🌰</div>
+                <div>
+                    <h3>Dietéticas</h3>
+                    <p>Vendés frutos secos y granos por peso, con precios que cambian seguido. Los actualizás en un toque.</p>
+                </div>
+            </div>
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🧀</div>
+                <div>
+                    <h3>Fiambrerías</h3>
+                    <p>Cortás 200 gramos y el sistema calcula el precio justo, sin redondear de memoria.</p>
+                </div>
+            </div>
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🍫</div>
+                <div>
+                    <h3>Kioscos</h3>
+                    <p>Muchas ventas chicas y rápidas. Pasás el producto por el lector y listo, a cobrar.</p>
+                </div>
+            </div>
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🛒</div>
+                <div>
+                    <h3>Almacenes</h3>
+                    <p>Mezclás cosas por unidad y a granel todo el día. Un solo lugar para las dos.</p>
+                </div>
+            </div>
+            <div class="rubro">
+                <div class="rubro-emoji" aria-hidden="true">🫙</div>
+                <div>
+                    <h3>Despensas y granjas</h3>
+                    <p>Llevás la cuenta en un cuaderno. Pasala al celu y dejá de perder ventas de vista.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Demo venta a granel -->
+<section aria-labelledby="demo-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="demo-titulo" style="text-align:center;">Así de simple es vender por peso</h2>
+        <p class="bajada-seccion" style="margin: 0 auto 44px; text-align:center;">Tocás el producto, ponés cuánto pesó, y el total aparece solo.</p>
+        <div class="demo-marco">
+            <div class="demo-pantalla" role="img" aria-label="Pantalla de Vallis vendiendo almendras por peso: 0,250 kg a 8.000 pesos el kilo, con un teclado numérico grande y un total a cobrar de 2.000 pesos.">
+                <div class="demo-barra" aria-hidden="true">
+                    <div class="demo-punto"></div><div class="demo-punto"></div><div class="demo-punto"></div>
+                </div>
+                <div class="demo-cuerpo" aria-hidden="true">
+                    <div class="demo-fila">
+                        <div>
+                            <div class="demo-fila-nom">Almendras</div>
+                            <div class="demo-fila-det">$8.000 por kg</div>
+                        </div>
+                        <div class="demo-fila-monto">0,250 kg</div>
+                    </div>
+                    <div class="demo-teclado">
+                        <div class="demo-tecla">1</div><div class="demo-tecla">2</div><div class="demo-tecla">3</div>
+                        <div class="demo-tecla">4</div><div class="demo-tecla">5</div><div class="demo-tecla">6</div>
+                        <div class="demo-tecla">7</div><div class="demo-tecla">8</div><div class="demo-tecla">9</div>
+                        <div class="demo-tecla">,</div><div class="demo-tecla">0</div><div class="demo-tecla ok">✓</div>
+                    </div>
+                    <div class="demo-total">
+                        <div class="lbl">Total a cobrar</div>
+                        <div class="val">$2.000</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="demo-nota">Un teclado grande, como el de una balanza. Se usa con el dedo, sin buscar botoncitos.</p>
+    </div>
+</section>
+
+<!-- Prueba social -->
+<section class="social">
+    <div class="envoltura">
+        <div class="social-linea">
+            <span class="social-punto"></span>
+            Ya lo están probando comercios en Tandil.
+        </div>
+    </div>
+</section>
+
+<!-- Precio -->
+<section class="precio">
+    <div class="envoltura">
+        <div class="precio-caja">
+            <div class="precio-sello">Fase de prueba</div>
+            <h2>Gratis, por ahora</h2>
+            <p>Estamos en fase de prueba. El acceso es gratuito por tiempo limitado, con todas las funciones abiertas.</p>
+            <a href="#empezar" class="boton boton-grande">Empezar gratis</a>
+        </div>
+    </div>
+</section>
+
+<!-- Cierre -->
+<section class="cierre" id="empezar">
+    <div class="envoltura">
+        <h2>Probalo hoy en tu negocio</h2>
+        <p>Creás tu cuenta en un minuto y empezás a cobrar. Sin instalar nada.</p>
+        <a href="https://app.vallis.com.ar" class="boton boton-grande">Empezar gratis</a>
+    </div>
+</section>
+
+<footer>
+    <div class="envoltura">Vallis · Hecho en Argentina 🇦🇷</div>
+</footer>
+
+</body>
+</html>
