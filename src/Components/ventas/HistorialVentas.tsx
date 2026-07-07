@@ -1,18 +1,41 @@
 import { useState } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles } from 'lucide-react';
+import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer } from 'lucide-react';
+import { useImpresoras } from '../../context/ImpresorasContext';
+import { useAuth } from '../../context/AuthContext';
+import { imprimirArqueo } from '../../logic/impresion';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
 import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
 import { labelMetodo, iconoMetodo, colorMetodo } from '../../config/metodosPago';
+import type { VentaHistorial, DetalleVenta } from '../../hooks/useHistorialVentas';
 
 
 const HistorialVentas = () => {
-    const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar } = useHistorialVentas();
+    const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar, cargarDetalleVenta } = useHistorialVentas();
     const { puede } = usePlan();
     const historialCompleto = puede('historial_completo');
+    const { impresorasDeTickets } = useImpresoras();
+    const { local } = useAuth();
 
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [arqueoExpandido, setArqueoExpandido] = useState<string | null>(null);
+
+    const handleReimprimirArqueo = (arqueo: typeof arqueos[number]) => {
+        imprimirArqueo({
+            local: local?.nombre ?? 'Vallis',
+            fechaApertura: arqueo.fecha_apertura,
+            fechaCierre: arqueo.fecha_cierre ?? undefined,
+            montoInicial: 0,
+            totalVentas: arqueo.total_ventas,
+            cantidadVentas: arqueo.cantidad_ventas,
+            porMetodo: Object.fromEntries(
+                (Object.entries(arqueo.por_metodo) as [MetodoPago, number][])
+                    .map(([m, v]) => [labelMetodo(m), v])
+            ),
+            montoEsperado: arqueo.total_ventas,
+            impresoras: impresorasDeTickets().map(i => i.nombre_sistema),
+        });
+    };
 
     if (cargando) return (
         <div className="flex items-center justify-center h-40">
@@ -191,6 +214,29 @@ const HistorialVentas = () => {
                                             Cerrado {arqueo.fecha_cierre.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                                         </div>
                                     )}
+                                    {/* Ventas de este arqueo */}
+                                    {(() => {
+                                        const ventasDelArqueo = ventas.filter(v => v.arqueo_id === arqueo.id);
+                                        return ventasDelArqueo.length > 0 ? (
+                                            <div className="pt-3 mt-2 border-t border-stone-200 space-y-2">
+                                                <p className="text-xs font-medium text-stone-400 uppercase">Ventas de esta caja</p>
+                                                {ventasDelArqueo.map(venta => (
+                                                    <FilaVentaExpandible
+                                                        key={venta.id}
+                                                        venta={venta}
+                                                        cargarDetalle={cargarDetalleVenta}
+                                                    />
+                                                ))}
+                                            </div>
+                                        ) : null;
+                                    })()}
+                                    {/* Botón reimprimir */}
+                                    <button
+                                        onClick={() => handleReimprimirArqueo(arqueo)}
+                                        className="w-full mt-2 flex items-center justify-center gap-2 border border-stone-200 bg-white text-stone-600 hover:bg-stone-50 py-2 rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        <Printer size={14} /> Reimprimir reporte
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -255,5 +301,83 @@ const HistorialVentas = () => {
         </div>
     );
 };
+// --- Venta individual expandible (muestra sus productos al abrir) ---
+interface FilaVentaProps {
+    venta: VentaHistorial;
+    cargarDetalle: (ventaId: string) => Promise<DetalleVenta[]>;
+}
 
+const FilaVentaExpandible = ({ venta, cargarDetalle }: FilaVentaProps) => {
+    const [abierta, setAbierta] = useState(false);
+    const [detalle, setDetalle] = useState<DetalleVenta[] | null>(null);
+    const [cargandoDet, setCargandoDet] = useState(false);
+    const Icono = iconoMetodo(venta.metodo_pago);
+
+    const toggle = async () => {
+        const nuevoEstado = !abierta;
+        setAbierta(nuevoEstado);
+        // Cargar el detalle solo la primera vez que se abre
+        if (nuevoEstado && detalle === null) {
+            setCargandoDet(true);
+            const items = await cargarDetalle(venta.id);
+            setDetalle(items);
+            setCargandoDet(false);
+        }
+    };
+
+    return (
+        <div className="border border-stone-200 rounded-xl overflow-hidden bg-white">
+            <button
+                onClick={toggle}
+                className="w-full flex items-center justify-between p-3 hover:bg-stone-50 transition-colors"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-1.5 bg-violet-50 rounded-lg">
+                        <History size={14} className="text-violet-700" />
+                    </div>
+                    <div className="text-left">
+                        <p className="font-bold text-stone-800 text-sm">Venta #{venta.id.slice(-4).toUpperCase()}</p>
+                        <p className="text-xs text-stone-400">
+                            {venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
+                        <Icono size={11} />
+                        {labelMetodo(venta.metodo_pago)}
+                    </span>
+                    <p className="font-black text-stone-900 text-sm">${venta.total.toLocaleString()}</p>
+                    {abierta ? <ChevronUp size={14} className="text-stone-400" /> : <ChevronDown size={14} className="text-stone-400" />}
+                </div>
+            </button>
+
+            {abierta && (
+                <div className="border-t border-stone-200 bg-stone-50 p-3">
+                    {cargandoDet ? (
+                        <p className="text-xs text-stone-400 text-center py-2">Cargando detalle...</p>
+                    ) : detalle && detalle.length > 0 ? (
+                        <div className="space-y-1.5">
+                            {detalle.map((item, i) => (
+                                <div key={i} className="flex items-center justify-between text-sm">
+                                    <div className="flex-1 min-w-0">
+                                        <span className="text-stone-700">{item.nombre}</span>
+                                        <span className="text-stone-400 text-xs ml-2">
+                                            {item.tipo_venta === 'granel'
+                                                ? `${item.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 3 })} ${item.unidad_medida} × $${item.precio.toLocaleString()}`
+                                                : `${item.cantidad} × $${item.precio.toLocaleString()}`}
+                                        </span>
+                                    </div>
+                                    <span className="font-bold text-stone-700">${item.subtotal.toLocaleString()}</span>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-xs text-stone-400 text-center py-2">Sin detalle disponible</p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
 export default HistorialVentas;

@@ -30,6 +30,15 @@ interface Filtros {
     fecha_hasta: string;
 }
 
+export interface DetalleVenta {
+    nombre: string;
+    cantidad: number;
+    precio: number;
+    subtotal: number;
+    tipo_venta?: 'unidad' | 'granel';
+    unidad_medida?: string;
+}
+
 export const useHistorialVentas = () => {
     const { localId } = useAuth();
     const [ventas, setVentas] = useState<VentaHistorial[]>([]);
@@ -41,6 +50,8 @@ export const useHistorialVentas = () => {
         fecha_desde: '',
         fecha_hasta: '',
     });
+    const [detalles, setDetalles] = useState<Record<string, DetalleVenta[]>>({});
+
 
     useEffect(() => {
         if (!localId) return;
@@ -119,6 +130,38 @@ export const useHistorialVentas = () => {
         return acc;
     }, {} as Record<MetodoPago, number>);
 
+
+    // Carga el detalle de una venta (bajo demanda, con caché en memoria)
+    const cargarDetalleVenta = async (ventaId: string): Promise<DetalleVenta[]> => {
+        // Si ya lo trajimos antes, devolvemos el caché
+        if (detalles[ventaId]) return detalles[ventaId];
+
+        const { data, error } = await supabase
+            .from('detalle_ventas')
+            .select(`
+                cantidad,
+                precio_unitario,
+                subtotal,
+                productos ( nombre, tipo_venta, unidad_medida )
+            `)
+            .eq('venta_id', ventaId);
+
+        if (error) { console.error(error); return []; }
+
+        const items: DetalleVenta[] = (data ?? []).map((d: any) => ({
+            nombre: d.productos?.nombre ?? 'Producto eliminado',
+            cantidad: d.cantidad,
+            precio: d.precio_unitario,
+            subtotal: d.subtotal,
+            tipo_venta: d.productos?.tipo_venta ?? 'unidad',
+            unidad_medida: d.productos?.unidad_medida ?? 'unidad',
+        }));
+
+        // Guardar en caché
+        setDetalles(prev => ({ ...prev, [ventaId]: items }));
+        return items;
+    };
+
     return {
         ventas: ventasFiltradas,
         arqueos,
@@ -128,5 +171,6 @@ export const useHistorialVentas = () => {
         totalFiltrado,
         porMetodoFiltrado,
         recargar: cargarDatos,
+        cargarDetalleVenta,
     };
 };
