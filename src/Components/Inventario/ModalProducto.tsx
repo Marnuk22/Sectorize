@@ -5,8 +5,10 @@ import { usePlan } from '../../hooks/usePlan';
 import type { Producto, Categoria } from '../../types';
 import { UNIDADES, type UnidadMedida } from '../../config/unidades';
 
+
 interface Props {
     producto?: Producto | null;
+    datosIniciales?: Partial<typeof CAMPOS_INICIALES>;
     onCerrar: () => void;
 }
 
@@ -24,9 +26,11 @@ const CAMPOS_INICIALES = {
     unidad_medida: 'unidad' as UnidadMedida,
 };
 
+export type DatosProducto = typeof CAMPOS_INICIALES;
+
 const UNIDADES_GRANEL = (Object.keys(UNIDADES) as UnidadMedida[]).filter(u => u !== 'unidad');
 
-const ModalProducto = ({ producto, onCerrar }: Props) => {
+const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
     const { agregarProducto, editarProducto, categorias, agregarCategoria } = useMenu();
     const { puede } = usePlan();
     const puedeStock = puede('seguimiento_stock');
@@ -53,8 +57,14 @@ const ModalProducto = ({ producto, onCerrar }: Props) => {
                 unidad_medida: producto.unidad_medida ?? 'unidad',
             });
             setSeguimientoStock(producto.stock_minimo > 0);
+        }else if (datosIniciales) {
+            setForm({
+                ...CAMPOS_INICIALES,
+                ...datosIniciales,
+            });
+            setSeguimientoStock((datosIniciales.stock_minimo ?? 0) > 0);
         }
-    }, [producto]);
+    }, [producto, datosIniciales]);
 
     const cambiarTipoVenta = (tipo: 'unidad' | 'granel') => {
         setForm(p => ({

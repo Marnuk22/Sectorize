@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
-import ModalProducto from '../Inventario/ModalProducto';
+import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
 import ModalImportar from '../Inventario/ModalImportar';
 
@@ -18,6 +18,7 @@ const ContenedorInventario = () => {
     const [confirmarBorrar, setConfirmarBorrar] = useState<Producto | null>(null);
     const [borrando, setBorrando] = useState(false);
     const [errorBorrar, setErrorBorrar] = useState('');
+    const [duplicando, setDuplicando] = useState<Partial<DatosProducto> | null>(null);
 
     const productosFiltrados = productos.filter(p => {
         const catActiva = categorias.find(c => c.id === categoriaActiva);
@@ -59,6 +60,23 @@ const ContenedorInventario = () => {
         } finally {
             setBorrando(false);
         }
+    };
+
+    const handleDuplicar = (prod: Producto) => {
+        setDuplicando({
+            nombre: `${prod.nombre} (copia)`,
+            descripcion: prod.descripcion ?? '',
+            categoria: prod.categoria ?? '',
+            precio_venta: prod.precio_venta,
+            precio_costo: prod.precio_costo,
+            stock_actual: 0,               // el stock no se copia (arranca en 0)
+            stock_minimo: prod.stock_minimo,
+            codigo_barras: null,           // el código de barras es único, no se copia
+            activo: prod.activo,
+            tipo_venta: prod.tipo_venta,
+            unidad_medida: prod.unidad_medida,
+        });
+        setModalProducto(null);  // abre el modal en modo crear
     };
 
     return (
@@ -204,6 +222,13 @@ const ContenedorInventario = () => {
                                         >
                                             <Trash2 size={11} />
                                         </button>
+                                        <button
+                                            onClick={() => handleDuplicar(prod)}
+                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-violet-50 hover:border-violet-200 hover:text-violet-600"
+                                            title="Duplicar"
+                                        >
+                                            <Copy size={11} />
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -216,7 +241,8 @@ const ContenedorInventario = () => {
             {modalProducto !== undefined && (
                 <ModalProducto
                     producto={modalProducto}
-                    onCerrar={() => setModalProducto(undefined)}
+                    datosIniciales={duplicando ?? undefined}
+                    onCerrar={() => { setModalProducto(undefined); setDuplicando(null); }}
                 />
             )}
             {modalStock && (
@@ -258,7 +284,6 @@ const ContenedorInventario = () => {
                                 Cancelar
                             </button>
                             {errorBorrar ? (
-                                // Si tiene ventas, ofrecer desactivar en vez de borrar
                                 <button
                                     onClick={async () => {
                                         await toggleActivo(confirmarBorrar.id, false);
