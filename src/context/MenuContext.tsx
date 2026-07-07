@@ -17,6 +17,7 @@ interface MenuContextType {
     agregarCategoria: (nombre: string, icono?: string) => Promise<void>;
     editarCategoria: (id: string, nombre: string, icono?: string) => Promise<void>;
     borrarCategoria: (id: string) => Promise<void>;
+    actualizarPreciosMasivo: (cambios: { id: string; precio_venta: number }[]) => Promise<void>;
 }
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
@@ -77,6 +78,30 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             .single();
         if (error) throw error;
         setProductos(prev => prev.map(p => p.id === id ? data as Producto : p));
+    };
+
+    const actualizarPreciosMasivo = async (cambios: { id: string; precio_venta: number }[]) => {
+        if (cambios.length === 0) return;
+
+        // Actualizar todos en paralelo (más rápido que uno por uno en serie)
+        const resultados = await Promise.all(
+            cambios.map(c =>
+                supabase
+                    .from('productos')
+                    .update({ precio_venta: c.precio_venta })
+                    .eq('id', c.id)
+            )
+        );
+
+        // Si alguno falló, lanzar error
+        const conError = resultados.find(r => r.error);
+        if (conError?.error) throw conError.error;
+
+        // Actualizar el estado local con los precios nuevos
+        setProductos(prev => prev.map(p => {
+            const cambio = cambios.find(c => c.id === p.id);
+            return cambio ? { ...p, precio_venta: cambio.precio_venta } : p;
+        }));
     };
 
     const borrarProducto = async (id: string) => {
@@ -143,6 +168,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             agregarProducto, editarProducto, borrarProducto,
             toggleActivo, ajustarStock,
             agregarCategoria, editarCategoria, borrarCategoria,
+            actualizarPreciosMasivo,
         }}>
             {children}
         </MenuContext.Provider>

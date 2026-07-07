@@ -5,6 +5,8 @@ import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
 import ModalImportar from '../Inventario/ModalImportar';
+import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
+import { TrendingUp } from 'lucide-react';
 
 const ContenedorInventario = () => {
     const { productos, categorias, cargando, toggleActivo, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
@@ -19,6 +21,7 @@ const ContenedorInventario = () => {
     const [borrando, setBorrando] = useState(false);
     const [errorBorrar, setErrorBorrar] = useState('');
     const [duplicando, setDuplicando] = useState<Partial<DatosProducto> | null>(null);
+    const [modalPrecios, setModalPrecios] = useState(false);
 
     const productosFiltrados = productos.filter(p => {
         const catActiva = categorias.find(c => c.id === categoriaActiva);
@@ -98,6 +101,12 @@ const ContenedorInventario = () => {
                     className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
                 >
                     <Upload size={16} /> Importar
+                </button>
+                <button
+                    onClick={() => setModalPrecios(true)}
+                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
+                >
+                    <TrendingUp size={16} /> Ajustar precios
                 </button>
                 <button
                     onClick={() => setModalProducto(null)}
@@ -253,6 +262,10 @@ const ContenedorInventario = () => {
             )}
             {modalImportar && (
                 <ModalImportar onCerrar={() => setModalImportar(false)} />
+            )}
+
+            {modalPrecios && (
+                <ModalAjustePrecios onCerrar={() => setModalPrecios(false)} />
             )}
 
             {confirmarBorrar && (
