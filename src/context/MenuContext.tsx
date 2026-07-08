@@ -10,6 +10,7 @@ interface MenuContextType {
     obtenerProductoPorId: (id: string) => Producto | undefined;
     filtrarPorCategoria: (nombre: string) => Producto[];
     agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at'>) => Promise<void>;
+    recargarProductos: () => Promise<void>;
     editarProducto: (id: string, cambios: Partial<Producto>) => Promise<void>;
     borrarProducto: (id: string) => Promise<void>;
     toggleActivo: (id: string, activo: boolean) => Promise<void>;
@@ -68,6 +69,16 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             .single();
         if (error) throw error;
         setProductos(prev => [...prev, data as Producto]);
+    };
+
+    const recargarProductos = async () => {
+        if (!localId) return;
+        const { data } = await supabase
+            .from('productos')
+            .select('*')
+            .eq('local_id', localId)
+            .order('nombre');
+        if (data) setProductos(data as Producto[]);
     };
 
     const editarProducto = async (id: string, cambios: Partial<Producto>) => {
@@ -175,7 +186,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         <MenuContext.Provider value={{
             productos, categorias, cargando,
             obtenerProductoPorId, filtrarPorCategoria,
-            agregarProducto, editarProducto, borrarProducto,
+            agregarProducto, recargarProductos, editarProducto, borrarProducto,
             toggleActivo, toggleFavorito, ajustarStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,
