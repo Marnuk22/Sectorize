@@ -13,6 +13,7 @@ interface MenuContextType {
     editarProducto: (id: string, cambios: Partial<Producto>) => Promise<void>;
     borrarProducto: (id: string) => Promise<void>;
     toggleActivo: (id: string, activo: boolean) => Promise<void>;
+    toggleFavorito: (id: string, favorito: boolean) => Promise<void>;
     ajustarStock: (id: string, cantidad: number) => Promise<void>;
     agregarCategoria: (nombre: string, icono?: string) => Promise<void>;
     editarCategoria: (id: string, nombre: string, icono?: string) => Promise<void>;
@@ -128,6 +129,15 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         await editarProducto(id, { activo });
     };
 
+    const toggleFavorito = async (id: string, favorito: boolean) => {
+        const { error } = await supabase
+            .from('productos')
+            .update({ favorito })
+            .eq('id', id);
+        if (error) throw error;
+        setProductos(prev => prev.map(p => p.id === id ? { ...p, favorito } : p));
+    };
+
     const ajustarStock = async (id: string, cantidad: number) => {
         const producto = productos.find(p => p.id === id);
         if (!producto) return;
@@ -166,7 +176,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             productos, categorias, cargando,
             obtenerProductoPorId, filtrarPorCategoria,
             agregarProducto, editarProducto, borrarProducto,
-            toggleActivo, ajustarStock,
+            toggleActivo, toggleFavorito, ajustarStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,
         }}>

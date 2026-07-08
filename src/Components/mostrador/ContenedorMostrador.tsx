@@ -12,6 +12,7 @@ import { useImpresoras } from '../../context/ImpresorasContext';
 import { imprimirTicket } from '../../logic/impresion';
 import { UNIDADES } from '../../config/unidades';
 import { useEscaner } from '../../hooks/useEscaner';
+import { useFavoritos } from '../../hooks/useFavoritos';
 
 type TipoDescuento = 'monto' | 'porcentaje';
 
@@ -22,6 +23,7 @@ const ContenedorMostrador = () => {
     const { local } = useAuth();
     const { impresorasDeTickets } = useImpresoras();
     const [productoGranel, setProductoGranel] = useState<Producto | null>(null);
+    const { favoritos } = useFavoritos();
 
     const metodosHabilitados = (local?.metodos_pago && local.metodos_pago.length > 0
         ? local.metodos_pago
@@ -76,6 +78,14 @@ const ContenedorMostrador = () => {
         const porCategoria = !categoriaActiva || p.categoria === cat?.nombre;
         const porBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
         return porCategoria && porBusqueda;
+    });
+
+    // Los favoritos van primero en la grilla
+    const idsFavoritos = new Set(favoritos.map(f => f.id));
+    const productosOrdenados = [...productosFiltrados].sort((a, b) => {
+        const aFav = idsFavoritos.has(a.id) ? 0 : 1;
+        const bFav = idsFavoritos.has(b.id) ? 0 : 1;
+        return aFav - bFav;
     });
 
     // Cálculos del cobro
@@ -180,7 +190,7 @@ const ContenedorMostrador = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
-                            {productosFiltrados.map(prod => (
+                            {productosOrdenados.map(prod => (
                                 <button
                                     key={prod.id}
                                     onClick={() => {

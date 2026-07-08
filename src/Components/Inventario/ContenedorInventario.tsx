@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
@@ -9,7 +9,7 @@ import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
 import { TrendingUp } from 'lucide-react';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, toggleActivo, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
+    const { productos, categorias, cargando, toggleActivo,toggleFavorito, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
@@ -187,8 +187,9 @@ const ContenedorInventario = () => {
                                     <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
                                         {prod.activo ? 'Activo' : 'Inactivo'}
                                     </span>
-
-                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate">{prod.nombre}</p>
+                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate">
+                                        {prod.favorito && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0" />}
+                                        {prod.nombre}</p>
                                     <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
                                     <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
 
@@ -238,6 +239,17 @@ const ContenedorInventario = () => {
                                         >
                                             <Copy size={11} />
                                         </button>
+                                        <button
+                                            onClick={() => toggleFavorito(prod.id, !prod.favorito)}
+                                            className={`py-1.5 px-2 border rounded-lg text-xs transition-colors ${
+                                                prod.favorito
+                                                    ? 'border-amber-200 bg-amber-50 text-amber-500'
+                                                    : 'border-stone-200 text-stone-400 hover:bg-stone-50'
+                                            }`}
+                                        title={prod.favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                                    >
+                                        <Star size={11} fill={prod.favorito ? 'currentColor' : 'none'} />
+                                    </button>
                                     </div>
                                 </div>
                             ))}

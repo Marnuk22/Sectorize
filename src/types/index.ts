@@ -83,6 +83,7 @@ export interface Producto {
     updated_at:    string;
     tipo_venta: 'unidad' | 'granel';
     unidad_medida: 'unidad' | 'kg' | 'g' | 'l' | 'ml';
+    favorito: boolean;
 }
 
 export interface Arqueo {
