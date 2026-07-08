@@ -4,6 +4,7 @@ import { MesaService } from '../logic/MesaServices';
 import { useVentas } from './VentasContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { useMenu } from './MenuContext';
 
 interface SalonContextType {
     sectores: Sector[];
@@ -35,6 +36,7 @@ const SalonContext = createContext<SalonContextType | undefined>(undefined);
 
 export const SalonProvider = ({ children }: { children: ReactNode }) => {
     const { registrarVenta } = useVentas();
+    const {recargarProductos} = useMenu();
     const { localId } = useAuth();
     const [sectores, setSectores] = useState<Sector[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -187,6 +189,7 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
         try {
             await registrarVenta(mesa.pedidos, total, mesa, metodoPago);
+            await recargarProductos();
             setSectores(prev => prev.map(sector => ({
                 ...sector,
                 mesas: sector.mesas.map(m =>

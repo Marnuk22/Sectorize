@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useVentas } from './VentasContext';
 import type { ItemPedidoUI, MetodoPago, Producto, MesaUI } from '../types';
+import { useMenu } from './MenuContext';
 
 interface MostradorContextType {
     carrito: ItemPedidoUI[];
@@ -17,6 +18,7 @@ const MostradorContext = createContext<MostradorContextType | undefined>(undefin
 
 export const MostradorProvider = ({ children }: { children: ReactNode }) => {
     const { registrarVenta } = useVentas();
+    const { recargarProductos } = useMenu();
     const [carrito, setCarrito] = useState<ItemPedidoUI[]>([]);
 
     // El precio de cada ítem ya viene calculado al agregarlo (importante para granel)
@@ -110,6 +112,7 @@ export const MostradorProvider = ({ children }: { children: ReactNode }) => {
         pedidos: carrito,
     };
     await registrarVenta(carrito, totalACobrar, mesaVirtual, metodoPago);
+    await recargarProductos();
     vaciar();
 };
 
