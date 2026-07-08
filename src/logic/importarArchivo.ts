@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
+import type { UnidadMedida } from "../config/unidades";
 
 // Resultado de leer un archivo: las columnas detectadas y las filas de datos
 export interface ArchivoLeido {
@@ -123,7 +124,7 @@ export interface ProductoImportar {
     stock_actual: number;
     descripcion: string | null;
     tipo_venta: 'unidad' | 'granel';
-    unidad_medida: string;
+    unidad_medida: UnidadMedida;
     valido: boolean;
     errores: string[];
 }
@@ -231,7 +232,7 @@ export const convertirProductos = (
         // Unidad de medida (opcional): validar contra las conocidas
         const unidadTexto = normalizar(valor('unidad_medida'));
         const unidadesValidas = ['kg', 'g', 'l', 'ml', 'unidad'];
-        let unidad_medida = unidadesValidas.includes(unidadTexto) ? unidadTexto : 'unidad';
+        let unidad_medida: UnidadMedida = (unidadesValidas.includes(unidadTexto) ? unidadTexto : 'unidad') as UnidadMedida;
         if (tipo_venta === 'granel' && unidad_medida === 'unidad') unidad_medida = 'kg';
         if (tipo_venta === 'unidad') unidad_medida = 'unidad';
 

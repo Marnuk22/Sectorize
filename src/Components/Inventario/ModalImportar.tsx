@@ -88,7 +88,8 @@ const ModalImportar = ({ onCerrar }: Props) => {
                     codigo_barras: p.codigo_barras,
                     activo: true,
                     tipo_venta: p.tipo_venta,
-                    unidad_medida: p.unidad_medida as any,
+                    unidad_medida: p.unidad_medida,
+                    favorito: false,
                 });
                 ok++;
             } catch (err) {
