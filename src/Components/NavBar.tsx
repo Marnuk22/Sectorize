@@ -7,6 +7,7 @@ import PanelDatosLocal from './Usuario/PanelDatosLocal';
 import PanelConfiguracion from './Usuario/PanelConfiguracion';
 import PanelAyuda from './Usuario/PanelAyuda';
 import PanelImpresoras from './Usuario/PanelImpresoras';
+import PanelCatalogo from './Usuario/PanelCatalogo';
 
 export type SeccionPDV = 'sectores' | 'inventario' | 'ventas' | 'mostrador' | 'socios';
 
@@ -27,6 +28,7 @@ const TITULOS_PANEL: Record<PanelUsuario, string> = {
     local:      'Datos del local',
     config:     'Configuración',
     impresoras: 'Impresoras',
+    catalogo:   'Catálogo público',
     ayuda:      'Ayuda y soporte',
 };
 
@@ -49,6 +51,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
             case 'local':      return <PanelDatosLocal onCerrar={() => setPanelAbierto(null)} />;
             case 'config':     return <PanelConfiguracion onCerrar={() => setPanelAbierto(null)} />;
             case 'impresoras': return <PanelImpresoras />;
+            case 'catalogo':   return <PanelCatalogo />;
             case 'ayuda':      return <PanelAyuda />;
             default:           return null;
         }
