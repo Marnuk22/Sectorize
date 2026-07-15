@@ -25,6 +25,8 @@ const CAMPOS_INICIALES = {
     tipo_venta: 'unidad' as 'unidad' | 'granel',
     unidad_medida: 'unidad' as UnidadMedida,
     favorito: false,
+    publicado: false,
+    imagen_url: null as string | null,
 };
 
 export type DatosProducto = typeof CAMPOS_INICIALES;
@@ -57,6 +59,8 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                 tipo_venta: producto.tipo_venta ?? 'unidad',
                 unidad_medida: producto.unidad_medida ?? 'unidad',
                 favorito: producto.favorito ?? false,
+                publicado: producto.publicado ?? false,
+                imagen_url: producto.imagen_url ?? null,
             });
             setSeguimientoStock(producto.stock_minimo > 0);
         }else if (datosIniciales) {
@@ -97,6 +101,8 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                 stock_minimo: usaStock ? form.stock_minimo : 0,
                 stock_actual: usaStock ? form.stock_actual : 0,
                 favorito: form.favorito ?? false,
+                publicado: producto?.publicado ?? false,
+                imagen_url: producto?.imagen_url ?? null,
             };
 
             if (producto) {

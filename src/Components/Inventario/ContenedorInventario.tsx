@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
@@ -9,7 +9,7 @@ import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
 import { TrendingUp } from 'lucide-react';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, toggleActivo,toggleFavorito, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
+    const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
@@ -78,6 +78,9 @@ const ContenedorInventario = () => {
             activo: prod.activo,
             tipo_venta: prod.tipo_venta,
             unidad_medida: prod.unidad_medida,
+            favorito: prod.favorito,
+            publicado: prod.publicado,
+            imagen_url: prod.imagen_url,
         });
         setModalProducto(null);  // abre el modal en modo crear
     };
@@ -182,15 +185,16 @@ const ContenedorInventario = () => {
                             {productosFiltrados.map(prod => (
                                 <div
                                     key={prod.id}
-                                    className={`bg-white border rounded-2xl p-3 relative transition-all ${!prod.activo ? 'opacity-60' : ''} ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
+                                    className={`bg-white border rounded-2xl p-3 relative transition-all ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
                                 >
                                     <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
                                         {prod.activo ? 'Activo' : 'Inactivo'}
                                     </span>
-                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate">
+                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate flex items-center gap-1">
                                         {prod.favorito && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0" />}
-                                        {prod.nombre}</p>
-                                    <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
+                                        {prod.publicado && <Globe size={11} className="text-sky-500 shrink-0" />}
+                                        {prod.nombre}
+                                      </p>
                                     <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
 
                                     {tieneStock(prod) ? (
@@ -217,39 +221,14 @@ const ContenedorInventario = () => {
                                                 <Package size={11} /> Stock
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => toggleActivo(prod.id, !prod.activo)}
-                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-stone-50"
-                                            title={prod.activo ? 'Desactivar' : 'Activar'}
-                                        >
-                                            {prod.activo ? <EyeOff size={11} /> : <Eye size={11} />}
-                                        </button>
-
-                                        <button
-                                            onClick={() => { setConfirmarBorrar(prod); setErrorBorrar(''); }}
-                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-red-50 hover:border-red-200 hover:text-red-600"
-                                            title="Eliminar"
-                                        >
-                                            <Trash2 size={11} />
-                                        </button>
-                                        <button
-                                            onClick={() => handleDuplicar(prod)}
-                                            className="py-1.5 px-2 border border-stone-200 rounded-lg text-xs hover:bg-violet-50 hover:border-violet-200 hover:text-violet-600"
-                                            title="Duplicar"
-                                        >
-                                            <Copy size={11} />
-                                        </button>
-                                        <button
-                                            onClick={() => toggleFavorito(prod.id, !prod.favorito)}
-                                            className={`py-1.5 px-2 border rounded-lg text-xs transition-colors ${
-                                                prod.favorito
-                                                    ? 'border-amber-200 bg-amber-50 text-amber-500'
-                                                    : 'border-stone-200 text-stone-400 hover:bg-stone-50'
-                                            }`}
-                                        title={prod.favorito ? 'Quitar de favoritos' : 'Marcar como favorito'}
-                                    >
-                                        <Star size={11} fill={prod.favorito ? 'currentColor' : 'none'} />
-                                    </button>
+                                        <MenuAcciones
+                                            prod={prod}
+                                            onDuplicar={() => handleDuplicar(prod)}
+                                            onBorrar={() => { setConfirmarBorrar(prod); setErrorBorrar(''); }}
+                                            onToggleActivo={() => toggleActivo(prod.id, !prod.activo)}
+                                            onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
+                                            onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
+                                        />
                                     </div>
                                 </div>
                             ))}
@@ -335,5 +314,72 @@ const ContenedorInventario = () => {
         </div>
     );
 };
+// --- Menú de acciones secundarias de un producto ---
+interface MenuAccionesProps {
+    prod: Producto;
+    onDuplicar: () => void;
+    onBorrar: () => void;
+    onToggleActivo: () => void;
+    onToggleFavorito: () => void;
+    onTogglePublicado: () => void;
+}
 
+const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado }: MenuAccionesProps) => {
+    const [abierto, setAbierto] = useState(false);
+
+    const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
+
+    return (
+        <>
+            {/* Fondo para cerrar al tocar afuera */}
+            {abierto && (
+                <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
+            )}
+
+            <div className="relative">
+                <button
+                    onClick={() => setAbierto(a => !a)}
+                    className={`py-1.5 px-2 border rounded-lg text-xs transition-colors ${
+                        abierto ? 'border-violet-200 bg-violet-50 text-violet-600' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
+                    }`}
+                    title="Más acciones"
+                >
+                    <MoreHorizontal size={11} />
+                </button>
+
+                {abierto && (
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden py-1">
+                        <button className={item} onClick={() => { onDuplicar(); setAbierto(false); }}>
+                            <Copy size={12} className="text-stone-400" /> Duplicar
+                        </button>
+
+                        <button className={item} onClick={() => { onToggleFavorito(); setAbierto(false); }}>
+                            <Star size={12} className={prod.favorito ? 'text-amber-400 fill-amber-400' : 'text-stone-400'} />
+                            {prod.favorito ? 'Quitar de favoritos' : 'Marcar favorito'}
+                        </button>
+
+                        <button className={item} onClick={() => { onTogglePublicado(); setAbierto(false); }}>
+                            <Globe size={12} className={prod.publicado ? 'text-sky-500' : 'text-stone-400'} />
+                            {prod.publicado ? 'Quitar del catálogo' : 'Publicar en catálogo'}
+                        </button>
+
+                        <div className="h-px bg-stone-100 my-1" />
+
+                        <button className={item} onClick={() => { onToggleActivo(); setAbierto(false); }}>
+                            {prod.activo ? <EyeOff size={12} className="text-stone-400" /> : <Eye size={12} className="text-stone-400" />}
+                            {prod.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+
+                        <button
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left transition-colors"
+                            onClick={() => { onBorrar(); setAbierto(false); }}
+                        >
+                            <Trash2 size={12} /> Eliminar
+                        </button>
+                    </div>
+                )}
+            </div>
+        </>
+    );
+};
 export default ContenedorInventario;

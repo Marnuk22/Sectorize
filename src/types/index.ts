@@ -26,6 +26,9 @@ export interface Local {
     idioma:        string;
     metodos_pago:  string[];
     creado_at:     string;
+    slug: string | null;
+    whatsapp: string | null;
+    catalogo_activo: boolean;
 }
 
 export interface Perfil {
@@ -84,6 +87,8 @@ export interface Producto {
     tipo_venta: 'unidad' | 'granel';
     unidad_medida: 'unidad' | 'kg' | 'g' | 'l' | 'ml';
     favorito: boolean;
+    publicado: boolean;
+    imagen_url: string | null;
 }
 
 export interface Arqueo {

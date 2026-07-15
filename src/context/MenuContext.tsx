@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import type { Producto, Categoria } from '../types';
 
+//context para manejar el menú de productos y categorías, incluyendo funciones para CRUD y ajustes de stock.
+
 interface MenuContextType {
     productos: Producto[];
     categorias: Categoria[];
@@ -15,6 +17,7 @@ interface MenuContextType {
     borrarProducto: (id: string) => Promise<void>;
     toggleActivo: (id: string, activo: boolean) => Promise<void>;
     toggleFavorito: (id: string, favorito: boolean) => Promise<void>;
+    togglePublicado: (id: string, publicado: boolean) => Promise<void>;
     ajustarStock: (id: string, cantidad: number) => Promise<void>;
     agregarCategoria: (nombre: string, icono?: string) => Promise<void>;
     editarCategoria: (id: string, nombre: string, icono?: string) => Promise<void>;
@@ -148,6 +151,14 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         if (error) throw error;
         setProductos(prev => prev.map(p => p.id === id ? { ...p, favorito } : p));
     };
+    const togglePublicado = async (id: string, publicado: boolean) => {
+        const { error } = await supabase
+            .from('productos')
+            .update({ publicado })
+            .eq('id', id);
+        if (error) throw error;
+        setProductos(prev => prev.map(p => p.id === id ? { ...p, publicado } : p));
+    };
 
     const ajustarStock = async (id: string, cantidad: number) => {
         const producto = productos.find(p => p.id === id);
@@ -187,7 +198,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             productos, categorias, cargando,
             obtenerProductoPorId, filtrarPorCategoria,
             agregarProducto, recargarProductos, editarProducto, borrarProducto,
-            toggleActivo, toggleFavorito, ajustarStock,
+            toggleActivo, toggleFavorito, togglePublicado, ajustarStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,
         }}>

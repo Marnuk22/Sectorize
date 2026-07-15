@@ -90,6 +90,8 @@ const ModalImportar = ({ onCerrar }: Props) => {
                     tipo_venta: p.tipo_venta,
                     unidad_medida: p.unidad_medida,
                     favorito: false,
+                    publicado: false,
+                    imagen_url: null
                 });
                 ok++;
             } catch (err) {
