@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Catálogo — Vallis</title>
+<meta name="description" content="Mirá los productos disponibles y consultá por WhatsApp.">
+<meta name="theme-color" content="#f7f4ec">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_AR">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --papel: #f7f4ec;
+        --papel-hondo: #efe9db;
+        --tinta: #2b2823;
+        --tinta-suave: #6a635a;
+        --verde: #3f7d4f;
+        --violeta: #7f22fe;
+        --crema: #fffdf8;
+        --borde: #e3ddce;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--papel);
+        color: var(--tinta);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+    }
+    .envoltura { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+
+    /* Header */
+    header {
+        background: var(--crema);
+        border-bottom: 1px solid var(--borde);
+        padding: 22px 0;
+        position: sticky; top: 0; z-index: 10;
+    }
+    .cabecera { display: flex; align-items: center; gap: 13px; }
+    .avatar {
+        width: 46px; height: 46px; border-radius: 13px;
+        background: var(--violeta); color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px;
+        flex-shrink: 0;
+    }
+    .cabecera h1 { font-family: 'Fraunces', serif; font-size: 22px; letter-spacing: -0.01em; line-height: 1.15; }
+    .cabecera p { font-size: 13px; color: var(--tinta-suave); }
+
+    /* Categorías */
+    .categoria { margin-top: 30px; }
+    .categoria-titulo {
+        font-size: 11px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.09em; color: var(--tinta-suave);
+        margin-bottom: 11px; padding-left: 2px;
+    }
+
+    /* Producto */
+    .producto {
+        display: flex; align-items: center; gap: 13px;
+        background: var(--crema);
+        border: 1px solid var(--borde);
+        border-radius: 15px;
+        padding: 12px;
+        margin-bottom: 9px;
+    }
+    .producto.agotado { opacity: 0.55; }
+    .miniatura {
+        width: 58px; height: 58px; border-radius: 11px;
+        flex-shrink: 0; object-fit: cover;
+        background: var(--papel-hondo);
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px;
+        color: #fff;
+    }
+    .prod-info { flex: 1; min-width: 0; }
+    .prod-nombre { font-weight: 600; font-size: 15px; line-height: 1.3; }
+    .prod-desc {
+        font-size: 12.5px; color: var(--tinta-suave); margin-top: 2px;
+        display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .prod-derecha { text-align: right; flex-shrink: 0; }
+    .prod-precio {
+        font-family: 'Fraunces', serif; font-weight: 700; font-size: 17px;
+        color: var(--verde); font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .chip-agotado {
+        display: inline-block; margin-top: 4px;
+        font-size: 10px; font-weight: 600;
+        background: var(--papel-hondo); color: var(--tinta-suave);
+        padding: 2px 7px; border-radius: 100px; white-space: nowrap;
+    }
+
+    /* WhatsApp flotante */
+    .wsp {
+        position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--verde); color: #fff;
+        font-weight: 600; font-size: 15px;
+        padding: 13px 26px; border-radius: 100px;
+        text-decoration: none;
+        box-shadow: 0 10px 28px -8px rgba(47, 106, 63, 0.6);
+        z-index: 20; white-space: nowrap;
+    }
+    .wsp:active { transform: translateX(-50%) scale(0.97); }
+
+    /* Estados */
+    .centro { text-align: center; padding: 70px 20px; }
+    .centro h2 { font-family: 'Fraunces', serif; font-size: 22px; margin-bottom: 7px; }
+    .centro p { color: var(--tinta-suave); font-size: 15px; }
+    .esqueleto { background: var(--papel-hondo); border-radius: 13px; animation: latir 1.4s ease-in-out infinite; }
+    @keyframes latir { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+    footer {
+        text-align: center; padding: 34px 16px 96px;
+        font-size: 13px; color: var(--tinta-suave);
+    }
+    footer a { color: var(--violeta); text-decoration: none; font-weight: 600; }
+
+    @media (prefers-reduced-motion: reduce) {
+        * { animation: none !important; transition: none !important; }
+    }
+</style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Esqueleto de carga -->
+    <header>
+        <div class="envoltura cabecera">
+            <div class="esqueleto" style="width:46px;height:46px;border-radius:13px;"></div>
+            <div style="flex:1">
+                <div class="esqueleto" style="height:19px;width:58%;margin-bottom:6px;"></div>
+                <div class="esqueleto" style="height:12px;width:36%;"></div>
+            </div>
+        </div>
+    </header>
+    <div class="envoltura" style="margin-top:30px;">
+        <div class="esqueleto" style="height:82px;margin-bottom:9px;"></div>
+        <div class="esqueleto" style="height:82px;margin-bottom:9px;"></div>
+        <div class="esqueleto" style="height:82px;"></div>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://wlrwfkhjucomitgoryqu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indscndma2hqdWNvbWl0Z29yeXF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NDMyOTEsImV4cCI6MjA5MzUxOTI5MX0.5nvlaYzX9_dCalB3IQvTN_se0hr0xrwagfmeqZ03Tf0';
+
+const app = document.getElementById('app');
+
+// Escapa texto para no romper el HTML ni permitir inyección
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+const plata = (n) => '$' + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+
+// Color estable derivado del nombre (para el placeholder sin foto)
+const colorDe = (texto) => {
+    let h = 0;
+    for (let i = 0; i < texto.length; i++) h = texto.charCodeAt(i) + ((h << 5) - h);
+    return `hsl(${Math.abs(h) % 360}, 42%, 58%)`;
+};
+
+const pantalla = (titulo, texto) => {
+    app.innerHTML = `<div class="centro"><h2>${esc(titulo)}</h2><p>${esc(texto)}</p></div>
+        <footer>Hecho con <a href="https://vallis.com.ar">Vallis</a></footer>`;
+};
+
+const miniatura = (p) => {
+    if (p.imagen_url) {
+        return `<img class="miniatura" src="${esc(p.imagen_url)}" alt="${esc(p.nombre)}" loading="lazy">`;
+    }
+    const inicial = esc((p.nombre || '?').trim().charAt(0).toUpperCase());
+    return `<div class="miniatura" style="background:${colorDe(p.nombre || '')}">${inicial}</div>`;
+};
+
+const pintar = (data) => {
+    const { local, productos } = data;
+
+    document.title = `${local.nombre} — Catálogo`;
+
+    if (!productos.length) {
+        pantalla('Todavía no hay productos', 'Este comercio aún no publicó su catálogo.');
+        return;
+    }
+
+    // Agrupar por categoría conservando el orden que trae la función
+    const grupos = new Map();
+    for (const p of productos) {
+        const cat = p.categoria || 'Otros';
+        if (!grupos.has(cat)) grupos.set(cat, []);
+        grupos.get(cat).push(p);
+    }
+
+    const inicial = esc((local.nombre || 'V').trim().charAt(0).toUpperCase());
+
+    let html = `
+    <header>
+        <div class="envoltura cabecera">
+            <div class="avatar">${inicial}</div>
+            <div>
+                <h1>${esc(local.nombre)}</h1>
+                <p>${productos.length} producto${productos.length === 1 ? '' : 's'} disponible${productos.length === 1 ? '' : 's'}</p>
+            </div>
+        </div>
+    </header>
+    <div class="envoltura">`;
+
+    for (const [cat, items] of grupos) {
+        html += `<section class="categoria"><p class="categoria-titulo">${esc(cat)}</p>`;
+        for (const p of items) {
+            html += `
+            <article class="producto${p.sin_stock ? ' agotado' : ''}">
+                ${miniatura(p)}
+                <div class="prod-info">
+                    <p class="prod-nombre">${esc(p.nombre)}</p>
+                    ${p.descripcion ? `<p class="prod-desc">${esc(p.descripcion)}</p>` : ''}
+                </div>
+                <div class="prod-derecha">
+                    <p class="prod-precio">${plata(p.precio_venta)}</p>
+                    ${p.sin_stock ? '<span class="chip-agotado">Sin stock</span>' : ''}
+                </div>
+            </article>`;
+        }
+        html += `</section>`;
+    }
+
+    html += `</div><footer>Hecho con <a href="https://vallis.com.ar">Vallis</a></footer>`;
+
+    if (local.whatsapp) {
+        const msg = encodeURIComponent(`Hola ${local.nombre}! Vi su catálogo y quería consultar por un producto.`);
+        html += `<a class="wsp" href="https://wa.me/549${esc(local.whatsapp)}?text=${msg}" target="_blank" rel="noopener">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.1-1.7-.9-2-1-.3-.1-.5-.1-.7.1-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-.3-.1-1.2-.5-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.5-.5c.1-.2.2-.3.3-.5 0-.2 0-.4 0-.5 0-.1-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.4s1.1 2.8 1.2 3c.1.2 2.1 3.2 5 4.5.7.3 1.2.5 1.7.6.7.2 1.3.2 1.8.1.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.1-.3-.2-.6-.3z"/><path d="M12 2a10 10 0 0 0-8.5 15.2L2 22l4.9-1.4A10 10 0 1 0 12 2zm0 18.2c-1.6 0-3.1-.4-4.4-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2z"/></svg>
+            Consultar por WhatsApp
+        </a>`;
+    }
+
+    app.innerHTML = html;
+};
+
+(async () => {
+    const slug = window.location.pathname.split('/').filter(Boolean).pop();
+
+    if (!slug || slug === 'c') {
+        pantalla('Catálogo no encontrado', 'Revisá que el link esté completo.');
+        return;
+    }
+
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/catalogo_publico`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({ p_slug: slug }),
+        });
+
+        if (!res.ok) throw new Error('respuesta ' + res.status);
+        const data = await res.json();
+
+        if (!data) {
+            pantalla('Catálogo no encontrado', 'Este link no existe o el catálogo no está disponible.');
+            return;
+        }
+
+        pintar(data);
+    } catch (err) {
+        console.error(err);
+        pantalla('No pudimos cargar el catálogo', 'Revisá tu conexión y volvé a intentar.');
+    }
+})();
+</script>
+
+</body>
+</html>
