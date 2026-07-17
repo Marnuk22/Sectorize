@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { X, Lock, Barcode, Check } from 'lucide-react';
+import { X, Lock, Barcode, Check, Camera, Trash2 } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { usePlan } from '../../hooks/usePlan';
 import type { Producto, Categoria } from '../../types';
 import { UNIDADES, type UnidadMedida } from '../../config/unidades';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { comprimirImagen, validarImagen } from '../../logic/imagen';
 
 
 interface Props {
@@ -43,6 +46,10 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
+    const { localId } = useAuth();
+    const [fotoNueva, setFotoNueva] = useState<Blob | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+    const [procesandoFoto, setProcesandoFoto] = useState(false);
 
     useEffect(() => {
         if (producto) {
@@ -72,56 +79,115 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
         }
     }, [producto, datosIniciales]);
 
-    const cambiarTipoVenta = (tipo: 'unidad' | 'granel') => {
-        setForm(p => ({
-            ...p,
-            tipo_venta: tipo,
-            unidad_medida: tipo === 'unidad' ? 'unidad' : 'kg',
-        }));
-    };
+    // Libera la URL del preview al desmontar o cambiarla
+    useEffect(() => {
+            return () => { if (preview) URL.revokeObjectURL(preview); };
+        }, [preview]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
-        if (form.precio_venta <= 0) { setError('El precio debe ser mayor a 0'); return; }
-        if (form.tipo_venta === 'granel' && form.unidad_medida === 'unidad') {
-            setError('Elegí una unidad de medida para el producto a granel'); return;
-        }
+        const handleFoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';   // permite volver a elegir el mismo archivo
+            if (!file) return;
 
-        setCargando(true);
-        setError('');
-        try {
-            const usaStock = puedeStock && seguimientoStock;
-            const datos = {
-                ...form,
-                nombre: form.nombre.trim(),
-                descripcion: form.descripcion || null,
-                categoria: form.categoria || null,
-                codigo_barras: form.codigo_barras?.trim() || null,
-                stock_minimo: usaStock ? form.stock_minimo : 0,
-                stock_actual: usaStock ? form.stock_actual : 0,
-                favorito: form.favorito ?? false,
-                publicado: producto?.publicado ?? false,
-                imagen_url: producto?.imagen_url ?? null,
-            };
+            const problema = validarImagen(file);
+            if (problema) { setError(problema); return; }
 
-            if (producto) {
-                await editarProducto(producto.id, datos);
-            } else {
-                await agregarProducto(datos);
+            setProcesandoFoto(true);
+            setError('');
+            try {
+                const blob = await comprimirImagen(file);
+                if (preview) URL.revokeObjectURL(preview);
+                setFotoNueva(blob);
+                setPreview(URL.createObjectURL(blob));
+            } catch (err: any) {
+                setError(err.message ?? 'No se pudo procesar la imagen');
+            } finally {
+                setProcesandoFoto(false);
+            }
+        };
+
+        const quitarFoto = () => {
+            if (preview) URL.revokeObjectURL(preview);
+            setPreview(null);
+            setFotoNueva(null);
+            setForm(p => ({ ...p, imagen_url: null }));
+        };
+
+        // Saca la ruta del archivo a partir de la URL pública
+        const rutaDesdeUrl = (url: string): string | null => {
+            const partes = url.split('/storage/v1/object/public/productos/');
+            return partes[1] ?? null;
+        };
+
+        const fotoVisible = preview ?? form.imagen_url;
+
+        const cambiarTipoVenta = (tipo: 'unidad' | 'granel') => {
+            setForm(p => ({
+                ...p,
+                tipo_venta: tipo,
+                unidad_medida: tipo === 'unidad' ? 'unidad' : 'kg',
+            }));
+        };
+
+        const handleSubmit = async (e: React.FormEvent) => {
+            e.preventDefault();
+            if (!form.nombre.trim()) { setError('El nombre es obligatorio'); return; }
+            if (form.precio_venta <= 0) { setError('El precio debe ser mayor a 0'); return; }
+            if (form.tipo_venta === 'granel' && form.unidad_medida === 'unidad') {
+                setError('Elegí una unidad de medida para el producto a granel'); return;
             }
 
-            if (form.categoria && !categorias.find(c => c.nombre === form.categoria)) {
-                await agregarCategoria(form.categoria);
-            }
+            setCargando(true);
+            setError('');
+            try {
+                // Subir la foto nueva, si hay
+                let imagenFinal = form.imagen_url;
+                if (fotoNueva && localId) {
+                    const ruta = `${localId}/${crypto.randomUUID()}.jpg`;
+                    const { error: errSubida } = await supabase.storage
+                        .from('productos')
+                        .upload(ruta, fotoNueva, { contentType: 'image/jpeg' });
+                    if (errSubida) { console.error('ERROR SUBIDA:', errSubida); throw new Error('No se pudo subir la foto'); }
 
-            onCerrar();
-        } catch (err: any) {
-            setError(err.message);
-        } finally {
-            setCargando(false);
-        }
-    };
+                    const { data } = supabase.storage.from('productos').getPublicUrl(ruta);
+                    imagenFinal = data.publicUrl;
+                }
+                const usaStock = puedeStock && seguimientoStock;
+                const datos = {
+                    ...form,
+                    nombre: form.nombre.trim(),
+                    descripcion: form.descripcion || null,
+                    categoria: form.categoria || null,
+                    codigo_barras: form.codigo_barras?.trim() || null,
+                    stock_minimo: usaStock ? form.stock_minimo : 0,
+                    stock_actual: usaStock ? form.stock_actual : 0,
+                    favorito: form.favorito ?? false,
+                    publicado: producto?.publicado ?? false,
+                    imagen_url: imagenFinal,
+                };
+
+                if (producto) {
+                    await editarProducto(producto.id, datos);
+                } else {
+                    await agregarProducto(datos);
+                }
+                // Recién ahora borramos la foto vieja, con el guardado ya confirmado
+                if (producto?.imagen_url && producto.imagen_url !== imagenFinal) {
+                    const rutaVieja = rutaDesdeUrl(producto.imagen_url);
+                    if (rutaVieja) await supabase.storage.from('productos').remove([rutaVieja]);
+                }
+
+                if (form.categoria && !categorias.find(c => c.nombre === form.categoria)) {
+                    await agregarCategoria(form.categoria);
+                }
+
+                onCerrar();
+            } catch (err: any) {
+                setError(err.message);
+            } finally {
+                setCargando(false);
+            }
+        };
 
     const agregarNuevaCategoria = async () => {
         if (nuevaCategoria.trim()) {
@@ -148,6 +214,39 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                    <div className="flex items-center gap-4">
+                        <label className={`relative w-24 h-24 rounded-2xl border-2 border-dashed shrink-0 overflow-hidden cursor-pointer transition-colors flex items-center justify-center ${
+                            fotoVisible ? 'border-transparent' : 'border-stone-200 hover:border-violet-300 hover:bg-violet-50/40'
+                        }`}>
+                            <input type="file" accept="image/*" onChange={handleFoto} className="hidden" disabled={procesandoFoto} />
+                            {fotoVisible ? (
+                                <img src={fotoVisible} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="text-center">
+                                    <Camera size={20} className="text-stone-400 mx-auto" />
+                                    <span className="text-[10px] text-stone-400 block mt-1">
+                                        {procesandoFoto ? 'Procesando...' : 'Agregar foto'}
+                                    </span>
+                                </div>
+                            )}
+                        </label>
+
+                        <div className="min-w-0">
+                            <p className="text-sm font-medium text-stone-700">Foto del producto</p>
+                            <p className="text-xs text-stone-400 mt-0.5">
+                                Opcional. Se muestra en tu catálogo público.
+                            </p>
+                            {fotoVisible && (
+                                <button
+                                    type="button"
+                                    onClick={quitarFoto}
+                                    className="flex items-center gap-1 text-xs text-red-500 hover:text-red-600 mt-1.5"
+                                >
+                                    <Trash2 size={11} /> Quitar foto
+                                </button>
+                            )}
+                        </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
                             <label className="text-xs font-medium text-stone-500">Nombre *</label>
@@ -394,7 +493,7 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                             disabled={cargando}
                             className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold"
                         >
-                            {cargando ? 'Guardando...' : producto ? 'Guardar cambios' : 'Crear producto'}
+                            {cargando ? (fotoNueva ? 'Subiendo foto...' : 'Guardando...') : producto ? 'Guardar cambios' : 'Crear producto'}
                         </button>
                     </div>
                 </form>
