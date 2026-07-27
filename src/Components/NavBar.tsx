@@ -8,6 +8,7 @@ import PanelConfiguracion from './Usuario/PanelConfiguracion';
 import PanelAyuda from './Usuario/PanelAyuda';
 import PanelImpresoras from './Usuario/PanelImpresoras';
 import PanelCatalogo from './Usuario/PanelCatalogo';
+import PanelMiPlan from './Usuario/PanelMiPlan';
 
 export type SeccionPDV = 'sectores' | 'inventario' | 'ventas' | 'mostrador' | 'socios';
 
@@ -29,6 +30,7 @@ const TITULOS_PANEL: Record<PanelUsuario, string> = {
     config:     'Configuración',
     impresoras: 'Impresoras',
     catalogo:   'Catálogo público',
+    subscripcion: 'Mi suscripción',
     ayuda:      'Ayuda y soporte',
 };
 
@@ -52,6 +54,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
             case 'config':     return <PanelConfiguracion onCerrar={() => setPanelAbierto(null)} />;
             case 'impresoras': return <PanelImpresoras />;
             case 'catalogo':   return <PanelCatalogo />;
+            case 'subscripcion': return <PanelMiPlan />;
             case 'ayuda':      return <PanelAyuda />;
             default:           return null;
         }

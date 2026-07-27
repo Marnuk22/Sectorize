@@ -29,6 +29,10 @@ export interface Local {
     slug: string | null;
     whatsapp: string | null;
     catalogo_activo: boolean;
+    suscripcion_estado: 'prueba' | 'activa' | 'vencida' | 'cancelada';
+    suscripcion_id: string | null;
+    suscripcion_vence: string | null;
+    prueba_vence: string | null;
 }
 
 export interface Perfil {

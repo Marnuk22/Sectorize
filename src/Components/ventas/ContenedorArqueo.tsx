@@ -5,6 +5,7 @@ import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
 import { imprimirArqueo } from '../../logic/impresion';
+import { Tarjeta, SeccionDatos, FilaDato } from '../ui/ComponentesBase';
 
 const ContenedorArqueo = () => {
     const { arqueoActivo, historialVentas, abrirArqueo, cerrarArqueo } = useVentas();
@@ -87,7 +88,7 @@ const ContenedorArqueo = () => {
                 <p className="text-stone-400 text-sm mt-1">Abrí la caja para comenzar a registrar ventas</p>
             </div>
 
-            <div className="bg-white border border-stone-200 rounded-2xl p-5 space-y-3">
+            <Tarjeta padding="lg" className="space-y-4">
                 <label className="text-sm font-medium text-stone-600">Monto inicial en caja ($)</label>
                 <input
                     type="number"
@@ -108,7 +109,7 @@ const ContenedorArqueo = () => {
                     <Unlock size={18} />
                     {cargando ? 'Abriendo...' : 'Abrir caja'}
                 </button>
-            </div>
+            </Tarjeta>
         </div>
     );
 
@@ -116,45 +117,33 @@ const ContenedorArqueo = () => {
     return (
         <div className="space-y-4">
             {/* Header arqueo activo */}
-            <div className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-xl">
-                        <Unlock size={20} className="text-green-700" />
-                    </div>
-                    <div>
-                        <p className="font-bold text-green-800">Caja abierta</p>
-                        <p className="text-xs text-green-600">
-                            Desde {arqueoActivo.fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                    </div>
-                </div>
-                <p className="text-sm text-green-700 font-medium">
-                    Inicial: ${arqueoActivo.montoInicial.toLocaleString()}
-                </p>
-            </div>
+            <FilaDato
+                tono="exito"
+                icono={<span className="p-2 bg-green-100 rounded-xl inline-flex">
+                        <Unlock size={18} className="text-green-700" />
+                    </span>}
+                etiqueta={<span className="text-green-800">Caja abierta</span>}
+                subetiqueta={`Desde ${arqueoActivo.fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
+                valor={<span className="text-sm text-green-700">Inicial: ${arqueoActivo.montoInicial.toLocaleString()}</span>}
+            />
 
             {/* Resumen de ventas */}
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white border border-stone-200 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <TrendingUp size={16} className="text-violet-500" />
-                        <p className="text-xs text-stone-400">Total vendido</p>
-                    </div>
-                    <p className="text-2xl font-black text-stone-800">${totalVentas.toLocaleString()}</p>
-                </div>
-                <div className="bg-white border border-stone-200 rounded-2xl p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                        <ShoppingBag size={16} className="text-violet-500" />
-                        <p className="text-xs text-stone-400">Ventas</p>
-                    </div>
-                    <p className="text-2xl font-black text-stone-800">{cantidadVentas}</p>
-                </div>
+                <SeccionDatos
+                    etiqueta="Total vendido"
+                    icono={<TrendingUp size={14} className="text-violet-500" />}
+                    valor={`$${totalVentas.toLocaleString()}`}
+                />
+                <SeccionDatos
+                    etiqueta="Ventas"
+                    icono={<ShoppingBag size={14} className="text-violet-500" />}
+                    valor={cantidadVentas}
+                />
             </div>
-
             {/* Ventas por método de pago */}
             {Object.keys(ventasPorMetodo).length > 0 && (
-                <div className="bg-white border border-stone-200 rounded-2xl p-4 space-y-2">
-                    <p className="text-xs font-medium text-stone-400 uppercase mb-3">Por método de pago</p>
+                <Tarjeta className="space-y-2.5">
+                    <p className="text-xs font-bold text-stone-400 uppercase tracking-wide">Por método de pago</p>
                     {(Object.entries(ventasPorMetodo) as [string, number][]).map(([metodo, total]) => {
                         const Icono = iconoMetodo(metodo);
                         return (
@@ -167,14 +156,16 @@ const ContenedorArqueo = () => {
                             </div>
                         );
                     })}
-                </div>
+                </Tarjeta>
             )}
 
             {/* Monto esperado */}
-            <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 flex justify-between items-center">
-                <p className="text-sm font-medium text-violet-700">Monto esperado en caja</p>
-                <p className="text-xl font-black text-violet-800">${montoEsperado.toLocaleString()}</p>
-            </div>
+            <FilaDato
+                tono="acento"
+                destacado
+                etiqueta={<span className="text-violet-700">Monto esperado en caja</span>}
+                valor={<span className="text-violet-800">${montoEsperado.toLocaleString()}</span>}
+            />
 
             {/* Cierre de caja */}
             {!confirmandoCierre ? (
@@ -186,7 +177,7 @@ const ContenedorArqueo = () => {
                     Cerrar caja
                 </button>
             ) : (
-                <div className="bg-white border-2 border-red-200 rounded-2xl p-5 space-y-3">
+                <Tarjeta padding="lg" tono="neutral" className="space-y-3">
                     <p className="font-bold text-stone-700">¿Cuánto hay físicamente en caja?</p>
                     <input
                         type="number"
@@ -201,7 +192,7 @@ const ContenedorArqueo = () => {
 
                     {/* Diferencia en tiempo real */}
                     {montoReal && (
-                        <div className={`p-3 rounded-xl text-center ${diferencia >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                        <div className={`p-3 rounded-xl text-center ${diferencia >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
                             <p className="text-xs text-stone-500 mb-1">Diferencia</p>
                             <p className={`text-xl font-black ${diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                                 {diferencia >= 0 ? '+' : ''}{diferencia.toLocaleString()}
@@ -226,7 +217,7 @@ const ContenedorArqueo = () => {
                             {cargando ? 'Cerrando...' : 'Confirmar cierre'}
                         </button>
                     </div>
-                </div>
+                </Tarjeta>
             )}
         </div>
     );

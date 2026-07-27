@@ -3,6 +3,7 @@ import PanelMesa from './mesa/PanelMesa.tsx';
 import { useSalon } from '../context/index.ts';
 import FormularioNuevaMesa from './mesa/FormularioNuevaMesa.tsx';
 import { Plus, LayoutGrid, Move, Check } from 'lucide-react';
+import { Boton, EstadoVacio } from './ui/ComponentesBase.tsx';
 import type { MesaUI } from '../types';
 
 // Tamaño de cada mesa en el lienzo (px)
@@ -47,22 +48,22 @@ const ContenedorMesas = () => {
                     </h2>
                     <div className="flex items-center gap-2">
                         {/* Botón modo edición */}
-                        <button
+                        <Boton
+                            tamaño="sm"
+                            activo={modoEdicion}
+                            icono={modoEdicion ? <Check size={14} /> : <Move size={14} />}
                             onClick={() => setModoEdicion(!modoEdicion)}
-                            className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border ${
-                                modoEdicion
-                                    ? 'bg-violet-600 text-white border-violet-600'
-                                    : 'text-stone-500 border-stone-300 hover:bg-stone-50'
-                            }`}
                         >
-                            {modoEdicion ? <><Check size={14} /> Listo</> : <><Move size={14} /> Acomodar</>}
-                        </button>
-                        <button
-                            className="flex items-center gap-1 text-xs font-bold text-violet-600 border border-dashed border-violet-300 hover:border-violet-500 hover:bg-violet-50 px-3 py-1.5 rounded-lg transition-colors"
+                            {modoEdicion ? 'Listo' : 'Acomodar'}
+                        </Boton>
+                        <Boton
+                            variante="fantasma"
+                            tamaño="sm"
+                            icono={<Plus size={14} />}
                             onClick={() => setIsModalOpen(true)}
                         >
-                            <Plus size={14} /> Mesa
-                        </button>
+                            Mesa
+                        </Boton>
                     </div>
                 </div>
 
@@ -85,10 +86,17 @@ const ContenedorMesas = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center flex-1 text-stone-400 border-2 border-dashed border-stone-200 rounded-xl">
-                        <LayoutGrid size={32} className="mb-2" />
-                        <p className="text-sm">No hay mesas en este sector.</p>
-                    </div>
+                    <EstadoVacio
+                        icono={<LayoutGrid size={32} />}
+                        titulo="No hay mesas en este sector"
+                        descripcion="Agregá la primera para empezar a tomar pedidos."
+                        accion={
+                            <Boton variante="primario" tamaño="sm" icono={<Plus size={14} />} onClick={() => setIsModalOpen(true)}>
+                                Agregar mesa
+                            </Boton>
+                        }
+                        className="flex-1 border-2 border-dashed border-stone-200 rounded-xl"
+                    />
                 )}
             </div>
 
@@ -98,23 +106,21 @@ const ContenedorMesas = () => {
                     <div className="h-full flex flex-col">
                         <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 bg-white">
                             <h2 className="font-bold text-stone-800">{mesaSeleccionada.nombre}</h2>
-                            <button
-                                onClick={() => seleccionarMesa(null)}
-                                className="text-xs text-stone-400 hover:text-stone-600"
-                            >
+                            <Boton variante="fantasma" tamaño="sm" onClick={() => seleccionarMesa(null)}>
                                 Cerrar
-                            </button>
+                            </Boton>
                         </div>
                         <div className="p-4 flex-1 overflow-y-auto">
                             <PanelMesa />
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-stone-400">
-                        <LayoutGrid size={36} className="mb-3" />
-                        <p className="text-sm font-medium">Seleccioná una mesa</p>
-                        <p className="text-xs mt-1">para ver y cargar su pedido</p>
-                    </div>
+                    <EstadoVacio
+                        icono={<LayoutGrid size={36} />}
+                        titulo="Seleccioná una mesa"
+                        descripcion="para ver y cargar su pedido"
+                        className="h-full"
+                    />
                 )}
             </div>
 
