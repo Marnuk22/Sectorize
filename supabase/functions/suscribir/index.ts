@@ -47,7 +47,6 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
                 preapproval_plan_id: PLAN_ID,
-                payer_email: user.email,
                 back_url: 'https://app.vallis.com.ar',
                 external_reference: perfil.local_id,  // así el webhook sabe qué local es
             }),
