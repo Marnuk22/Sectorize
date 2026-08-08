@@ -107,3 +107,19 @@ Receipt/comanda printing goes through `src/logic/qz.ts` (QZ Tray websocket bridg
 - Windows, VS Code, repo at `C:\Users\oniam\Vallis\Sectorize`.
 - Student developer; prefers changes applied one at a time, reporting errors as they come.
 - Legacy leftovers to eventually fix: `index.html` app title still says "gymgestor"; `package.json` name is `gymgestor`.
+
+## Mantenimiento de este archivo
+
+Cuando tomes una decisión de arquitectura, agregues una convención nueva, o cambies
+una regla estructural del proyecto, actualizá este CLAUDE.md para reflejarlo — es la
+memoria del proyecto entre sesiones. Antes de hacerlo, avisame qué vas a agregar o
+cambiar y por qué, para que lo apruebe.
+
+Qué SÍ registrar: decisiones de arquitectura, convenciones nuevas, reglas de negocio
+estables, gotchas descubiertos, cambios en el modelo de datos.
+
+Qué NO registrar: el estado de tareas en curso, detalles que cambian seguido, notas
+temporales. Mantené el archivo conciso — su valor está en ser corto y preciso, no
+exhaustivo.
+
+Importante: avisame antes de cambiarlo, para que lo apruebe

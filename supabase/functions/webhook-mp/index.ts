@@ -40,10 +40,13 @@ Deno.serve(async (req) => {
             if (sub.next_payment_date) vence = sub.next_payment_date;
         } else if (estadoMP === 'paused') {
             estado = 'vencida';
+            vence = new Date().toISOString();
         } else if (estadoMP === 'cancelled') {
             estado = 'cancelada';
+            vence = new Date().toISOString();
         } else {
             estado = 'vencida';
+            vence = new Date().toISOString();
         }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
