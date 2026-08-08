@@ -13,9 +13,10 @@ const diasRestantes = (fecha: string | null): number => {
 };
 
 const PanelMiPlan = () => {
-    const { local } = useAuth();
+    const { local, user } = useAuth();
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
+    const [emailMP, setEmailMP] = useState(user?.email ?? '');
 
     const estado = local?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(local?.prueba_vence ?? null);
@@ -36,6 +37,7 @@ const PanelMiPlan = () => {
                         'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json',
                     },
+                    body: JSON.stringify({ payer_email: emailMP }),
                 }
             );
 
@@ -130,6 +132,24 @@ const PanelMiPlan = () => {
                     ))}
                 </ul>
 
+                {mostrarBoton && (
+                    <div className="mb-3">
+                        <label className="block text-xs font-medium text-stone-500 mb-1">
+                            Email de tu cuenta de MercadoPago
+                        </label>
+                        <input
+                            type="email"
+                            value={emailMP}
+                            onChange={(e) => setEmailMP(e.target.value)}
+                            placeholder="tu-email@mercadopago.com"
+                            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                        />
+                        <p className="text-xs text-stone-400 mt-1">
+                            Usá el email con el que iniciás sesión en MercadoPago, no necesariamente el mismo que usás en Vallis.
+                        </p>
+                    </div>
+                )}
+
                 {error && (
                     <div className="flex items-center gap-2 p-3 bg-red-50 rounded-xl text-red-600 text-sm mb-3">
                         <AlertCircle size={15} className="shrink-0" /> {error}
@@ -139,7 +159,7 @@ const PanelMiPlan = () => {
                 {mostrarBoton && (
                     <button
                         onClick={handleSuscribirse}
-                        disabled={cargando}
+                        disabled={cargando || !emailMP.trim()}
                         className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
                     >
                         {cargando ? <><Loader2 size={16} className="animate-spin" /> Redirigiendo...</> : <><Sparkles size={16} /> Suscribirme</>}

@@ -12,6 +12,7 @@ const cors = {
 };
 
 Deno.serve(async (req) => {
+    
     if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
     try {
@@ -38,7 +39,16 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'Sin local' }), { status: 400, headers: cors });
         }
 
-        // Crear la suscripción en MercadoPago, asociada al plan
+        // Email de la cuenta de MercadoPago del pagador (puede diferir del email de login)
+        let payerEmail = user.email;
+        try {
+            const body = await req.json();
+            if (body?.payer_email) payerEmail = body.payer_email;
+        } catch {
+            // sin body, se usa el email de login
+        }
+
+        // Crear la suscripción SIN plan asociado, en estado pendiente (para redirigir)
         const res = await fetch('https://api.mercadopago.com/preapproval', {
             method: 'POST',
             headers: {
@@ -46,9 +56,18 @@ Deno.serve(async (req) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                preapproval_plan_id: PLAN_ID,
+                reason: 'Vallis - Suscripción mensual',
+                auto_recurring: {
+                    frequency: 1,
+                    frequency_type: 'months',
+                    transaction_amount: 100,
+                    currency_id: 'ARS',
+                    start_date: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                },
+                payer_email: payerEmail,
                 back_url: 'https://app.vallis.com.ar',
-                external_reference: perfil.local_id,  // así el webhook sabe qué local es
+                external_reference: perfil.local_id,
+                status: 'pending',
             }),
         });
 
@@ -56,7 +75,7 @@ Deno.serve(async (req) => {
 
         if (!res.ok) {
             console.error('Error MP:', data);
-            return new Response(JSON.stringify({ error: 'No se pudo crear la suscripción' }), { status: 500, headers: cors });
+            return new Response(JSON.stringify({ error: data.message || 'No se pudo crear la suscripción', cause: data.cause }), { status: res.status, headers: cors });
         }
 
         // Guardar el id de la suscripción en el local
