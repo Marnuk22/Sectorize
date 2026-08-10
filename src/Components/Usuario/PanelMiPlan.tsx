@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Check, Sparkles, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { estadoAcceso } from '../../logic/suscripcion';
 
 const PRECIO = 28000;
 
@@ -21,6 +22,9 @@ const PanelMiPlan = () => {
     const estado = local?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(local?.prueba_vence ?? null);
     const diasSuscripcion = diasRestantes(local?.suscripcion_vence ?? null);
+    // "activa" según la DB no alcanza: si el webhook nunca la marcó vencida,
+    // hay que chequear la fecha real (estadoAcceso) para saber si sigue vigente.
+    const activaVigente = estado === 'activa' && estadoAcceso(local) === 'ok';
 
     const handleSuscribirse = async () => {
         setCargando(true);
@@ -56,7 +60,7 @@ const PanelMiPlan = () => {
 
     // --- Tarjeta de estado según la situación ---
     const renderEstado = () => {
-        if (estado === 'activa') {
+        if (activaVigente) {
             return (
                 <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
                     <div className="flex items-center gap-2 mb-1">
@@ -104,7 +108,7 @@ const PanelMiPlan = () => {
         );
     };
 
-    const mostrarBoton = estado !== 'activa';
+    const mostrarBoton = !activaVigente;
 
     return (
         <div className="space-y-4">
