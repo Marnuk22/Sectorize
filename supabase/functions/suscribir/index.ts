@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
                 auto_recurring: {
                     frequency: 1,
                     frequency_type: 'months',
-                    transaction_amount: 100,
+                    transaction_amount: 30000,
                     currency_id: 'ARS',
                     start_date: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
                 },
