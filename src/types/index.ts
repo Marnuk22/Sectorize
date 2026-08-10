@@ -93,6 +93,7 @@ export interface Producto {
     favorito: boolean;
     publicado: boolean;
     imagen_url: string | null;
+    alerta_enviada: boolean;
 }
 
 export interface Arqueo {

@@ -11,7 +11,7 @@ interface MenuContextType {
     cargando: boolean;
     obtenerProductoPorId: (id: string) => Producto | undefined;
     filtrarPorCategoria: (nombre: string) => Producto[];
-    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at'>) => Promise<void>;
+    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => Promise<void>;
     recargarProductos: () => Promise<void>;
     editarProducto: (id: string, cambios: Partial<Producto>) => Promise<void>;
     borrarProducto: (id: string) => Promise<void>;
@@ -64,7 +64,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     const filtrarPorCategoria = (nombre: string) =>
         productos.filter(p => p.categoria === nombre);
 
-    const agregarProducto = async (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at'>) => {
+    const agregarProducto = async (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => {
         const { data, error } = await supabase
             .from('productos')
             .insert({ ...nuevo, local_id: localId })

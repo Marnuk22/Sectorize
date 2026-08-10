@@ -10,11 +10,13 @@ Deno.serve(async () => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Traer productos con seguimiento que estén en o por debajo del mínimo
+    // y que no hayan disparado ya la alerta inmediata (evita mandarla duplicada)
     const { data: productos, error } = await supabase
         .from('productos')
         .select('local_id, nombre, stock_actual, stock_minimo')
         .gt('stock_minimo', 0)
-        .eq('activo', true);
+        .eq('activo', true)
+        .eq('alerta_enviada', false);
 
     if (error) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
