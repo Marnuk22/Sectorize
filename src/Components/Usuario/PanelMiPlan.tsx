@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
 
-const PRECIO = 28000;
+const PRECIO = 30000;
 
 // Días entre hoy y una fecha (redondeado hacia arriba)
 const diasRestantes = (fecha: string | null): number => {
