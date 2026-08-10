@@ -108,6 +108,23 @@ Receipt/comanda printing goes through `src/logic/qz.ts` (QZ Tray websocket bridg
 - Student developer; prefers changes applied one at a time, reporting errors as they come.
 - Legacy leftovers to eventually fix: `index.html` app title still says "gymgestor"; `package.json` name is `gymgestor`.
 
+## Archivos de contexto del proyecto
+
+Dos archivos en la raíz sirven de memoria persistente entre sesiones, con roles distintos:
+
+- **`CLAUDE.md`** (este archivo) — describe **cómo ES** el proyecto: arquitectura,
+  convenciones, reglas de negocio estables, gotchas descubiertos. Es la memoria estable
+  del proyecto entre sesiones.
+- **`ROADMAP.md`** — describe **QUÉ FALTA** hacer: backlog de tareas pendientes,
+  organizado por prioridad. Consultalo antes de encarar una feature nueva para tomar la
+  tarea correspondiente del backlog.
+
+Regla de cruce: cuando se completa una tarea del ROADMAP, se marca `[x]` ahí, no acá.
+Cuando se toma una decisión de arquitectura o una convención nueva, se registra en
+CLAUDE.md, nunca en el ROADMAP (el ROADMAP es una lista de tareas, no documentación).
+Mantené los dos archivos concisos: el ROADMAP no explica cómo funciona el código, y este
+archivo no lleva la cuenta de tareas pendientes.
+
 ## Mantenimiento de este archivo
 
 Cuando tomes una decisión de arquitectura, agregues una convención nueva, o cambies

@@ -1,0 +1,80 @@
+# ROADMAP — Vallis
+
+Backlog de tareas pendientes. Marcá con `[x]` lo completado. Organizado por prioridad y área.
+Para el contexto del proyecto (arquitectura, convenciones, reglas), ver CLAUDE.md.
+
+---
+
+## 🔴 En curso / inmediato
+
+### Cobros MercadoPago — cerrar el pago de prueba
+- [ ] Completar UN pago de prueba de suscripción de punta a punta. El código está construido y verificado contra la doc oficial; el bloqueo es el entorno de prueba de MercadoPago (sandbox inestable + modelo de credenciales nuevo sin `TEST-`). Usar el MCP oficial de MercadoPago (mp-test-setup crea usuarios de prueba con fondos; mp-review audita).
+- [ ] Alternativa si el sandbox falla: probar en producción pagando con otra cuenta (dinero real que vuelve menos comisión ~5-6%), después cancelar la suscripción.
+- [x] Resolver el `payer_email` flexible: agregar un campo "Email de tu cuenta de MercadoPago" en `PanelMiPlan` y mandar ESE como `payer_email` (no `user.email`), para que el mail del local y el de la cuenta que paga puedan ser distintos.
+- [ ] Revertir valores de prueba a producción cuando corresponda: `transaction_amount` a 28000 (si se bajó para test), token `APP_USR-` real.
+
+### Bloqueo por suscripción — terminar Etapa 2
+- [x] Confirmar que estén cubiertas TODAS las tablas de escritura en el RLS: verificar que productos, categorías, arqueos y mesas tengan la condición `estado_acceso_local(...) <> 'bloqueado'` (además de las ya aplicadas).
+- [ ] Probar el combo completo con un local de prueba en `bloqueado`: no puede vender/cargar producto/abrir arqueo/gestionar socios, PERO sí puede ver todo (SELECT). Un local `ok` opera normal; uno en `gracia` opera + ve el banner. (Ya verificado en `productos` con insert simulado: rechazado en bloqueado, permitido en ok. Falta repetir en `ventas`/`arqueos`/`socios` y confirmar SELECT + banner de gracia en la app real.)
+- [x] Verificar que `estado_acceso_local` (SQL) y `estadoAcceso` (frontend, Etapa 1) den el mismo resultado en todos los casos (mismos 3 días de gracia, mismo manejo de nulls, mismo operador de comparación).
+- [x] Correr el advisor de seguridad de Supabase después de aplicar todo el RLS, y revisar que no haya quedado ningún hueco.
+- [ ] Redeployar `webhook-mp` (`supabase functions deploy webhook-mp`) para que el fix de fecha en vencida/cancelada tome efecto en producción.
+
+---
+
+## 🟡 Cabos sueltos (cortos, mejoran el pulido)
+
+- [ ] Redundancia de alertas de stock: la alerta inmediata (al cruzar) y el resumen diario se solapan (un producto que cruzó a las 15h llega 2 veces). Solución: flag `alerta_enviada` boolean en el producto — la inmediata lo pone en true, el resumen ignora los true, se resetea al reponer.
+- [ ] Mail de contacto en el catálogo público: campo en `locales` + agregarlo a `catalogo_publico()` + botón en la página. (WhatsApp ya funciona.)
+- [ ] Footer de la landing (`vallis-landing/index.html`) con contacto: mail manuel@vallis.com.ar como texto + botón WhatsApp. Falta el número real. Nunca se aplicó.
+- [ ] `preview.jpg` (1200×630) + favicon de la landing (están referenciados pero no existen).
+- [ ] Google Search Console + sitemap para la landing.
+- [ ] Cambiar el `<title>` de la app: dice "gymgestor", debería decir "Vallis".
+- [ ] Cambiar el `name` en `package.json`: dice "gymgestor".
+- [x] Limpieza menor DB: `mesas` tiene dos policies SELECT idénticas; versiones viejas de `registrar_local_y_perfil` (3 y 4 params) probablemente huérfanas, se pueden borrar si nada las llama.
+
+---
+
+## 🔵 Deuda de diseño (aplicar la gramática de ComponentesBase)
+
+Diagnóstico hecho: falta una gramática de contenedor consistente; jerarquía visual plana; densidad mal calibrada. Ya existe `ComponentesBase.tsx` (Tarjeta, SeccionDatos, FilaDato) y el arqueo ya está convertido.
+
+- [ ] Aplicar la gramática (Tarjeta/SeccionDatos/FilaDato) a Inventario, Mostrador, Historial y los paneles de usuario.
+- [ ] Crear componentes base que faltan: `Boton` (variantes primario/secundario/peligro), `TarjetaProducto` (con altura pareja para arreglar la grilla dentada del inventario), `Modal` (envoltorio), `Campo` (input con label), `EstadoVacio`, `Etiqueta`.
+- [ ] Arreglar la grilla dentada del inventario (tarjetas de producto con distinta altura según tengan o no seguimiento de stock).
+
+---
+
+## 🟢 Features de la app (frontend)
+
+- [ ] Notas configurables en descuentos: que el motivo del descuento salga en el ticket.
+- [ ] Impresoras Capa 2: permisos de impresión por categoría.
+- [ ] Features de mesa: dividir cuenta, cantidad de comensales, tiempo de mesa.
+- [ ] Estadísticas para el dueño: producto estrella, horas pico, ticket promedio.
+
+---
+
+## 🟣 Con código de servidor (Edge Functions)
+
+- [ ] Resumen semanal por mail (variación del resumen diario que ya funciona).
+- [ ] Interpretar facturas de proveedor con IA (integrar una API de IA como secreto en una Edge Function).
+- [ ] Facturación electrónica (proyecto grande: requiere contador + cliente real + configuración AFIP por local — CUIT, certificado, punto de venta). No encarar hasta tener un cliente que la necesite y pague.
+
+---
+
+## ⚫ Proyectos futuros (grandes, sin apuro)
+
+- [ ] Carrito en el catálogo: mutar la vidriera actual a tienda con pedidos. Requiere tabla de pedidos, notificación al comercio, estados de pedido, manejo de stock.
+- [ ] Cobro 2 — Marketplace: que los gimnasios cobren las cuotas a sus socios vía MercadoPago (OAuth por cada gimnasio, split de pagos, responsabilidad sobre plata de terceros). El más grande del roadmap.
+- [ ] Rubro reventa/celulares: inventario serializado (IMEI). Por ahora se carga cada equipo como producto individual con stock 1. Esperar feedback del amigo.
+- [ ] WhatsApp bot.
+- [ ] Cuenta corriente / fiado digital.
+- [ ] Migrar opciones del menú de usuario a una Configuración dedicada (`PanelConfiguracion` ya existe).
+- [ ] Firma digital QZ Tray (impresión silenciosa sin el diálogo del navegador).
+
+---
+
+## 📝 Notas de mantenimiento
+
+- Validación de firma del webhook de MercadoPago con `MP_WEBHOOK_SECRET` (guardado en el gestor, no implementado en código — la seguridad actual es re-consultar el estado a MP, que ya es robusto). Opcional.
+- Auditar la carpeta de skills y este ROADMAP cada tanto: borrar lo que ya no aplica.
