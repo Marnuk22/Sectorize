@@ -1,4 +1,78 @@
-# React + TypeScript + Vite
+# Vallis
+
+POS/gestión multi-tenant para locales chicos (restaurantes/bares, tiendas, gimnasios). Un
+mismo codebase sirve a todos los tipos de negocio — qué se ve depende de datos del local
+(`plan` y `modulos`), no de builds separados. Ver `CLAUDE.md` para el detalle de
+convenciones y arquitectura.
+
+## Arquitectura
+
+```mermaid
+flowchart TD
+    subgraph VERCEL["Vercel (hosting)"]
+        subgraph FE["Frontend — React (Vite + Tailwind) · app.vallis.com.ar"]
+            direction LR
+            CAuth["AuthContext"]
+            CMenu["MenuContext"]
+            CVentas["VentasContext"]
+            CMostrador["MostradorContext"]
+            CSalon["SalonContext"]
+            CAfiliados["AfiliadosContext"]
+            CImpresoras["ImpresorasContext"]
+            SBCLIENT["supabase-js client"]
+            CAuth --> SBCLIENT
+            CMenu --> SBCLIENT
+            CVentas --> SBCLIENT
+            CMostrador --> SBCLIENT
+            CSalon --> SBCLIENT
+            CAfiliados --> SBCLIENT
+            CImpresoras --> SBCLIENT
+        end
+        LANDING["vallis-landing (HTML estático)<br/>vallis.com.ar + catálogo /c/slug"]
+    end
+
+    subgraph SUPA["Supabase"]
+        DB[("Postgres + RLS<br/>estado_acceso_local() · triggers de stock")]
+        SBAUTH["Auth"]
+        STORAGE["Storage<br/>(bucket productos)"]
+        CRON["pg_cron<br/>resumen-stock-diario"]
+
+        subgraph EDGE["Edge Functions (Deno)"]
+            SUSCRIBIR["suscribir"]
+            WEBHOOK["webhook-mp"]
+            PLANMP["crear-plan-mp"]
+            ALERTA["alerta-stock"]
+            RESUMEN["resumen-stock"]
+        end
+    end
+
+    subgraph EXT["Servicios externos"]
+        MP["MercadoPago"]
+        RESEND["Resend"]
+    end
+
+    SBCLIENT -->|login / sesión| SBAUTH
+    SBCLIENT -->|CRUD tenant, filtrado por RLS| DB
+    SBCLIENT -->|subir / leer fotos de producto| STORAGE
+    SBCLIENT -->|POST al suscribirse| SUSCRIBIR
+
+    LANDING -->|RPC catalogo_publico anon| DB
+
+    SUSCRIBIR -->|crea preapproval| MP
+    SUSCRIBIR -->|guarda suscripcion_id| DB
+    MP -->|notifica cambio de estado| WEBHOOK
+    WEBHOOK -->|confirma estado real| MP
+    WEBHOOK -->|actualiza suscripcion_estado| DB
+    PLANMP -.->|manual, una sola vez| MP
+
+    DB -->|trigger cruza stock mínimo| ALERTA
+    CRON --> RESUMEN
+    RESUMEN -->|lee stock bajo| DB
+    ALERTA --> RESEND
+    RESUMEN --> RESEND
+```
+
+## Desarrollo (Vite)
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
