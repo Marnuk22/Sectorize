@@ -22,8 +22,8 @@ const PanelLateral = ({ titulo, abierto, onCerrar, children }: Props) => {
             {/* Panel */}
             <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
                 <div className="flex items-center justify-between p-5 border-b">
-                    <h2 className="font-bold text-gray-800 text-lg">{titulo}</h2>
-                    <button onClick={onCerrar} className="p-2 hover:bg-gray-100 rounded-xl">
+                    <h2 className="font-bold text-stone-800 text-lg">{titulo}</h2>
+                    <button onClick={onCerrar} className="p-2 hover:bg-stone-100 rounded-xl">
                         <X size={20} />
                     </button>
                 </div>

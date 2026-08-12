@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import { Package } from 'lucide-react';
 
 /**
  * Sistema de tonos: reemplaza las franjas de color ad-hoc (verde de "Caja abierta",
@@ -31,26 +32,33 @@ interface TarjetaProps {
     tono?: TonoDato;
     padding?: keyof typeof PADDINGS;
     interactiva?: boolean;
+    onClick?: () => void;
     className?: string;
 }
 
+// `interactiva`/`onClick` agregan active:scale, que crea un stacking context y
+// atrapa el z-index de un menú flotante hijo (ver CLAUDE.md). No usar en una
+// Tarjeta que contenga un menú de acciones tipo ⋯.
 export const Tarjeta = ({
     children,
     tono = 'neutral',
     padding = 'md',
     interactiva = false,
+    onClick,
     className = '',
-}: TarjetaProps) => (
-    <div
-        className={`rounded-2xl border ${TONOS[tono]} ${PADDINGS[padding]} ${
-            interactiva
-                ? 'cursor-pointer transition-colors hover:border-violet-300 active:scale-[0.99]'
-                : ''
-        } ${className}`}
-    >
-        {children}
-    </div>
-);
+}: TarjetaProps) => {
+    const clases = `rounded-2xl border text-left ${TONOS[tono]} ${PADDINGS[padding]} ${
+        interactiva || onClick
+            ? 'cursor-pointer transition-colors hover:border-violet-300 active:scale-[0.99]'
+            : ''
+    } ${className}`;
+
+    if (onClick) {
+        return <button type="button" onClick={onClick} className={clases}>{children}</button>;
+    }
+
+    return <div className={clases}>{children}</div>;
+};
 
 /* ---------------------------------------------------------------------- */
 /* SeccionDatos: bloque grande con etiqueta + valor destacado.
@@ -246,3 +254,123 @@ export const ModalBase = ({ isOpen, onClose, titulo, children, ancho = 'sm' }: M
         </div>
     );
 };
+
+/* ---------------------------------------------------------------------- */
+/* Etiqueta: pill chico de estado (tono + texto). Reemplaza los
+   `<span className="text-[10px] px-2 py-0.5 rounded-full ...">` a mano
+   repetidos en Inventario ("Activo/Inactivo") e Historial (método de pago). */
+/* ---------------------------------------------------------------------- */
+const TONOS_ETIQUETA: Record<TonoDato, string> = {
+    neutral: 'bg-stone-100 text-stone-500',
+    exito: 'bg-green-50 text-green-700',
+    alerta: 'bg-red-50 text-red-600',
+    acento: 'bg-violet-50 text-violet-700',
+};
+
+interface EtiquetaProps {
+    children: ReactNode;
+    tono?: TonoDato;
+    icono?: ReactNode;
+    className?: string;
+}
+
+export const Etiqueta = ({ children, tono = 'neutral', icono, className = '' }: EtiquetaProps) => (
+    <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${TONOS_ETIQUETA[tono]} ${className}`}>
+        {icono}
+        {children}
+    </span>
+);
+
+/* ---------------------------------------------------------------------- */
+/* Campo: input con label arriba + texto de ayuda/error abajo. Reemplaza el
+   bloque `<label>...</label><input className="border border-stone-200 ...">`
+   repetido en PanelDatosLocal, PanelMiPlan, PanelConfiguracion, filtros de
+   HistorialVentas.                                                        */
+/* ---------------------------------------------------------------------- */
+interface CampoProps extends InputHTMLAttributes<HTMLInputElement> {
+    etiqueta: string;
+    ayuda?: string;
+    error?: string;
+}
+
+export const Campo = ({ etiqueta, ayuda, error, className = '', ...props }: CampoProps) => (
+    <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-stone-500">{etiqueta}</label>
+        <input
+            className={`border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 ${className}`}
+            {...props}
+        />
+        {error ? (
+            <p className="text-xs text-red-500">{error}</p>
+        ) : ayuda ? (
+            <p className="text-xs text-stone-400">{ayuda}</p>
+        ) : null}
+    </div>
+);
+
+/* ---------------------------------------------------------------------- */
+/* TarjetaProducto: tarjeta de producto compartida entre la grilla de
+   Inventario (con pill de estado, badges, línea de stock y acciones) y la
+   de Mostrador (clickeable, sin acciones). Sobre `Tarjeta` para heredar
+   borde/radio/padding. Si se le pasa `acciones` (con el menú ⋯ de
+   Inventario), NO pasarle también `onClick`/`interactiva` — ver el gotcha
+   de stacking context en el comentario de `Tarjeta`.                      */
+/* ---------------------------------------------------------------------- */
+const TONO_SUBTEXTO_STOCK: Record<'exito' | 'alerta' | 'neutral', string> = {
+    exito: 'text-green-600',
+    alerta: 'text-red-500',
+    neutral: 'text-stone-400',
+};
+
+interface TarjetaProductoProps {
+    nombre: string;
+    precio: number;
+    unidadLabel?: string;
+    categoria?: string | null;
+    stockInfo?: { texto: string; tono: 'exito' | 'alerta' | 'neutral' };
+    pill?: ReactNode;
+    badges?: ReactNode;
+    acciones?: ReactNode;
+    alerta?: boolean;
+    onClick?: () => void;
+    className?: string;
+}
+
+export const TarjetaProducto = ({
+    nombre,
+    precio,
+    unidadLabel,
+    categoria,
+    stockInfo,
+    pill,
+    badges,
+    acciones,
+    alerta = false,
+    onClick,
+    className = '',
+}: TarjetaProductoProps) => (
+    <Tarjeta
+        tono={alerta ? 'alerta' : 'neutral'}
+        padding="sm"
+        onClick={onClick}
+        className={`relative ${className}`}
+    >
+        {pill && <div className="absolute top-2 right-2">{pill}</div>}
+        <p className={`font-medium text-stone-800 text-sm truncate flex items-center gap-1 ${pill ? 'pr-12' : ''}`}>
+            {badges}
+            {nombre}
+        </p>
+        {categoria !== undefined && <p className="text-xs text-stone-400 mb-2">{categoria ?? 'Sin categoría'}</p>}
+        <p className="font-bold text-stone-900">
+            ${precio.toLocaleString()}
+            {unidadLabel && <span className="text-xs font-normal text-stone-400"> {unidadLabel}</span>}
+        </p>
+        {stockInfo && (
+            <p className={`text-xs mt-1 flex items-center gap-1 ${TONO_SUBTEXTO_STOCK[stockInfo.tono]}`}>
+                <Package size={11} />
+                {stockInfo.texto}
+            </p>
+        )}
+        {acciones && <div className="flex gap-1 mt-3">{acciones}</div>}
+    </Tarjeta>
+);

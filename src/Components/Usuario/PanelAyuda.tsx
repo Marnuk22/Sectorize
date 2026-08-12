@@ -27,7 +27,7 @@ const PanelAyuda = () => {
 
     return (
         <div className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-stone-500">
                 ¿Necesitás ayuda? Estamos para darte una mano.
             </p>
 
@@ -39,16 +39,16 @@ const PanelAyuda = () => {
                         href={r.href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 p-4 rounded-2xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50 transition-all group"
+                        className="flex items-center gap-3 p-4 rounded-2xl border border-stone-100 hover:border-violet-200 hover:bg-violet-50 transition-all group"
                     >
-                        <div className="p-2.5 bg-gray-100 rounded-xl group-hover:bg-blue-100 transition-colors">
-                            <Icono size={20} className="text-gray-600 group-hover:text-blue-600" />
+                        <div className="p-2.5 bg-stone-100 rounded-xl group-hover:bg-violet-100 transition-colors">
+                            <Icono size={20} className="text-stone-600 group-hover:text-violet-600" />
                         </div>
                         <div className="flex-1">
-                            <p className="font-bold text-gray-800 text-sm">{r.titulo}</p>
-                            <p className="text-xs text-gray-400">{r.descripcion}</p>
+                            <p className="font-bold text-stone-800 text-sm">{r.titulo}</p>
+                            <p className="text-xs text-stone-400">{r.descripcion}</p>
                         </div>
-                        <span className="flex items-center gap-1 text-xs font-medium text-blue-600">
+                        <span className="flex items-center gap-1 text-xs font-medium text-violet-600">
                             {r.accion} <ExternalLink size={12} />
                         </span>
                     </a>
@@ -56,7 +56,7 @@ const PanelAyuda = () => {
             })}
 
             <div className="pt-4 text-center">
-                <p className="text-xs text-gray-300">Vallis · versión 1.0</p>
+                <p className="text-xs text-stone-300">Vallis · versión 1.0</p>
             </div>
         </div>
     );

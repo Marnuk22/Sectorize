@@ -7,6 +7,7 @@ import ModalStock from '../Inventario/ModalStock';
 import ModalImportar from '../Inventario/ModalImportar';
 import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
 import { TrendingUp } from 'lucide-react';
+import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
 const ContenedorInventario = () => {
     const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
@@ -183,54 +184,60 @@ const ContenedorInventario = () => {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 content-start">
                             {productosFiltrados.map(prod => (
-                                <div
+                                <TarjetaProducto
                                     key={prod.id}
-                                    className={`bg-white border rounded-2xl p-3 relative transition-all ${stockBajo(prod) ? 'border-red-200' : 'border-stone-200'}`}
-                                >
-                                    <span className={`absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full font-medium ${prod.activo ? 'bg-green-50 text-green-700' : 'bg-stone-100 text-stone-500'}`}>
-                                        {prod.activo ? 'Activo' : 'Inactivo'}
-                                    </span>
-                                    <p className="font-medium text-stone-800 text-sm pr-12 truncate flex items-center gap-1">
-                                        {prod.favorito && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0" />}
-                                        {prod.publicado && <Globe size={11} className="text-sky-500 shrink-0" />}
-                                        {prod.nombre}
-                                      </p>
-                                    <p className="font-bold text-stone-900">${prod.precio_venta.toLocaleString()}</p>
-
-                                    {tieneStock(prod) ? (
-                                        <p className={`text-xs mt-1 flex items-center gap-1 ${stockBajo(prod) ? 'text-red-500' : 'text-green-600'}`}>
-                                            <Package size={11} />
-                                            {stockBajo(prod) ? `Stock bajo: ${prod.stock_actual}` : `Stock: ${prod.stock_actual}`}
-                                        </p>
-                                    ) : (
-                                        <p className="text-xs mt-1 text-stone-400">Sin seguimiento</p>
-                                    )}
-
-                                    <div className="flex gap-1 mt-3">
-                                        <button
-                                            onClick={() => setModalProducto(prod)}
-                                            className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
-                                        >
-                                            <Edit size={11} /> Editar
-                                        </button>
-                                        {tieneStock(prod) && (
+                                    nombre={prod.nombre}
+                                    precio={prod.precio_venta}
+                                    alerta={stockBajo(prod)}
+                                    pill={
+                                        <Etiqueta tono={prod.activo ? 'exito' : 'neutral'}>
+                                            {prod.activo ? 'Activo' : 'Inactivo'}
+                                        </Etiqueta>
+                                    }
+                                    badges={
+                                        <>
+                                            {prod.favorito && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0" />}
+                                            {prod.publicado && <Globe size={11} className="text-sky-500 shrink-0" />}
+                                        </>
+                                    }
+                                    stockInfo={
+                                        tieneStock(prod)
+                                            ? {
+                                                texto: stockBajo(prod) ? `Stock bajo: ${prod.stock_actual}` : `Stock: ${prod.stock_actual}`,
+                                                tono: stockBajo(prod) ? 'alerta' : 'exito',
+                                            }
+                                            : { texto: 'Sin seguimiento', tono: 'neutral' }
+                                    }
+                                    /* Sin onClick/interactiva a propósito: esta tarjeta lleva el menú
+                                       ⋯ flotante (MenuAcciones) — ver el gotcha de stacking context
+                                       documentado junto a `Tarjeta` en ComponentesBase.tsx. */
+                                    acciones={
+                                        <>
                                             <button
-                                                onClick={() => setModalStock(prod)}
+                                                onClick={() => setModalProducto(prod)}
                                                 className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
                                             >
-                                                <Package size={11} /> Stock
+                                                <Edit size={11} /> Editar
                                             </button>
-                                        )}
-                                        <MenuAcciones
-                                            prod={prod}
-                                            onDuplicar={() => handleDuplicar(prod)}
-                                            onBorrar={() => { setConfirmarBorrar(prod); setErrorBorrar(''); }}
-                                            onToggleActivo={() => toggleActivo(prod.id, !prod.activo)}
-                                            onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
-                                            onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
-                                        />
-                                    </div>
-                                </div>
+                                            {tieneStock(prod) && (
+                                                <button
+                                                    onClick={() => setModalStock(prod)}
+                                                    className="flex-1 py-1.5 border border-stone-200 rounded-lg text-xs flex items-center justify-center gap-1 hover:bg-stone-50"
+                                                >
+                                                    <Package size={11} /> Stock
+                                                </button>
+                                            )}
+                                            <MenuAcciones
+                                                prod={prod}
+                                                onDuplicar={() => handleDuplicar(prod)}
+                                                onBorrar={() => { setConfirmarBorrar(prod); setErrorBorrar(''); }}
+                                                onToggleActivo={() => toggleActivo(prod.id, !prod.activo)}
+                                                onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
+                                                onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
+                                            />
+                                        </>
+                                    }
+                                />
                             ))}
                         </div>
                     )}

@@ -87,8 +87,8 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
         <div className="space-y-6">
             {/* Métodos de pago base */}
             <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Métodos de pago</label>
-                <p className="text-xs text-gray-400 mb-3">Los que aparecen al cobrar una venta.</p>
+                <label className="text-xs font-medium text-stone-500 uppercase">Métodos de pago</label>
+                <p className="text-xs text-stone-400 mb-3">Los que aparecen al cobrar una venta.</p>
                 <div className="space-y-2">
                     {METODOS_BASE.map(m => {
                         const Icono = m.icono;
@@ -98,16 +98,16 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
                                 key={m.id}
                                 onClick={() => toggleMetodo(m.id)}
                                 className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                                    activo ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'
+                                    activo ? 'border-violet-500 bg-violet-50' : 'border-stone-200 hover:bg-stone-50'
                                 }`}
                             >
                                 <div className="flex items-center gap-2">
-                                    <Icono size={18} className={activo ? 'text-blue-600' : 'text-gray-400'} />
-                                    <span className={`text-sm ${activo ? 'text-blue-700 font-medium' : 'text-gray-600'}`}>
+                                    <Icono size={18} className={activo ? 'text-violet-600' : 'text-stone-400'} />
+                                    <span className={`text-sm ${activo ? 'text-violet-700 font-medium' : 'text-stone-600'}`}>
                                         {m.label}
                                     </span>
                                 </div>
-                                <div className={`w-5 h-5 rounded-md flex items-center justify-center ${activo ? 'bg-blue-600' : 'border border-gray-300'}`}>
+                                <div className={`w-5 h-5 rounded-md flex items-center justify-center ${activo ? 'bg-violet-600' : 'border border-stone-300'}`}>
                                     {activo && <Check size={13} className="text-white" />}
                                 </div>
                             </button>
@@ -118,20 +118,20 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
 
             {/* Métodos personalizados */}
             <div>
-                <label className="text-xs font-medium text-gray-500 uppercase">Métodos personalizados</label>
-                <p className="text-xs text-gray-400 mb-3">Agregá los tuyos: Mercado Pago, QR, etc.</p>
+                <label className="text-xs font-medium text-stone-500 uppercase">Métodos personalizados</label>
+                <p className="text-xs text-stone-400 mb-3">Agregá los tuyos: Mercado Pago, QR, etc.</p>
 
                 {metodosCustom.length > 0 && (
                     <div className="space-y-2 mb-3">
                         {metodosCustom.map(m => (
-                            <div key={m} className="flex items-center justify-between p-3 rounded-xl border border-blue-500 bg-blue-50">
+                            <div key={m} className="flex items-center justify-between p-3 rounded-xl border border-violet-500 bg-violet-50">
                                 <div className="flex items-center gap-2">
-                                    <Wallet size={18} className="text-blue-600" />
-                                    <span className="text-sm text-blue-700 font-medium capitalize">{m}</span>
+                                    <Wallet size={18} className="text-violet-600" />
+                                    <span className="text-sm text-violet-700 font-medium capitalize">{m}</span>
                                 </div>
                                 <button
                                     onClick={() => eliminarCustom(m)}
-                                    className="p-1 hover:bg-blue-100 rounded-lg text-blue-400 hover:text-red-500 transition-colors"
+                                    className="p-1 hover:bg-violet-100 rounded-lg text-violet-400 hover:text-red-500 transition-colors"
                                 >
                                     <X size={16} />
                                 </button>
@@ -142,7 +142,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
 
                 <div className="flex gap-2">
                     <input
-                        className="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                         placeholder="Ej: Mercado Pago"
                         value={nuevoMetodo}
                         onChange={e => setNuevoMetodo(e.target.value)}
@@ -150,7 +150,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
                     />
                     <button
                         onClick={agregarCustom}
-                        className="px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl flex items-center gap-1 text-sm font-medium transition-colors"
+                        className="px-4 bg-violet-600 hover:bg-violet-700 text-white rounded-xl flex items-center gap-1 text-sm font-medium transition-colors"
                     >
                         <Plus size={16} /> Agregar
                     </button>
@@ -159,7 +159,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
 
             {/* Moneda */}
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">Moneda</label>
+                <label className="text-xs font-medium text-stone-500 uppercase">Moneda</label>
                 <select
                     className="border rounded-xl px-3 py-2 text-sm bg-white"
                     value={moneda}
@@ -171,7 +171,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
 
             {/* Idioma */}
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500 uppercase">Idioma</label>
+                <label className="text-xs font-medium text-stone-500 uppercase">Idioma</label>
                 <select
                     className="border rounded-xl px-3 py-2 text-sm bg-white"
                     value={idioma}
@@ -179,7 +179,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
                 >
                     {IDIOMAS.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
                 </select>
-                <p className="text-xs text-gray-400">El cambio de idioma se aplicará próximamente en toda la app.</p>
+                <p className="text-xs text-stone-400">El cambio de idioma se aplicará próximamente en toda la app.</p>
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -187,7 +187,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
             <button
                 onClick={handleGuardar}
                 disabled={guardando}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
             >
                 {guardado ? <><Check size={16} /> Guardado</> : guardando ? 'Guardando...' : 'Guardar configuración'}
             </button>

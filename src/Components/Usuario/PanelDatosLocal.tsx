@@ -34,9 +34,9 @@ const PanelDatosLocal = ({ onCerrar }: Props) => {
     return (
         <div className="space-y-5">
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500">Nombre del local</label>
-                <div className="flex items-center gap-2 border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-blue-500">
-                    <Store size={18} className="text-gray-400" />
+                <label className="text-xs font-medium text-stone-500">Nombre del local</label>
+                <div className="flex items-center gap-2 border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-violet-500">
+                    <Store size={18} className="text-stone-400" />
                     <input
                         className="flex-1 text-sm outline-none"
                         value={nombre}
@@ -44,20 +44,20 @@ const PanelDatosLocal = ({ onCerrar }: Props) => {
                         placeholder="Nombre del local"
                     />
                 </div>
-                <p className="text-xs text-gray-400">Este nombre aparece en el menú principal.</p>
+                <p className="text-xs text-stone-400">Este nombre aparece en el menú principal.</p>
             </div>
 
             {/* Tipo de negocio — solo lectura por ahora */}
             <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-gray-500">Módulos activos</label>
+                <label className="text-xs font-medium text-stone-500">Módulos activos</label>
                 <div className="flex flex-wrap gap-2">
                     {(local?.modulos ?? []).map(m => (
-                        <span key={m} className="text-xs px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full capitalize">
+                        <span key={m} className="text-xs px-2.5 py-1 bg-stone-100 text-stone-600 rounded-full capitalize">
                             {m}
                         </span>
                     ))}
                 </div>
-                <p className="text-xs text-gray-400">El tipo de negocio define tus módulos. Contactanos para cambiarlo.</p>
+                <p className="text-xs text-stone-400">El tipo de negocio define tus módulos. Contactanos para cambiarlo.</p>
             </div>
 
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -65,7 +65,7 @@ const PanelDatosLocal = ({ onCerrar }: Props) => {
             <button
                 onClick={handleGuardar}
                 disabled={guardando}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+                className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
             >
                 {guardado ? <><Check size={16} /> Guardado</> : guardando ? 'Guardando...' : 'Guardar cambios'}
             </button>
