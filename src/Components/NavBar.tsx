@@ -67,7 +67,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
                     <MenuUsuario onAbrirPanel={setPanelAbierto} />
                 </div>
 
-                <div className="flex gap-1 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                <div className="flex-1 min-w-0 flex gap-1 bg-stone-100 p-1 rounded-xl overflow-x-auto no-scrollbar">
                     {seccionesVisibles.map(({ modulo, seccion, config }) => {
                         const Icono = config?.icono;
                         const activa = seccionActiva === seccion;
