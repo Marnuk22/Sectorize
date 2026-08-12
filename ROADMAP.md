@@ -39,9 +39,10 @@ Para el contexto del proyecto (arquitectura, convenciones, reglas), ver CLAUDE.m
 
 Diagnóstico hecho: falta una gramática de contenedor consistente; jerarquía visual plana; densidad mal calibrada. Ya existe `ComponentesBase.tsx` (Tarjeta, SeccionDatos, FilaDato) y el arqueo ya está convertido.
 
-- [ ] Aplicar la gramática (Tarjeta/SeccionDatos/FilaDato) a Inventario, Mostrador, Historial y los paneles de usuario.
-- [ ] Crear componentes base que faltan: `Boton` (variantes primario/secundario/peligro), `TarjetaProducto` (con altura pareja para arreglar la grilla dentada del inventario), `Modal` (envoltorio), `Campo` (input con label), `EstadoVacio`, `Etiqueta`.
-- [ ] Arreglar la grilla dentada del inventario (tarjetas de producto con distinta altura según tengan o no seguimiento de stock).
+- [x] Aplicar la gramática (Tarjeta/SeccionDatos/FilaDato/Campo/Etiqueta) a Inventario, Mostrador, Historial y los paneles de usuario (Mi plan, Ayuda, Impresoras, Catálogo). De paso se corrigió una fuga de paleta real (`gray`/`blue` en vez de `stone`/`violet`) en PanelConfiguracion, PanelAyuda, PanelLateral y PanelDatosLocal. Quedaron afuera a propósito: los bloques que no encajan en los primitivos (formularios grandes, resumen por método de pago con colores categóricos por método) y los modals tipo wizard/panel lateral (ver nota abajo).
+- [x] Crear componentes base que faltaban: `Etiqueta`, `Campo`, `TarjetaProducto`. (`Boton`, `EstadoVacio` y `Modal`=`ModalBase` ya existían de antes; esta lista estaba desactualizada.)
+- [x] Grilla dentada del inventario: se revisó y **no había tal bug** (el grid ya fuerza altura pareja). Se creó `TarjetaProducto` de todos modos, por duplicación real entre Inventario y Mostrador.
+- Nota: `ModalStock` y `TecladoCantidad` se evaluaron para migrar a `ModalBase` pero tienen layout de varias zonas separadas por `border-b` a todo el ancho (header, franja de display, teclado), que `ModalBase` no soporta (asume un solo bloque con padding parejo) — se dejaron con su overlay actual, igual que los modals grandes (`ModalImportar`/`ModalProducto`/`ModalAjustePrecios`) y `PanelLateral`.
 
 ---
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X, Plus, Minus } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
+import { Boton } from '../ui/ComponentesBase';
 
 interface Props {
     producto: Producto;
@@ -103,19 +104,12 @@ const ModalStock = ({ producto, onCerrar }: Props) => {
                     </div>
 
                     <div className="flex gap-3">
-                        <button
-                            onClick={onCerrar}
-                            className="flex-1 py-2.5 border border-stone-200 rounded-xl text-sm font-medium text-stone-600 hover:bg-stone-50"
-                        >
+                        <Boton variante="secundario" onClick={onCerrar} className="flex-1">
                             Cancelar
-                        </button>
-                        <button
-                            onClick={handleGuardar}
-                            disabled={cargando}
-                            className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold"
-                        >
+                        </Boton>
+                        <Boton variante="primario" onClick={handleGuardar} disabled={cargando} className="flex-1">
                             {cargando ? 'Guardando...' : 'Confirmar'}
-                        </button>
+                        </Boton>
                     </div>
                 </div>
             </div>

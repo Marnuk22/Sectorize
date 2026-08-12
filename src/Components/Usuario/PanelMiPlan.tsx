@@ -3,6 +3,7 @@ import { Check, Sparkles, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
+import { Tarjeta, Campo, Boton } from '../ui/ComponentesBase';
 
 const PRECIO = 30000;
 
@@ -62,7 +63,7 @@ const PanelMiPlan = () => {
     const renderEstado = () => {
         if (activaVigente) {
             return (
-                <div className="rounded-2xl border-2 border-green-200 bg-green-50 p-5">
+                <Tarjeta tono="exito" padding="lg">
                     <div className="flex items-center gap-2 mb-1">
                         <Check size={18} className="text-green-600" />
                         <h3 className="font-bold text-stone-800">Suscripción activa</h3>
@@ -71,14 +72,16 @@ const PanelMiPlan = () => {
                         Tu suscripción a Vallis está al día.
                         {diasSuscripcion > 0 && ` Próxima renovación en ${diasSuscripcion} día${diasSuscripcion === 1 ? '' : 's'}.`}
                     </p>
-                </div>
+                </Tarjeta>
             );
         }
 
         if (estado === 'prueba') {
             const porVencer = diasPrueba <= 2;
             return (
-                <div className={`rounded-2xl border-2 p-5 ${porVencer ? 'border-amber-200 bg-amber-50' : 'border-violet-200 bg-violet-50'}`}>
+                // amber no es uno de los 4 tonos del sistema (solo hay "alerta"=rojo);
+                // se fuerza con !important en vez de agregar un tono nuevo sin acordarlo.
+                <Tarjeta tono="acento" padding="lg" className={porVencer ? '!bg-amber-50 !border-amber-200' : ''}>
                     <div className="flex items-center gap-2 mb-1">
                         <Clock size={18} className={porVencer ? 'text-amber-600' : 'text-violet-600'} />
                         <h3 className="font-bold text-stone-800">Período de prueba</h3>
@@ -88,13 +91,13 @@ const PanelMiPlan = () => {
                             ? `Te quedan ${diasPrueba} día${diasPrueba === 1 ? '' : 's'} de prueba gratis.`
                             : 'Tu período de prueba terminó. Suscribite para seguir usando Vallis.'}
                     </p>
-                </div>
+                </Tarjeta>
             );
         }
 
         // vencida o cancelada
         return (
-            <div className="rounded-2xl border-2 border-red-200 bg-red-50 p-5">
+            <Tarjeta tono="alerta" padding="lg">
                 <div className="flex items-center gap-2 mb-1">
                     <AlertCircle size={18} className="text-red-600" />
                     <h3 className="font-bold text-stone-800">
@@ -104,7 +107,7 @@ const PanelMiPlan = () => {
                 <p className="text-sm text-stone-600">
                     Reactivá tu suscripción para seguir usando todas las funciones de Vallis.
                 </p>
-            </div>
+            </Tarjeta>
         );
     };
 
@@ -115,7 +118,7 @@ const PanelMiPlan = () => {
             {renderEstado()}
 
             {/* Tarjeta del plan */}
-            <div className="rounded-2xl border border-stone-200 p-5">
+            <Tarjeta padding="lg">
                 <div className="flex items-start justify-between mb-3">
                     <div>
                         <h3 className="font-bold text-stone-800">Vallis</h3>
@@ -138,19 +141,14 @@ const PanelMiPlan = () => {
 
                 {mostrarBoton && (
                     <div className="mb-3">
-                        <label className="block text-xs font-medium text-stone-500 mb-1">
-                            Email de tu cuenta de MercadoPago
-                        </label>
-                        <input
+                        <Campo
+                            etiqueta="Email de tu cuenta de MercadoPago"
                             type="email"
                             value={emailMP}
                             onChange={(e) => setEmailMP(e.target.value)}
                             placeholder="tu-email@mercadopago.com"
-                            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-200"
+                            ayuda="Usá el email con el que iniciás sesión en MercadoPago, no necesariamente el mismo que usás en Vallis."
                         />
-                        <p className="text-xs text-stone-400 mt-1">
-                            Usá el email con el que iniciás sesión en MercadoPago, no necesariamente el mismo que usás en Vallis.
-                        </p>
                     </div>
                 )}
 
@@ -161,15 +159,16 @@ const PanelMiPlan = () => {
                 )}
 
                 {mostrarBoton && (
-                    <button
+                    <Boton
+                        variante="primario"
                         onClick={handleSuscribirse}
                         disabled={cargando || !emailMP.trim()}
-                        className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors"
+                        className="w-full"
                     >
                         {cargando ? <><Loader2 size={16} className="animate-spin" /> Redirigiendo...</> : <><Sparkles size={16} /> Suscribirme</>}
-                    </button>
+                    </Boton>
                 )}
-            </div>
+            </Tarjeta>
         </div>
     );
 };

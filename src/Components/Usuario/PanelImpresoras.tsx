@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Printer, Plus, Trash2, RefreshCw, Check, X, AlertCircle, Download, Info } from 'lucide-react';
 import { useImpresoras, type Impresora } from '../../context/ImpresorasContext';
 import { listarImpresoras } from '../../logic/qz';
+import { Tarjeta, Boton } from '../ui/ComponentesBase';
 
 const PanelImpresoras = () => {
     const { impresoras, agregarImpresora, editarImpresora, borrarImpresora } = useImpresoras();
@@ -150,25 +151,22 @@ const PanelImpresoras = () => {
                         </label>
                     </div>
                     <div className="flex gap-2">
-                        <button
+                        <Boton
+                            variante="primario"
                             onClick={handleAgregar}
                             disabled={!nombre.trim() || !nombreSistema}
-                            className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white py-2 rounded-lg text-sm font-bold flex items-center justify-center gap-1"
+                            icono={<Check size={14} />}
+                            className="flex-1"
                         >
-                            <Check size={14} /> Guardar
-                        </button>
-                        <button onClick={resetForm} className="bg-stone-200 text-stone-600 px-3 rounded-lg hover:bg-stone-300">
-                            <X size={16} />
-                        </button>
+                            Guardar
+                        </Boton>
+                        <Boton variante="secundario" onClick={resetForm} icono={<X size={16} />} />
                     </div>
                 </div>
             ) : (
-                <button
-                    onClick={() => setAgregando(true)}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 py-2.5 rounded-xl text-sm font-medium transition-colors"
-                >
-                    <Plus size={16} /> Agregar impresora
-                </button>
+                <Boton variante="acento" onClick={() => setAgregando(true)} icono={<Plus size={16} />} className="w-full">
+                    Agregar impresora
+                </Boton>
             )}
 
             {/* Ayuda: QZ Tray (siempre visible) */}
@@ -197,7 +195,7 @@ const ImpresoraItem = ({ impresora, onToggleComandas, onToggleTickets, onBorrar 
     onToggleTickets: () => void;
     onBorrar: () => void;
 }) => (
-    <div className="border border-stone-200 rounded-xl p-3">
+    <Tarjeta padding="sm">
         <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2 min-w-0">
                 <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center shrink-0">
@@ -230,7 +228,7 @@ const ImpresoraItem = ({ impresora, onToggleComandas, onToggleTickets, onBorrar 
                 {impresora.imprime_tickets ? '✓ ' : ''}Tickets
             </button>
         </div>
-    </div>
+    </Tarjeta>
 );
 
 export default PanelImpresoras;

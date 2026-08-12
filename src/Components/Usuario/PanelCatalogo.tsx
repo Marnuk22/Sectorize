@@ -3,6 +3,7 @@ import { Globe, Check, X, Copy, ExternalLink, Loader2, AlertCircle } from 'lucid
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { generarSlug, slugValido } from '../../logic/slug';
+import { Tarjeta, Boton } from '../ui/ComponentesBase';
 
 type EstadoSlug = 'vacio' | 'invalido' | 'chequeando' | 'libre' | 'ocupado' | 'propio';
 
@@ -73,7 +74,7 @@ const PanelCatalogo = () => {
     return (
         <div className="space-y-5">
             {/* Activar */}
-            <div className="flex items-start justify-between gap-3 p-4 bg-stone-50 rounded-2xl">
+            <Tarjeta className="flex items-start justify-between gap-3">
                 <div>
                     <p className="font-medium text-stone-800 text-sm">Catálogo público</p>
                     <p className="text-xs text-stone-500 mt-0.5">
@@ -86,7 +87,7 @@ const PanelCatalogo = () => {
                 >
                     <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${activo ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
-            </div>
+            </Tarjeta>
 
             {activo && (
                 <>
@@ -170,13 +171,14 @@ const PanelCatalogo = () => {
                 </div>
             )}
 
-            <button
+            <Boton
+                variante="primario"
                 onClick={handleGuardar}
                 disabled={guardando || !puedeGuardar}
-                className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-xl text-sm font-bold"
+                className="w-full"
             >
                 {guardando ? 'Guardando...' : 'Guardar'}
-            </button>
+            </Boton>
         </div>
     );
 };

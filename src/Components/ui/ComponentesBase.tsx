@@ -17,6 +17,7 @@ const TONOS: Record<TonoDato, string> = {
 };
 
 const PADDINGS = {
+    none: '',
     sm: 'p-3',
     md: 'p-4',
     lg: 'p-5',
@@ -172,7 +173,7 @@ export const Boton = ({
     ...props
 }: BotonProps) => (
     <button
-        className={`inline-flex items-center justify-center gap-1.5 font-bold rounded-lg transition-colors whitespace-nowrap ${
+        className={`inline-flex items-center justify-center gap-1.5 font-bold rounded-lg transition-colors whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed ${
             TAMAÑOS_BOTON[tamaño]
         } ${
             activo

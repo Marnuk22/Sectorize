@@ -8,6 +8,7 @@ import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
 import { labelMetodo, iconoMetodo, colorMetodo } from '../../config/metodosPago';
 import type { VentaHistorial, DetalleVenta } from '../../hooks/useHistorialVentas';
+import { Tarjeta, FilaDato, Campo } from '../ui/ComponentesBase';
 
 
 const HistorialVentas = () => {
@@ -140,24 +141,20 @@ const HistorialVentas = () => {
                                 ))}
                             </select>
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-stone-400">Desde</label>
-                            <input
-                                type="date"
-                                className="border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white"
-                                value={filtros.fecha_desde}
-                                onChange={e => setFiltros(f => ({ ...f, fecha_desde: e.target.value }))}
-                            />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs text-stone-400">Hasta</label>
-                            <input
-                                type="date"
-                                className="border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white"
-                                value={filtros.fecha_hasta}
-                                onChange={e => setFiltros(f => ({ ...f, fecha_hasta: e.target.value }))}
-                            />
-                        </div>
+                        <Campo
+                            etiqueta="Desde"
+                            type="date"
+                            className="bg-white"
+                            value={filtros.fecha_desde}
+                            onChange={e => setFiltros(f => ({ ...f, fecha_desde: e.target.value }))}
+                        />
+                        <Campo
+                            etiqueta="Hasta"
+                            type="date"
+                            className="bg-white"
+                            value={filtros.fecha_hasta}
+                            onChange={e => setFiltros(f => ({ ...f, fecha_hasta: e.target.value }))}
+                        />
                     </div>
                     <button
                         onClick={() => setFiltros({ metodo: 'todos', arqueo_id: 'todos', fecha_desde: '', fecha_hasta: '' })}
@@ -255,28 +252,26 @@ const HistorialVentas = () => {
                     ventasVisibles.map(venta => {
                         const Icono = iconoMetodo(venta.metodo_pago);
                         return (
-                            <div key={venta.id} className="flex items-center justify-between p-4 bg-white rounded-xl border border-stone-200 hover:border-violet-300 transition-colors">
-                                <div className="flex items-center gap-3">
+                            <FilaDato
+                                key={venta.id}
+                                className="hover:border-violet-300 transition-colors"
+                                icono={
                                     <div className="p-2 bg-violet-50 rounded-xl">
                                         <History size={16} className="text-violet-700" />
                                     </div>
-                                    <div>
-                                        <p className="font-bold text-stone-800 text-sm">Venta #{venta.id.slice(-4).toUpperCase()}</p>
-                                        <p className="text-xs text-stone-400">
-                                            {venta.fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}
-                                            {' · '}
-                                            {venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
-                                        </p>
+                                }
+                                etiqueta={`Venta #${venta.id.slice(-4).toUpperCase()}`}
+                                subetiqueta={`${venta.fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} · ${venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
+                                valor={
+                                    <div className="flex items-center gap-3">
+                                        <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
+                                            <Icono size={11} />
+                                            {labelMetodo(venta.metodo_pago)}
+                                        </span>
+                                        <span className="font-black text-stone-900">${venta.total.toLocaleString()}</span>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
-                                        <Icono size={11} />
-                                        {labelMetodo(venta.metodo_pago)}
-                                    </span>
-                                    <p className="font-black text-stone-900">${venta.total.toLocaleString()}</p>
-                                </div>
-                            </div>
+                                }
+                            />
                         );
                     })
                 )}
@@ -326,7 +321,7 @@ const FilaVentaExpandible = ({ venta, cargarDetalle }: FilaVentaProps) => {
     };
 
     return (
-        <div className="border border-stone-200 rounded-xl overflow-hidden bg-white">
+        <Tarjeta padding="none" className="overflow-hidden">
             <button
                 onClick={toggle}
                 className="w-full flex items-center justify-between p-3 hover:bg-stone-50 transition-colors"
@@ -377,7 +372,7 @@ const FilaVentaExpandible = ({ venta, cargarDetalle }: FilaVentaProps) => {
                     )}
                 </div>
             )}
-        </div>
+        </Tarjeta>
     );
 };
 export default HistorialVentas;

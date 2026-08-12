@@ -13,6 +13,7 @@ import { imprimirTicket } from '../../logic/impresion';
 import { UNIDADES } from '../../config/unidades';
 import { useEscaner } from '../../hooks/useEscaner';
 import { useFavoritos } from '../../hooks/useFavoritos';
+import { TarjetaProducto } from '../ui/ComponentesBase';
 
 type TipoDescuento = 'monto' | 'porcentaje';
 
@@ -191,8 +192,12 @@ const ContenedorMostrador = () => {
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
                             {productosOrdenados.map(prod => (
-                                <button
+                                <TarjetaProducto
                                     key={prod.id}
+                                    nombre={prod.nombre}
+                                    precio={prod.precio_venta}
+                                    categoria={prod.categoria}
+                                    unidadLabel={prod.tipo_venta === 'granel' ? `/${UNIDADES[prod.unidad_medida].label}` : undefined}
                                     onClick={() => {
                                         if (prod.tipo_venta === 'granel') {
                                             setProductoGranel(prod);
@@ -200,17 +205,7 @@ const ContenedorMostrador = () => {
                                             agregar(prod);
                                         }
                                     }}
-                                    className="bg-white border border-stone-200 rounded-2xl p-3 text-left hover:border-violet-300 hover:shadow-md transition-all active:scale-95"
-                                >
-                                    <p className="font-medium text-stone-800 text-sm truncate">{prod.nombre}</p>
-                                    <p className="text-xs text-stone-400 mb-2">{prod.categoria ?? 'Sin categoría'}</p>
-                                    <p className="font-black text-stone-900">
-                                        ${prod.precio_venta.toLocaleString()}
-                                        {prod.tipo_venta === 'granel' && (
-                                            <span className="text-xs font-normal text-stone-400"> /{UNIDADES[prod.unidad_medida].label}</span>
-                                        )}
-                                    </p>
-                                </button>
+                                />
                             ))}
                         </div>
                     )}
