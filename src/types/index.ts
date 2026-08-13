@@ -118,6 +118,8 @@ export interface Venta {
     metodo_pago: MetodoPago;
     estado:      EstadoVenta;
     fecha:       string;
+    descuento:   number;
+    editado_en:  string | null;
 }
 
 export interface DetalleVenta {

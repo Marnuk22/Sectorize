@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer, Pencil } from 'lucide-react';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
 import { imprimirArqueo } from '../../logic/impresion';
@@ -8,18 +8,25 @@ import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
 import { labelMetodo, iconoMetodo, colorMetodo } from '../../config/metodosPago';
 import type { VentaHistorial, DetalleVenta } from '../../hooks/useHistorialVentas';
-import { Tarjeta, FilaDato, Campo } from '../ui/ComponentesBase';
+import { Campo, Boton } from '../ui/ComponentesBase';
+import PanelLateral from '../Usuario/PanelLateral';
 
+const fmtEditado = (fecha: Date) => fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 
 const HistorialVentas = () => {
-    const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar, cargarDetalleVenta } = useHistorialVentas();
+    const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar, cargarDetalleVenta, editarVenta } = useHistorialVentas();
     const { puede } = usePlan();
     const historialCompleto = puede('historial_completo');
     const { impresorasDeTickets } = useImpresoras();
-    const { local } = useAuth();
+    const { local, perfil } = useAuth();
+
+    const metodosHabilitados = (local?.metodos_pago && local.metodos_pago.length > 0
+        ? local.metodos_pago
+        : ['efectivo']) as MetodoPago[];
 
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [arqueoExpandido, setArqueoExpandido] = useState<string | null>(null);
+    const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaHistorial | null>(null);
 
     const handleReimprimirArqueo = (arqueo: typeof arqueos[number]) => {
         imprimirArqueo({
@@ -45,6 +52,11 @@ const HistorialVentas = () => {
     );
 
     const arqueoAbierto = arqueos.find(a => a.estado === 'abierto');
+    // Solo se puede editar una venta del arqueo que sigue abierto: los
+    // agregados de un arqueo ya cerrado no se recalculan solos.
+    const puedeEditar = (venta: VentaHistorial) =>
+        perfil?.rol === 'admin' && !!arqueoAbierto && venta.arqueo_id === arqueoAbierto.id;
+
     const ventasVisibles = historialCompleto
         ? ventas
         : ventas.filter(v => arqueoAbierto && v.arqueo_id === arqueoAbierto.id);
@@ -61,7 +73,7 @@ const HistorialVentas = () => {
         }, {} as Record<MetodoPago, number>);
 
     return (
-        <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+        <div className="space-y-3 animate-in fade-in slide-in-from-left-4 duration-300">
 
             {/* Header con totales */}
             <div className="flex items-center justify-between">
@@ -96,7 +108,7 @@ const HistorialVentas = () => {
                     {(Object.entries(porMetodoVisible) as [MetodoPago, number][]).map(([metodo, total]) => {
                         const Icono = iconoMetodo(metodo);
                         return (
-                            <div key={metodo} className={`flex items-center gap-2 p-3 rounded-xl ${colorMetodo(metodo)}`}>
+                            <div key={metodo} className={`flex items-center gap-2 px-3 py-2 rounded-xl ${colorMetodo(metodo)}`}>
                                 <Icono size={15} />
                                 <div>
                                     <p className="text-xs font-medium">{labelMetodo(metodo)}</p>
@@ -215,15 +227,17 @@ const HistorialVentas = () => {
                                     {(() => {
                                         const ventasDelArqueo = ventas.filter(v => v.arqueo_id === arqueo.id);
                                         return ventasDelArqueo.length > 0 ? (
-                                            <div className="pt-3 mt-2 border-t border-stone-200 space-y-2">
-                                                <p className="text-xs font-medium text-stone-400 uppercase">Ventas de esta caja</p>
-                                                {ventasDelArqueo.map(venta => (
-                                                    <FilaVentaExpandible
-                                                        key={venta.id}
-                                                        venta={venta}
-                                                        cargarDetalle={cargarDetalleVenta}
-                                                    />
-                                                ))}
+                                            <div className="pt-3 mt-2 border-t border-stone-200">
+                                                <p className="text-xs font-medium text-stone-400 uppercase mb-1.5">Ventas de esta caja</p>
+                                                <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white">
+                                                    {ventasDelArqueo.map(venta => (
+                                                        <FilaVentaTicket
+                                                            key={venta.id}
+                                                            venta={venta}
+                                                            onClick={() => setVentaSeleccionada(venta)}
+                                                        />
+                                                    ))}
+                                                </div>
                                             </div>
                                         ) : null;
                                     })()}
@@ -242,38 +256,22 @@ const HistorialVentas = () => {
             )}
 
             {/* Lista de ventas */}
-            <div className="space-y-2">
-                <p className="text-xs font-medium text-stone-400 uppercase">Detalle de ventas</p>
+            <div>
+                <p className="text-xs font-medium text-stone-400 uppercase mb-1.5">Detalle de ventas</p>
                 {ventasVisibles.length === 0 ? (
                     <div className="text-center py-8 text-stone-400 text-sm">
                         No hay ventas registradas
                     </div>
                 ) : (
-                    ventasVisibles.map(venta => {
-                        const Icono = iconoMetodo(venta.metodo_pago);
-                        return (
-                            <FilaDato
+                    <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden bg-white">
+                        {ventasVisibles.map(venta => (
+                            <FilaVentaTicket
                                 key={venta.id}
-                                className="hover:border-violet-300 transition-colors"
-                                icono={
-                                    <div className="p-2 bg-violet-50 rounded-xl">
-                                        <History size={16} className="text-violet-700" />
-                                    </div>
-                                }
-                                etiqueta={`Venta #${venta.id.slice(-4).toUpperCase()}`}
-                                subetiqueta={`${venta.fecha.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })} · ${venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
-                                valor={
-                                    <div className="flex items-center gap-3">
-                                        <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
-                                            <Icono size={11} />
-                                            {labelMetodo(venta.metodo_pago)}
-                                        </span>
-                                        <span className="font-black text-stone-900">${venta.total.toLocaleString()}</span>
-                                    </div>
-                                }
+                                venta={venta}
+                                onClick={() => setVentaSeleccionada(venta)}
                             />
-                        );
-                    })
+                        ))}
+                    </div>
                 )}
             </div>
 
@@ -293,86 +291,201 @@ const HistorialVentas = () => {
                     </div>
                 </div>
             )}
+
+            {/* Detalle completo de una venta, en panel lateral */}
+            <PanelLateral
+                titulo={ventaSeleccionada ? `Venta #${ventaSeleccionada.id.slice(-4).toUpperCase()}` : ''}
+                abierto={ventaSeleccionada !== null}
+                onCerrar={() => setVentaSeleccionada(null)}
+            >
+                {ventaSeleccionada && (
+                    <DetalleVentaPanel
+                        key={ventaSeleccionada.id}
+                        venta={ventaSeleccionada}
+                        cargarDetalle={cargarDetalleVenta}
+                        puedeEditar={puedeEditar(ventaSeleccionada)}
+                        metodosHabilitados={metodosHabilitados}
+                        editarVenta={editarVenta}
+                    />
+                )}
+            </PanelLateral>
         </div>
     );
 };
-// --- Venta individual expandible (muestra sus productos al abrir) ---
-interface FilaVentaProps {
+
+// --- Fila densa tipo ticket: hora, preview de productos, método, total ---
+interface FilaVentaTicketProps {
     venta: VentaHistorial;
-    cargarDetalle: (ventaId: string) => Promise<DetalleVenta[]>;
+    onClick: () => void;
 }
 
-const FilaVentaExpandible = ({ venta, cargarDetalle }: FilaVentaProps) => {
-    const [abierta, setAbierta] = useState(false);
+const FilaVentaTicket = ({ venta, onClick }: FilaVentaTicketProps) => {
+    const Icono = iconoMetodo(venta.metodo_pago);
+    return (
+        <button
+            onClick={onClick}
+            className="w-full flex items-center gap-3 px-3 py-2 hover:bg-stone-50 transition-colors text-left"
+        >
+            <span className="text-xs text-stone-400 tabular-nums shrink-0">
+                {venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="flex-1 min-w-0 text-sm text-stone-600 truncate">
+                {venta.resumenItems}
+                {venta.editadoEn && (
+                    <span className="text-stone-400"> · editado {fmtEditado(venta.editadoEn)}</span>
+                )}
+            </span>
+            <Icono size={13} className="text-stone-400 shrink-0" />
+            <span className="font-bold text-stone-900 text-sm shrink-0 tabular-nums">
+                ${venta.total.toLocaleString()}
+            </span>
+        </button>
+    );
+};
+
+// --- Contenido del panel lateral: método, fecha, detalle de productos y edición ---
+interface DetalleVentaPanelProps {
+    venta: VentaHistorial;
+    cargarDetalle: (ventaId: string) => Promise<DetalleVenta[]>;
+    puedeEditar: boolean;
+    metodosHabilitados: MetodoPago[];
+    editarVenta: (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: number }) => Promise<number>;
+}
+
+const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitados, editarVenta }: DetalleVentaPanelProps) => {
     const [detalle, setDetalle] = useState<DetalleVenta[] | null>(null);
-    const [cargandoDet, setCargandoDet] = useState(false);
+    const [editando, setEditando] = useState(false);
+    const [metodoEdit, setMetodoEdit] = useState<MetodoPago>(venta.metodo_pago);
+    const [descuentoEdit, setDescuentoEdit] = useState(String(venta.descuento));
+    const [guardando, setGuardando] = useState(false);
+    const [errorEdit, setErrorEdit] = useState('');
     const Icono = iconoMetodo(venta.metodo_pago);
 
-    const toggle = async () => {
-        const nuevoEstado = !abierta;
-        setAbierta(nuevoEstado);
-        // Cargar el detalle solo la primera vez que se abre
-        if (nuevoEstado && detalle === null) {
-            setCargandoDet(true);
-            const items = await cargarDetalle(venta.id);
-            setDetalle(items);
-            setCargandoDet(false);
+    // El panel se remonta con key={venta.id} (ver donde se usa), así que acá
+    // no hace falta resetear `detalle` a mano al cambiar de venta.
+    useEffect(() => {
+        let vigente = true;
+        cargarDetalle(venta.id).then(items => { if (vigente) setDetalle(items); });
+        return () => { vigente = false; };
+    }, [venta.id, cargarDetalle]);
+
+    // Subtotal de ítems (antes del descuento). Mientras el detalle no cargó,
+    // se estima desde venta.total + venta.descuento (misma cuenta que hace el hook).
+    const subtotalItems = detalle
+        ? detalle.reduce((acc, i) => acc + i.subtotal, 0)
+        : venta.total + venta.descuento;
+    const descuentoNum = parseFloat(descuentoEdit) || 0;
+    const totalPreview = Math.max(0, subtotalItems - descuentoNum);
+
+    const handleGuardar = async () => {
+        setGuardando(true);
+        setErrorEdit('');
+        try {
+            await editarVenta(venta.id, { metodo_pago: metodoEdit, descuento: descuentoNum });
+            setEditando(false);
+        } catch {
+            setErrorEdit('No se pudo guardar el cambio.');
+        } finally {
+            setGuardando(false);
         }
     };
 
     return (
-        <Tarjeta padding="none" className="overflow-hidden">
-            <button
-                onClick={toggle}
-                className="w-full flex items-center justify-between p-3 hover:bg-stone-50 transition-colors"
-            >
+        <div className="space-y-4">
+            <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-1.5 bg-violet-50 rounded-lg">
-                        <History size={14} className="text-violet-700" />
+                    <div className="p-2 bg-violet-50 rounded-xl shrink-0">
+                        <History size={18} className="text-violet-700" />
                     </div>
-                    <div className="text-left">
-                        <p className="font-bold text-stone-800 text-sm">Venta #{venta.id.slice(-4).toUpperCase()}</p>
+                    <div>
+                        <p className="text-sm font-bold text-stone-800 capitalize">
+                            {venta.fecha.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                        </p>
                         <p className="text-xs text-stone-400">
                             {venta.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                            {venta.editadoEn && ` · editado ${fmtEditado(venta.editadoEn)}`}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${colorMetodo(venta.metodo_pago)}`}>
-                        <Icono size={11} />
+                {!editando && (
+                    <span className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium shrink-0 ${colorMetodo(venta.metodo_pago)}`}>
+                        <Icono size={12} />
                         {labelMetodo(venta.metodo_pago)}
                     </span>
-                    <p className="font-black text-stone-900 text-sm">${venta.total.toLocaleString()}</p>
-                    {abierta ? <ChevronUp size={14} className="text-stone-400" /> : <ChevronDown size={14} className="text-stone-400" />}
-                </div>
-            </button>
+                )}
+            </div>
 
-            {abierta && (
-                <div className="border-t border-stone-200 bg-stone-50 p-3">
-                    {cargandoDet ? (
-                        <p className="text-xs text-stone-400 text-center py-2">Cargando detalle...</p>
-                    ) : detalle && detalle.length > 0 ? (
-                        <div className="space-y-1.5">
-                            {detalle.map((item, i) => (
-                                <div key={i} className="flex items-center justify-between text-sm">
-                                    <div className="flex-1 min-w-0">
-                                        <span className="text-stone-700">{item.nombre}</span>
-                                        <span className="text-stone-400 text-xs ml-2">
-                                            {item.tipo_venta === 'granel'
-                                                ? `${item.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 3 })} ${item.unidad_medida} × $${item.precio.toLocaleString()}`
-                                                : `${item.cantidad} × $${item.precio.toLocaleString()}`}
-                                        </span>
-                                    </div>
-                                    <span className="font-bold text-stone-700">${item.subtotal.toLocaleString()}</span>
+            <div className="border-t border-stone-100 pt-3">
+                {detalle === null ? (
+                    <p className="text-xs text-stone-400 text-center py-4">Cargando detalle...</p>
+                ) : detalle.length === 0 ? (
+                    <p className="text-xs text-stone-400 text-center py-4">Sin detalle disponible</p>
+                ) : (
+                    <div className="space-y-2">
+                        {detalle.map((item, i) => (
+                            <div key={i} className="flex items-center justify-between text-sm">
+                                <div className="flex-1 min-w-0">
+                                    <span className="text-stone-700">{item.nombre}</span>
+                                    <span className="text-stone-400 text-xs ml-2">
+                                        {item.tipo_venta === 'granel'
+                                            ? `${item.cantidad.toLocaleString('es-AR', { maximumFractionDigits: 3 })} ${item.unidad_medida} × $${item.precio.toLocaleString()}`
+                                            : `${item.cantidad} × $${item.precio.toLocaleString()}`}
+                                    </span>
                                 </div>
+                                <span className="font-bold text-stone-700">${item.subtotal.toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {editando ? (
+                <div className="border-t border-stone-200 pt-3 space-y-3">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-stone-500">Método de pago</label>
+                        <select
+                            className="border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white"
+                            value={metodoEdit}
+                            onChange={e => setMetodoEdit(e.target.value as MetodoPago)}
+                        >
+                            {metodosHabilitados.map(m => (
+                                <option key={m} value={m}>{labelMetodo(m)}</option>
                             ))}
-                        </div>
-                    ) : (
-                        <p className="text-xs text-stone-400 text-center py-2">Sin detalle disponible</p>
-                    )}
+                        </select>
+                    </div>
+                    <Campo
+                        etiqueta="Descuento ($)"
+                        type="number"
+                        min="0"
+                        value={descuentoEdit}
+                        onChange={e => setDescuentoEdit(e.target.value)}
+                    />
+                    <div className="flex items-center justify-between text-sm bg-stone-50 rounded-xl px-3 py-2">
+                        <span className="text-stone-500">Nuevo total</span>
+                        <span className="font-bold text-stone-800">${totalPreview.toLocaleString()}</span>
+                    </div>
+                    {errorEdit && <p className="text-xs text-red-500">{errorEdit}</p>}
+                    <div className="flex gap-2">
+                        <Boton variante="secundario" className="flex-1" onClick={() => setEditando(false)} disabled={guardando}>
+                            Cancelar
+                        </Boton>
+                        <Boton variante="primario" className="flex-1" onClick={handleGuardar} disabled={guardando}>
+                            {guardando ? 'Guardando...' : 'Guardar'}
+                        </Boton>
+                    </div>
                 </div>
+            ) : puedeEditar && (
+                <Boton variante="secundario" icono={<Pencil size={14} />} className="w-full" onClick={() => setEditando(true)}>
+                    Editar venta
+                </Boton>
             )}
-        </Tarjeta>
+
+            <div className="flex items-center justify-between border-t border-stone-200 pt-3">
+                <span className="font-bold text-stone-700">Total</span>
+                <span className="text-xl font-black text-stone-900">${venta.total.toLocaleString()}</span>
+            </div>
+        </div>
     );
 };
+
 export default HistorialVentas;

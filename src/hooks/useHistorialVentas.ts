@@ -11,6 +11,9 @@ export interface VentaHistorial {
     arqueo_id: string;
     fecha_apertura_arqueo: Date;
     fecha_cierre_arqueo: Date | null;
+    resumenItems: string;
+    descuento: number;
+    editadoEn: Date | null;
 }
 
 export interface ArqueoResumen {
@@ -39,6 +42,16 @@ export interface DetalleVenta {
     unidad_medida?: string;
 }
 
+const fmtCantidad = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 3 });
+
+// Texto corto para la fila de la lista, ej. "Cerveza x2, Papas x1 +2"
+const resumenDeItems = (items: DetalleVenta[]): string => {
+    if (items.length === 0) return 'Sin productos';
+    const visibles = items.slice(0, 2).map(i => `${i.nombre} x${fmtCantidad(i.cantidad)}`);
+    const resto = items.length > 2 ? ` +${items.length - 2}` : '';
+    return visibles.join(', ') + resto;
+};
+
 export const useHistorialVentas = () => {
     const { localId } = useAuth();
     const [ventas, setVentas] = useState<VentaHistorial[]>([]);
@@ -63,13 +76,40 @@ export const useHistorialVentas = () => {
         const { data, error } = await supabase
             .from('ventas')
             .select(`
-                id, fecha, total, metodo_pago, arqueo_id,
+                id, fecha, total, metodo_pago, arqueo_id, descuento, editado_en,
                 arqueos (fecha_apertura, fecha_cierre, estado)
             `)
             .eq('local_id', localId)
             .order('fecha', { ascending: false });
 
         if (error) { console.error(error); setCargando(false); return; }
+
+        const ventaIds = (data ?? []).map((v: any) => v.id);
+
+        // Ítems de todas las ventas en una sola query (no N+1), para el preview
+        // de cada fila y para precalentar el cache de cargarDetalleVenta.
+        const { data: detallesRaw } = ventaIds.length > 0
+            ? await supabase
+                .from('detalle_ventas')
+                .select('venta_id, cantidad, precio_unitario, subtotal, productos(nombre, tipo_venta, unidad_medida)')
+                .in('venta_id', ventaIds)
+            : { data: [] as any[] };
+
+        const itemsPorVenta: Record<string, DetalleVenta[]> = {};
+        for (const id of ventaIds) itemsPorVenta[id] = [];
+        // `any`: igual que cargarDetalleVenta más abajo — sin tipos generados de
+        // Supabase, el join embebido "productos" se infiere mal (array en vez de
+        // objeto único) y forzar el tipo correcto sería más frágil que castear.
+        for (const d of (detallesRaw ?? []) as any[]) {
+            itemsPorVenta[d.venta_id].push({
+                nombre: d.productos?.nombre ?? 'Producto eliminado',
+                cantidad: d.cantidad,
+                precio: d.precio_unitario,
+                subtotal: d.subtotal,
+                tipo_venta: d.productos?.tipo_venta ?? 'unidad',
+                unidad_medida: d.productos?.unidad_medida ?? 'unidad',
+            });
+        }
 
         const ventasFormateadas: VentaHistorial[] = (data ?? []).map((v: any) => ({
             id: v.id,
@@ -79,9 +119,13 @@ export const useHistorialVentas = () => {
             arqueo_id: v.arqueo_id,
             fecha_apertura_arqueo: new Date(v.arqueos.fecha_apertura),
             fecha_cierre_arqueo: v.arqueos.fecha_cierre ? new Date(v.arqueos.fecha_cierre) : null,
+            resumenItems: resumenDeItems(itemsPorVenta[v.id]),
+            descuento: v.descuento,
+            editadoEn: v.editado_en ? new Date(v.editado_en) : null,
         }));
 
         setVentas(ventasFormateadas);
+        setDetalles(prev => ({ ...prev, ...itemsPorVenta }));
 
         // Armar resumen por arqueo
         const { data: arqs } = await supabase
@@ -162,6 +206,34 @@ export const useHistorialVentas = () => {
         return items;
     };
 
+    // Edita método de pago y descuento de una venta ya registrada, recalculando
+    // el total a partir de sus ítems (cache de cargarDetalleVenta/cargarDatos).
+    const editarVenta = async (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: number }): Promise<number> => {
+        const items = detalles[ventaId] ?? [];
+        const sumaSubtotales = items.reduce((acc, i) => acc + i.subtotal, 0);
+        const nuevoTotal = Math.max(0, sumaSubtotales - cambios.descuento);
+        const editadoEn = new Date();
+
+        const { error } = await supabase
+            .from('ventas')
+            .update({
+                metodo_pago: cambios.metodo_pago,
+                descuento: cambios.descuento,
+                total: nuevoTotal,
+                editado_en: editadoEn.toISOString(),
+            })
+            .eq('id', ventaId);
+
+        if (error) throw error;
+
+        setVentas(prev => prev.map(v => v.id === ventaId
+            ? { ...v, metodo_pago: cambios.metodo_pago, descuento: cambios.descuento, total: nuevoTotal, editadoEn }
+            : v
+        ));
+
+        return nuevoTotal;
+    };
+
     return {
         ventas: ventasFiltradas,
         arqueos,
@@ -172,5 +244,6 @@ export const useHistorialVentas = () => {
         porMetodoFiltrado,
         recargar: cargarDatos,
         cargarDetalleVenta,
+        editarVenta,
     };
 };
