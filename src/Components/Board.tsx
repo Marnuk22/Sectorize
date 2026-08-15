@@ -4,6 +4,7 @@ import ContenedorVentas from './ContenedorVentas.tsx';
 import ContenedorInventario from './Inventario/ContenedorInventario.tsx';
 import ContenedorMostrador from './mostrador/ContenedorMostrador.tsx';
 import ContenedorAfiliados from './afiliados/ContenedorAfiliados.tsx';
+import ContenedorInforme from './Informe/ContenedorInforme.tsx';
 
 interface BoardProps {
     seccionActiva: seccionPdv;
@@ -40,6 +41,12 @@ const Board = ({ seccionActiva }: BoardProps) => {
                 return (
                     <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <ContenedorAfiliados />
+                    </div>
+                );
+            case 'informe':
+                return (
+                    <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <ContenedorInforme />
                     </div>
                 );
         }

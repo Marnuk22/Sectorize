@@ -10,7 +10,7 @@ import PanelImpresoras from './Usuario/PanelImpresoras';
 import PanelCatalogo from './Usuario/PanelCatalogo';
 import PanelMiPlan from './Usuario/PanelMiPlan';
 
-export type SeccionPDV = 'sectores' | 'inventario' | 'ventas' | 'mostrador' | 'socios';
+export type SeccionPDV = 'sectores' | 'inventario' | 'ventas' | 'mostrador' | 'socios' | 'informe';
 
 interface NavBarProps {
     seccionActiva: SeccionPDV;
@@ -23,6 +23,7 @@ const SECCION_POR_MODULO: Record<string, SeccionPDV> = {
     suscripciones: 'socios',
     inventario: 'inventario',
     ventas: 'ventas',
+    informe: 'informe',
 };
 
 const TITULOS_PANEL: Record<PanelUsuario, string> = {
@@ -38,7 +39,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
     const { modulos } = useModulos();
     const [panelAbierto, setPanelAbierto] = useState<PanelUsuario | null>(null);
 
-    const ordenSecciones: string[] = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ventas'];
+    const ordenSecciones: string[] = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ventas', 'informe'];
 
     const seccionesVisibles = ordenSecciones
         .filter(m => modulos.includes(m as any))
@@ -75,6 +76,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
                             <button
                                 key={modulo}
                                 onClick={() => setSeccionActiva(seccion)}
+                                aria-current={activa ? 'page' : undefined}
                                 className={`flex items-center gap-2 px-4 sm:px-5 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
                                     activa
                                         ? 'bg-white text-violet-700 shadow-sm'

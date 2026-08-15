@@ -18,8 +18,9 @@ const SECCION_POR_MODULO: Record<string, seccionPdv> = {
     suscripciones: 'socios',
     inventario: 'inventario',
     ventas: 'ventas',
+    informe: 'informe',
 };
-const ORDEN_MODULOS = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ventas'];
+const ORDEN_MODULOS = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ventas', 'informe'];
 
 // Componente interno que ya tiene acceso a los módulos
 function LayoutPrincipal() {

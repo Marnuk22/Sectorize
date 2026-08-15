@@ -1,6 +1,6 @@
-import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, BarChart3, type LucideIcon } from 'lucide-react';
 
-export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos';
+export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos' | 'informe';
 
 export interface ModuloConfig {
     id:          ModuloId;
@@ -33,6 +33,13 @@ export const MODULOS: Record<ModuloId, ModuloConfig> = {
         icono: Calculator,
         esNucleo: true,
     },
+    informe: {
+        id: 'informe',
+        nombre: 'Informe',
+        descripcion: 'Análisis de ventas por período',
+        icono: BarChart3,
+        esNucleo: true,
+    },
     salon: {
         id: 'salon',
         nombre: 'Salón',
@@ -63,16 +70,16 @@ export const NEGOCIOS: Record<TipoNegocio, { nombre: string; descripcion: string
     restaurante: {
         nombre: 'Restaurante / Bar / Café',
         descripcion: 'Gestión por mesas y sectores',
-        modulos: ['inventario', 'ventas', 'arqueos', 'salon'],
+        modulos: ['inventario', 'ventas', 'arqueos', 'informe', 'salon'],
     },
     tienda: {
         nombre: 'Tienda / Kiosco',
         descripcion: 'Venta directa de productos',
-        modulos: ['inventario', 'ventas', 'arqueos', 'mostrador'],
+        modulos: ['inventario', 'ventas', 'arqueos', 'informe', 'mostrador'],
     },
     servicios: {
         nombre: 'Servicios / Academias',
         descripcion: 'Membresías y asistencias',
-        modulos: ['inventario', 'ventas', 'arqueos', 'suscripciones'],
+        modulos: ['inventario', 'ventas', 'arqueos', 'informe', 'suscripciones'],
     },
 };
