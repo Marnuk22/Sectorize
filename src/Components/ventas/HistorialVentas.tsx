@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer, Pencil } from 'lucide-react';
+import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer, Pencil, Download } from 'lucide-react';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
 import { imprimirArqueo } from '../../logic/impresion';
+import { exportarHistorialAExcel } from '../../logic/exportarVentas';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
 import { usePlan } from '../../hooks/usePlan';
 import type { MetodoPago } from '../../types';
@@ -27,6 +28,7 @@ const HistorialVentas = () => {
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [arqueoExpandido, setArqueoExpandido] = useState<string | null>(null);
     const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaHistorial | null>(null);
+    const [exportando, setExportando] = useState(false);
 
     const handleReimprimirArqueo = (arqueo: typeof arqueos[number]) => {
         imprimirArqueo({
@@ -72,6 +74,21 @@ const HistorialVentas = () => {
             return acc;
         }, {} as Record<MetodoPago, number>);
 
+    // Exporta exactamente lo que se ve en pantalla: mismos filtros y mismo
+    // límite de plan gratis (solo arqueo abierto) que ventasVisibles.
+    const handleExportar = async () => {
+        setExportando(true);
+        try {
+            const detallePorVenta: Record<string, DetalleVenta[]> = {};
+            await Promise.all(ventasVisibles.map(async venta => {
+                detallePorVenta[venta.id] = await cargarDetalleVenta(venta.id);
+            }));
+            exportarHistorialAExcel(ventasVisibles, detallePorVenta);
+        } finally {
+            setExportando(false);
+        }
+    };
+
     return (
         <div className="space-y-3 animate-in fade-in slide-in-from-left-4 duration-300">
 
@@ -91,6 +108,14 @@ const HistorialVentas = () => {
                     >
                         <RefreshCw size={16} className="text-stone-400" />
                     </button>
+                    <Boton
+                        variante="secundario"
+                        icono={<Download size={14} />}
+                        onClick={handleExportar}
+                        disabled={exportando || ventasVisibles.length === 0}
+                    >
+                        {exportando ? 'Generando...' : 'Exportar a Excel'}
+                    </Boton>
                     {historialCompleto && (
                         <button
                             onClick={() => setMostrarFiltros(!mostrarFiltros)}

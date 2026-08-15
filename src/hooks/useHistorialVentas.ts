@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import type { MetodoPago } from '../types';
+import type { MetodoPago, EstadoVenta } from '../types';
 
 export interface VentaHistorial {
     id: string;
     fecha: Date;
     total: number;
     metodo_pago: MetodoPago;
+    estado: EstadoVenta;
     arqueo_id: string;
     fecha_apertura_arqueo: Date;
     fecha_cierre_arqueo: Date | null;
@@ -76,7 +77,7 @@ export const useHistorialVentas = () => {
         const { data, error } = await supabase
             .from('ventas')
             .select(`
-                id, fecha, total, metodo_pago, arqueo_id, descuento, editado_en,
+                id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
                 arqueos (fecha_apertura, fecha_cierre, estado)
             `)
             .eq('local_id', localId)
@@ -116,6 +117,7 @@ export const useHistorialVentas = () => {
             fecha: new Date(v.fecha),
             total: v.total,
             metodo_pago: v.metodo_pago,
+            estado: v.estado,
             arqueo_id: v.arqueo_id,
             fecha_apertura_arqueo: new Date(v.arqueos.fecha_apertura),
             fecha_cierre_arqueo: v.arqueos.fecha_cierre ? new Date(v.arqueos.fecha_cierre) : null,
