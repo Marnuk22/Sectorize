@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Mail, Eye, EyeOff, Lock, Store, UtensilsCrossed, ShoppingBag, Dumbbell, ArrowLeft, Sparkles } from 'lucide-react';
+import { Mail, Eye, EyeOff, Lock, Store, UtensilsCrossed, ShoppingBag, Dumbbell, ArrowLeft, Sparkles, Building2 } from 'lucide-react';
 import InputVallis from './InputVallis';
 import { NEGOCIOS, type TipoNegocio } from '../../config/modulos';
 
@@ -16,8 +16,9 @@ const ICONOS_NEGOCIO: Record<TipoNegocio, typeof Store> = {
 };
 
 const FormRegistro = () => {
-    const [paso, setPaso]               = useState<1 | 2>(1);
+    const [paso, setPaso]               = useState<1 | 2 | 3>(1);
     const [tipoNegocio, setTipoNegocio] = useState<TipoNegocio | null>(null);
+    const [multisucursal, setMultisucursal] = useState<boolean | null>(null);
     const [nombreLocal, setNombreLocal] = useState('');
     const [email, setEmail]             = useState('');
     const [clave, setClave]             = useState('');
@@ -29,6 +30,11 @@ const FormRegistro = () => {
     const elegirTipo = (tipo: TipoNegocio) => {
         setTipoNegocio(tipo);
         setPaso(2);
+    };
+
+    const elegirAlcance = (esMultisucursal: boolean) => {
+        setMultisucursal(esMultisucursal);
+        setPaso(3);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +66,7 @@ const FormRegistro = () => {
                 p_nombre_usuario: email.split('@')[0],
                 p_modulos: NEGOCIOS[tipoNegocio].modulos,
                 p_plan: 'premium',   // fase de prueba: todos acceden a premium
+                p_multisucursal: multisucursal ?? false,
             });
             if (fnError) throw fnError;
             setRegistroExitoso(true);
@@ -119,12 +126,52 @@ const FormRegistro = () => {
         );
     }
 
-    // PASO 2 — Datos de la cuenta
+    // PASO 2 — Único local o multisucursal
+    if (paso === 2) {
+        return (
+            <div className="space-y-3">
+                <button
+                    type="button"
+                    onClick={() => setPaso(1)}
+                    className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600 mb-1"
+                >
+                    <ArrowLeft size={16} /> Volver
+                </button>
+                <p className="text-sm text-slate-500 text-center mb-4">¿Tenés un solo local o varias sucursales?</p>
+                <button
+                    onClick={() => elegirAlcance(false)}
+                    className="w-full flex items-center gap-4 p-4 border border-slate-200 rounded-2xl hover:border-violet-400 hover:bg-violet-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-slate-100 rounded-xl group-hover:bg-violet-100 transition-colors">
+                        <Store size={24} className="text-slate-600 group-hover:text-violet-600" />
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-800">Un solo local</p>
+                        <p className="text-xs text-slate-400">Manejo un único local por ahora</p>
+                    </div>
+                </button>
+                <button
+                    onClick={() => elegirAlcance(true)}
+                    className="w-full flex items-center gap-4 p-4 border border-slate-200 rounded-2xl hover:border-violet-400 hover:bg-violet-50 transition-all text-left group"
+                >
+                    <div className="p-3 bg-slate-100 rounded-xl group-hover:bg-violet-100 transition-colors">
+                        <Building2 size={24} className="text-slate-600 group-hover:text-violet-600" />
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-800">Varias sucursales</p>
+                        <p className="text-xs text-slate-400">Manejo (o voy a manejar) más de un local</p>
+                    </div>
+                </button>
+            </div>
+        );
+    }
+
+    // PASO 3 — Datos de la cuenta
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <button
                 type="button"
-                onClick={() => setPaso(1)}
+                onClick={() => setPaso(2)}
                 className="flex items-center gap-1 text-sm text-slate-400 hover:text-slate-600"
             >
                 <ArrowLeft size={16} /> Volver
