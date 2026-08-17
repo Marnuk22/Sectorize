@@ -5,6 +5,7 @@ import type { MetodoPago, EstadoVenta } from '../types';
 
 export interface VentaHistorial {
     id: string;
+    local_id: string;
     fecha: Date;
     total: number;
     metodo_pago: MetodoPago;
@@ -53,8 +54,14 @@ const resumenDeItems = (items: DetalleVenta[]): string => {
     return visibles.join(', ') + resto;
 };
 
-export const useHistorialVentas = () => {
-    const { localId } = useAuth();
+interface OpcionesHistorial {
+    // Arranca mostrando todas las sucursales del negocio en vez de solo la
+    // activa (Informe la usa así; Historial no la pasa, sigue como siempre).
+    consolidarPorDefecto?: boolean;
+}
+
+export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
+    const { localId, sucursales } = useAuth();
     const [ventas, setVentas] = useState<VentaHistorial[]>([]);
     const [arqueos, setArqueos] = useState<ArqueoResumen[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -66,22 +73,33 @@ export const useHistorialVentas = () => {
     });
     const [detalles, setDetalles] = useState<Record<string, DetalleVenta[]>>({});
 
+    // 'todas' consolida las sucursales del negocio (dueño); un local_id puntual
+    // filtra a una sola. Con 1 sola sucursal esto no cambia nada (siempre localId).
+    const [sucursalFiltro, setSucursalFiltro] = useState<string>(opciones.consolidarPorDefecto ? 'todas' : 'propia');
 
     useEffect(() => {
         if (!localId) return;
         cargarDatos();
-    }, [localId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localId, sucursalFiltro, sucursales.length]);
 
     const cargarDatos = async () => {
         setCargando(true);
-        const { data, error } = await supabase
+
+        const idsSucursales = sucursalFiltro === 'todas' && sucursales.length > 1
+            ? sucursales.map(s => s.id)
+            : null;
+
+        let queryVentas = supabase
             .from('ventas')
             .select(`
-                id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
+                id, local_id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
                 arqueos (fecha_apertura, fecha_cierre, estado)
             `)
-            .eq('local_id', localId)
             .order('fecha', { ascending: false });
+        queryVentas = idsSucursales ? queryVentas.in('local_id', idsSucursales) : queryVentas.eq('local_id', localId);
+
+        const { data, error } = await queryVentas;
 
         if (error) { console.error(error); setCargando(false); return; }
 
@@ -114,6 +132,7 @@ export const useHistorialVentas = () => {
 
         const ventasFormateadas: VentaHistorial[] = (data ?? []).map((v: any) => ({
             id: v.id,
+            local_id: v.local_id,
             fecha: new Date(v.fecha),
             total: v.total,
             metodo_pago: v.metodo_pago,
@@ -130,11 +149,9 @@ export const useHistorialVentas = () => {
         setDetalles(prev => ({ ...prev, ...itemsPorVenta }));
 
         // Armar resumen por arqueo
-        const { data: arqs } = await supabase
-            .from('arqueos')
-            .select('*')
-            .eq('local_id', localId)
-            .order('fecha_apertura', { ascending: false });
+        let queryArqueos = supabase.from('arqueos').select('*').order('fecha_apertura', { ascending: false });
+        queryArqueos = idsSucursales ? queryArqueos.in('local_id', idsSucursales) : queryArqueos.eq('local_id', localId);
+        const { data: arqs } = await queryArqueos;
 
         if (arqs) {
             const resumenes: ArqueoResumen[] = arqs.map(a => {
@@ -242,6 +259,8 @@ export const useHistorialVentas = () => {
         cargando,
         filtros,
         setFiltros,
+        sucursalFiltro,
+        setSucursalFiltro,
         totalFiltrado,
         porMetodoFiltrado,
         recargar: cargarDatos,

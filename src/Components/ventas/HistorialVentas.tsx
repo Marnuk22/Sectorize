@@ -57,7 +57,7 @@ const HistorialVentas = () => {
     // Solo se puede editar una venta del arqueo que sigue abierto: los
     // agregados de un arqueo ya cerrado no se recalculan solos.
     const puedeEditar = (venta: VentaHistorial) =>
-        perfil?.rol === 'admin' && !!arqueoAbierto && venta.arqueo_id === arqueoAbierto.id;
+        perfil?.rol === 'dueño' && !!arqueoAbierto && venta.arqueo_id === arqueoAbierto.id;
 
     const ventasVisibles = historialCompleto
         ? ventas

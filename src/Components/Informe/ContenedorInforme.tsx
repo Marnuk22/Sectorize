@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, TrendingUp, ShoppingBag, Receipt, BarChart3 } from 'lucide-react';
+import { Download, TrendingUp, ShoppingBag, Receipt, BarChart3, Store } from 'lucide-react';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
 import type { DetalleVenta } from '../../hooks/useHistorialVentas';
+import { useAuth } from '../../context/AuthContext';
 import { exportarInformeAExcel } from '../../logic/exportarVentas';
 import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
 import { formatearCantidad, type UnidadMedida } from '../../config/unidades';
@@ -61,7 +62,9 @@ interface FilaRanking {
 }
 
 const ContenedorInforme = () => {
-    const { ventas, cargando, setFiltros, cargarDetalleVenta } = useHistorialVentas();
+    const { sucursales } = useAuth();
+    const { ventas, cargando, setFiltros, cargarDetalleVenta, sucursalFiltro, setSucursalFiltro } =
+        useHistorialVentas({ consolidarPorDefecto: true });
 
     const [periodo, setPeriodo] = useState<Periodo>('mes_actual');
     const [personalizado, setPersonalizado] = useState({ desde: '', hasta: '' });
@@ -177,12 +180,29 @@ const ContenedorInforme = () => {
         }));
     }, [ventas]);
 
+    const consolidando = sucursalFiltro === 'todas' && sucursales.length > 1;
+
+    const desglosePorSucursal = useMemo(() => {
+        if (!consolidando) return [];
+        const acc = new Map<string, { local_id: string; nombre: string; total: number; cantidad: number }>();
+        for (const v of ventas) {
+            if (v.estado !== 'cerrada') continue;
+            const nombre = sucursales.find(s => s.id === v.local_id)?.nombre ?? 'Sucursal';
+            const entrada = acc.get(v.local_id) ?? { local_id: v.local_id, nombre, total: 0, cantidad: 0 };
+            entrada.total += v.total;
+            entrada.cantidad += 1;
+            acc.set(v.local_id, entrada);
+        }
+        return Array.from(acc.values()).sort((a, b) => b.total - a.total);
+    }, [ventas, consolidando, sucursales]);
+
     const handleExportar = () => {
         exportarInformeAExcel({
             resumen: { desde, hasta, totalVendido: totalPeriodo, cantidadVentas, ticketPromedio },
             ventasPorDia: ventasPorDia.map(d => ({ fecha: d.fecha, total: d.total })),
             ranking,
             porMetodo,
+            porSucursal: desglosePorSucursal.map(({ nombre, total, cantidad }) => ({ nombre, total, cantidad })),
         });
     };
 
@@ -240,6 +260,35 @@ const ContenedorInforme = () => {
                     )}
                 </div>
 
+                {/* Selector de sucursal — solo aparece si el negocio tiene más de una */}
+                {sucursales.length > 1 && (
+                    <div className="flex gap-1 bg-stone-100 p-1 rounded-xl w-fit" role="group" aria-label="Sucursal del informe">
+                        <button
+                            type="button"
+                            aria-pressed={sucursalFiltro === 'todas'}
+                            onClick={() => setSucursalFiltro('todas')}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                sucursalFiltro === 'todas' ? 'bg-white text-violet-700 shadow-sm' : 'text-stone-500 hover:text-stone-700'
+                            }`}
+                        >
+                            Todas las sucursales
+                        </button>
+                        {sucursales.map(s => (
+                            <button
+                                key={s.id}
+                                type="button"
+                                aria-pressed={sucursalFiltro === s.id}
+                                onClick={() => setSucursalFiltro(s.id)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                    sucursalFiltro === s.id ? 'bg-white text-violet-700 shadow-sm' : 'text-stone-500 hover:text-stone-700'
+                                }`}
+                            >
+                                {s.nombre}
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {cargando ? (
                     <div className="flex items-center justify-center py-16" aria-busy="true">
                         <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
@@ -275,6 +324,42 @@ const ContenedorInforme = () => {
                                 />
                             </div>
                         </section>
+
+                        {/* Por sucursal — solo en la vista consolidada */}
+                        {consolidando && desglosePorSucursal.length > 0 && (
+                            <section aria-labelledby="informe-sucursal-heading">
+                                <h3 id="informe-sucursal-heading" className="text-xs font-bold text-stone-400 uppercase tracking-wide mb-2">
+                                    Por sucursal
+                                </h3>
+                                <Tarjeta padding="none" className="overflow-hidden">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="border-b border-stone-200 text-left text-xs text-stone-400 uppercase">
+                                                    <th scope="col" className="px-4 py-2.5 font-medium">Sucursal</th>
+                                                    <th scope="col" className="px-4 py-2.5 font-medium text-right">Cantidad de ventas</th>
+                                                    <th scope="col" className="px-4 py-2.5 font-medium text-right">Total vendido</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-stone-100">
+                                                {desglosePorSucursal.map(fila => (
+                                                    <tr key={fila.local_id}>
+                                                        <td className="px-4 py-2.5 text-stone-700 flex items-center gap-2">
+                                                            <Store size={14} className="text-stone-400" />
+                                                            {fila.nombre}
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-right text-stone-600 tabular-nums">{fila.cantidad}</td>
+                                                        <td className="px-4 py-2.5 text-right font-bold text-stone-800 tabular-nums">
+                                                            ${fila.total.toLocaleString('es-AR')}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </Tarjeta>
+                            </section>
+                        )}
 
                         {/* Ventas por día */}
                         <section aria-labelledby="informe-dia-heading">
