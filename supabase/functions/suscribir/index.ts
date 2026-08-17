@@ -1,4 +1,4 @@
-// Genera un link de suscripción para un local
+// Genera un link de suscripción para un negocio (cubre todas sus sucursales)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
@@ -28,15 +28,15 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401, headers: cors });
         }
 
-        // Buscar el local del usuario
+        // Buscar el negocio del usuario (la suscripción es por negocio, no por sucursal)
         const { data: perfil } = await supabase
             .from('perfiles')
-            .select('local_id')
+            .select('local_id, negocio_id')
             .eq('id', user.id)
             .single();
 
-        if (!perfil) {
-            return new Response(JSON.stringify({ error: 'Sin local' }), { status: 400, headers: cors });
+        if (!perfil || !perfil.negocio_id) {
+            return new Response(JSON.stringify({ error: 'Sin negocio' }), { status: 400, headers: cors });
         }
 
         // Email de la cuenta de MercadoPago del pagador (puede diferir del email de login)
@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
                 },
                 payer_email: payerEmail,
                 back_url: 'https://app.vallis.com.ar',
-                external_reference: perfil.local_id,
+                external_reference: perfil.negocio_id,
                 status: 'pending',
             }),
         });
@@ -78,11 +78,11 @@ Deno.serve(async (req) => {
             return new Response(JSON.stringify({ error: data.message || 'No se pudo crear la suscripción', cause: data.cause }), { status: res.status, headers: cors });
         }
 
-        // Guardar el id de la suscripción en el local
+        // Guardar el id de la suscripción en el negocio (aplica a todas sus sucursales)
         await supabase
-            .from('locales')
+            .from('negocios')
             .update({ suscripcion_id: data.id })
-            .eq('id', perfil.local_id);
+            .eq('id', perfil.negocio_id);
 
         // Devolver el link al que redirigir
         return new Response(JSON.stringify({ init_point: data.init_point }), {

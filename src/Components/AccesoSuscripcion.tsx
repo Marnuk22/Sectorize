@@ -52,15 +52,15 @@ const BannerGracia = ({ dias, onPagar }: { dias: number; onPagar: () => void }) 
 );
 
 const AccesoSuscripcion = ({ children }: { children: ReactNode }) => {
-    const { local } = useAuth();
+    const { negocio } = useAuth();
     const [panelPago, setPanelPago] = useState(false);
 
-    const estado = BLOQUEO_ACTIVO ? estadoAcceso(local) : 'ok';
+    const estado = BLOQUEO_ACTIVO ? estadoAcceso(negocio) : 'ok';
 
     return (
         <div className="h-screen flex flex-col overflow-hidden">
             {estado === 'gracia' && (
-                <BannerGracia dias={diasGraciaRestantes(local)} onPagar={() => setPanelPago(true)} />
+                <BannerGracia dias={diasGraciaRestantes(negocio)} onPagar={() => setPanelPago(true)} />
             )}
 
             <div className="flex-1 min-h-0">

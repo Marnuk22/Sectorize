@@ -15,17 +15,17 @@ const diasRestantes = (fecha: string | null): number => {
 };
 
 const PanelMiPlan = () => {
-    const { local, user } = useAuth();
+    const { negocio, user } = useAuth();
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
     const [emailMP, setEmailMP] = useState(user?.email ?? '');
 
-    const estado = local?.suscripcion_estado ?? 'prueba';
-    const diasPrueba = diasRestantes(local?.prueba_vence ?? null);
-    const diasSuscripcion = diasRestantes(local?.suscripcion_vence ?? null);
+    const estado = negocio?.suscripcion_estado ?? 'prueba';
+    const diasPrueba = diasRestantes(negocio?.prueba_vence ?? null);
+    const diasSuscripcion = diasRestantes(negocio?.suscripcion_vence ?? null);
     // "activa" según la DB no alcanza: si el webhook nunca la marcó vencida,
     // hay que chequear la fecha real (estadoAcceso) para saber si sigue vigente.
-    const activaVigente = estado === 'activa' && estadoAcceso(local) === 'ok';
+    const activaVigente = estado === 'activa' && estadoAcceso(negocio) === 'ok';
 
     const handleSuscribirse = async () => {
         setCargando(true);

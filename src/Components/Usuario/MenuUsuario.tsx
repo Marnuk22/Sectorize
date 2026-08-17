@@ -1,16 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Store, Settings, HelpCircle, LogOut, Printer, Globe, Sparkles } from 'lucide-react';
+import { ChevronDown, Store, Settings, HelpCircle, LogOut, Printer, Globe, Sparkles, Plus, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { ModalBase, Campo, Boton } from '../ui/ComponentesBase';
 
-export type PanelUsuario = 'local' | 'config' | 'impresoras' | 'catalogo' | 'subscripcion' | 'ayuda';
+export type PanelUsuario = 'local' | 'config' | 'impresoras' | 'catalogo' | 'subscripcion' | 'empleados' | 'ayuda';
 
 interface Props {
     onAbrirPanel: (panel: PanelUsuario) => void;
 }
 
 const MenuUsuario = ({ onAbrirPanel }: Props) => {
-    const { local, perfil, signOut } = useAuth();
+    const { local, perfil, sucursales, cambiarSucursal, refrescar, signOut } = useAuth();
     const [abierto, setAbierto] = useState(false);
+    const [modalSucursal, setModalSucursal] = useState(false);
+    const [nombreSucursal, setNombreSucursal] = useState('');
+    const [creando, setCreando] = useState(false);
+    const [errorSucursal, setErrorSucursal] = useState('');
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -39,6 +45,23 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
         onAbrirPanel(panel);
     };
 
+    const agregarSucursal = async () => {
+        if (!nombreSucursal.trim()) return;
+        setCreando(true);
+        setErrorSucursal('');
+        try {
+            const { error } = await supabase.rpc('agregar_sucursal', { p_nombre: nombreSucursal.trim() });
+            if (error) throw error;
+            await refrescar();
+            setModalSucursal(false);
+            setNombreSucursal('');
+        } catch (err: any) {
+            setErrorSucursal(err.message ?? 'No se pudo crear la sucursal');
+        } finally {
+            setCreando(false);
+        }
+    };
+
     return (
         <div className="relative" ref={menuRef}>
             <button
@@ -64,6 +87,42 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
                             Fase de prueba
                         </span>
                     </div>
+
+                    {/* Selector de sucursal — solo aparece si el negocio tiene más de una */}
+                    {perfil?.rol === 'dueño' && (
+                        <div className="py-1 border-b border-stone-100">
+                            {sucursales.length > 1 && (
+                                <>
+                                    <p className="px-4 pt-1 pb-1.5 text-xs font-medium text-stone-400">Sucursal activa</p>
+                                    {sucursales.map(s => (
+                                        <button
+                                            key={s.id}
+                                            onClick={() => { cambiarSucursal(s.id); setAbierto(false); }}
+                                            className={`w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${
+                                                s.id === local?.id ? 'text-violet-700 font-medium bg-violet-50' : 'text-stone-700 hover:bg-stone-50'
+                                            }`}
+                                        >
+                                            {s.nombre}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            <button
+                                onClick={() => { setAbierto(false); setModalSucursal(true); }}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-violet-600 hover:bg-violet-50 transition-colors"
+                            >
+                                <Plus size={16} />
+                                Agregar sucursal
+                            </button>
+                            <button
+                                onClick={() => abrirPanel('empleados')}
+                                className="w-full flex items-center gap-3 px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-50 transition-colors"
+                            >
+                                <Users size={16} className="text-stone-400" />
+                                Empleados
+                            </button>
+                        </div>
+                    )}
 
                     {/* Opciones */}
                     <div className="py-1">
@@ -94,6 +153,28 @@ const MenuUsuario = ({ onAbrirPanel }: Props) => {
                     </div>
                 </div>
             )}
+
+            <ModalBase isOpen={modalSucursal} onClose={() => setModalSucursal(false)} titulo="Agregar sucursal" ancho="sm">
+                <div className="space-y-3">
+                    <Campo
+                        etiqueta="Nombre de la sucursal"
+                        value={nombreSucursal}
+                        onChange={(e) => setNombreSucursal(e.target.value)}
+                        placeholder="Ej: Sucursal Centro"
+                        ayuda="Arranca con el catálogo vacío — vas a poder compartir productos entre sucursales en un paso posterior."
+                        autoFocus
+                    />
+                    {errorSucursal && <p className="text-xs text-red-500">{errorSucursal}</p>}
+                    <Boton
+                        variante="primario"
+                        onClick={agregarSucursal}
+                        disabled={creando || !nombreSucursal.trim()}
+                        className="w-full"
+                    >
+                        {creando ? 'Creando...' : 'Crear sucursal'}
+                    </Boton>
+                </div>
+            </ModalBase>
         </div>
     );
 };

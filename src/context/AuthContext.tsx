@@ -1,16 +1,19 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { type User } from '@supabase/supabase-js';
-import { type Perfil, type Local } from '../types';
+import { type Perfil, type Local, type Negocio } from '../types';
 
 interface AuthContextType {
     user: User | null;
     perfil: Perfil | null;
     local: Local | null;
+    negocio: Negocio | null;
+    sucursales: Local[];
     localId: string | null;
     loading: boolean;
     signOut: () => Promise<void>;
     actualizarLocal: (cambios: Partial<Local>) => Promise<void>;
+    cambiarSucursal: (id: string) => void;
     refrescar: () => Promise<void>;
 }
 
@@ -38,10 +41,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } catch { return null; }
     });
 
+    const [negocio, setNegocio] = useState<Negocio | null>(() => {
+        try {
+            const cached = localStorage.getItem('negocio');
+            return cached ? JSON.parse(cached) as Negocio : null;
+        } catch { return null; }
+    });
+
+    const [sucursales, setSucursales] = useState<Local[]>(() => {
+        try {
+            const cached = localStorage.getItem('sucursales');
+            return cached ? JSON.parse(cached) as Local[] : [];
+        } catch { return []; }
+    });
+
     const [localId, setLocalId] = useState<string | null>(() => {
         try {
-            const cached = localStorage.getItem('perfil');
-            return cached ? (JSON.parse(cached) as Perfil).local_id : null;
+            // La sucursal activa cacheada (que puede diferir de la propia si
+            // el dueño cambió de sucursal antes de recargar) manda sobre la
+            // propia del perfil, para no desincronizar `local` y `localId`
+            // en el primer render.
+            const cachedLocal = localStorage.getItem('local');
+            if (cachedLocal) return (JSON.parse(cachedLocal) as Local).id;
+            const cachedPerfil = localStorage.getItem('perfil');
+            return cachedPerfil ? (JSON.parse(cachedPerfil) as Perfil).local_id : null;
         } catch { return null; }
     });
 
@@ -57,7 +80,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const { data, error } = await supabase
                 .from('perfiles')
-                .select('local_id, nombre_usuario, rol')
+                .select('local_id, nombre_usuario, rol, negocio_id')
                 .eq('id', authUser.id)
                 .single();
 
@@ -66,21 +89,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (data) {
                 console.log("✅ [Auth] Perfil obtenido con éxito:", data.local_id);
                 setPerfil(data as Perfil);
-                setLocalId(data.local_id);
                 localStorage.setItem('perfil', JSON.stringify(data));
                 localStorage.setItem('vallis_user', JSON.stringify(authUser));
 
-                if (data.local_id) {
-                    const { data: localData, error: localError } = await supabase
+                if (data.negocio_id) {
+                    // sucursales_del_usuario() (RLS) ya devuelve todas las del negocio
+                    // si es dueño, o solo la propia si es encargado/empleado.
+                    const { data: sucursalesData, error: sucursalesError } = await supabase
                         .from('locales')
                         .select('*')
-                        .eq('id', data.local_id)
-                        .single();
+                        .eq('negocio_id', data.negocio_id);
 
-                    if (!localError && localData) {
-                        console.log("🏪 [Auth] Local obtenido:", localData.nombre, localData.modulos);
-                        setLocal(localData as Local);
-                        localStorage.setItem('local', JSON.stringify(localData));
+                    if (!sucursalesError && sucursalesData && sucursalesData.length > 0) {
+                        setSucursales(sucursalesData as Local[]);
+                        localStorage.setItem('sucursales', JSON.stringify(sucursalesData));
+
+                        const guardada = localStorage.getItem('sucursalActivaId');
+                        const activa =
+                            sucursalesData.find(l => l.id === guardada) ??
+                            sucursalesData.find(l => l.id === data.local_id) ??
+                            sucursalesData[0];
+
+                        console.log("🏪 [Auth] Sucursal activa:", activa.nombre, activa.modulos);
+                        setLocal(activa as Local);
+                        setLocalId(activa.id);
+                        localStorage.setItem('local', JSON.stringify(activa));
+                        localStorage.setItem('sucursalActivaId', activa.id);
+
+                        const { data: negocioData, error: negocioError } = await supabase
+                            .from('negocios')
+                            .select('*')
+                            .eq('id', activa.negocio_id)
+                            .single();
+
+                        if (!negocioError && negocioData) {
+                            setNegocio(negocioData as Negocio);
+                            localStorage.setItem('negocio', JSON.stringify(negocioData));
+                        }
                     }
                 }
             }
@@ -110,15 +155,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    // Cambia la sucursal activa entre las del propio negocio, sin pegarle a
+    // la red (ya tenemos las filas completas cacheadas en `sucursales`).
+    const cambiarSucursal = (id: string) => {
+        const encontrada = sucursales.find(s => s.id === id);
+        if (!encontrada) return;
+        setLocal(encontrada);
+        setLocalId(id);
+        localStorage.setItem('local', JSON.stringify(encontrada));
+        localStorage.setItem('sucursalActivaId', id);
+    };
+
     const limpiarEstado = () => {
         console.log("🧹 [Auth] Ejecutando limpieza total de estados y localStorage...");
         setUser(null);
         setPerfil(null);
         setLocal(null);
+        setNegocio(null);
+        setSucursales([]);
         setLocalId(null);
         localStorage.removeItem('perfil');
         localStorage.removeItem('vallis_user');
         localStorage.removeItem('local');
+        localStorage.removeItem('negocio');
+        localStorage.removeItem('sucursales');
+        localStorage.removeItem('sucursalActivaId');
     };
 
     useEffect(() => {
@@ -172,7 +233,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, perfil, local, localId, loading, signOut, actualizarLocal, refrescar }}>
+        <AuthContext.Provider value={{ user, perfil, local, negocio, sucursales, localId, loading, signOut, actualizarLocal, cambiarSucursal, refrescar }}>
             {children}
         </AuthContext.Provider>
     );

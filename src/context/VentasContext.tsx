@@ -159,7 +159,7 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
         const totalVentas = ventas?.reduce((acc, v) => acc + v.total, 0) ?? 0;
         const montoEsperado = arqueoActivo.montoInicial + totalVentas;
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('arqueos')
             .update({
                 estado: 'cerrado',
@@ -167,9 +167,16 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
                 monto_final_esperado: montoEsperado,
                 fecha_cierre: new Date().toISOString(),
             })
-            .eq('id', arqueoActivo.id);
+            .eq('id', arqueoActivo.id)
+            .select()
+            .maybeSingle();
 
         if (error) throw error;
+        // Un UPDATE bloqueado por RLS no es un error de Postgres (0 filas
+        // afectadas es "éxito" para la sintaxis) — sin este chequeo, un
+        // permiso insuficiente se ve en pantalla como "caja cerrada" cuando
+        // en la base sigue abierta.
+        if (!data) throw new Error('No se pudo cerrar la caja (sin permiso)');
 
         setArqueosHistorial(prev => prev.map(a =>
             a.id === arqueoActivo.id

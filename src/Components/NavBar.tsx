@@ -9,6 +9,7 @@ import PanelAyuda from './Usuario/PanelAyuda';
 import PanelImpresoras from './Usuario/PanelImpresoras';
 import PanelCatalogo from './Usuario/PanelCatalogo';
 import PanelMiPlan from './Usuario/PanelMiPlan';
+import PanelEmpleados from './Usuario/PanelEmpleados';
 
 export type SeccionPDV = 'sectores' | 'inventario' | 'ventas' | 'mostrador' | 'socios' | 'informe';
 
@@ -32,6 +33,7 @@ const TITULOS_PANEL: Record<PanelUsuario, string> = {
     impresoras: 'Impresoras',
     catalogo:   'Catálogo público',
     subscripcion: 'Mi suscripción',
+    empleados:  'Empleados',
     ayuda:      'Ayuda y soporte',
 };
 
@@ -56,6 +58,7 @@ const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
             case 'impresoras': return <PanelImpresoras />;
             case 'catalogo':   return <PanelCatalogo />;
             case 'subscripcion': return <PanelMiPlan />;
+            case 'empleados':  return <PanelEmpleados />;
             case 'ayuda':      return <PanelAyuda />;
             default:           return null;
         }

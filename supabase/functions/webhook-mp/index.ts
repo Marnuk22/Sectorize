@@ -24,11 +24,14 @@ Deno.serve(async (req) => {
         });
         const sub = await res.json();
 
-        // external_reference es el local_id que guardamos al suscribir
-        const localId = sub.external_reference;
+        // external_reference es el negocio_id que guardamos al suscribir. Las
+        // suscripciones creadas ANTES de la migración a suscripción-por-negocio
+        // llevan un local_id ahí (no se puede cambiar retroactivamente en MP),
+        // así que si no matchea un negocio directo, se resuelve como local viejo.
+        const externalRef = sub.external_reference;
         const estadoMP = sub.status;  // 'authorized', 'paused', 'cancelled'
 
-        if (!localId) return new Response('ok', { status: 200 });
+        if (!externalRef) return new Response('ok', { status: 200 });
 
         // Traducir el estado de MercadoPago al nuestro
         let estado: string;
@@ -50,14 +53,30 @@ Deno.serve(async (req) => {
         }
 
         const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+        // ¿externalRef es un negocio directo? (suscripciones nuevas)
+        let negocioId: string | null = externalRef;
+        const { data: negocioDirecto } = await supabase
+            .from('negocios').select('id').eq('id', externalRef).maybeSingle();
+
+        if (!negocioDirecto) {
+            // No matcheó: es un local_id viejo (suscripción creada antes de
+            // esta migración) — resolver su negocio_id.
+            const { data: localViejo } = await supabase
+                .from('locales').select('negocio_id').eq('id', externalRef).maybeSingle();
+            negocioId = localViejo?.negocio_id ?? null;
+        }
+
+        if (!negocioId) return new Response('ok', { status: 200 });
+
         await supabase
-            .from('locales')
+            .from('negocios')
             .update({
                 suscripcion_estado: estado,
                 suscripcion_id: id,
                 suscripcion_vence: vence,
             })
-            .eq('id', localId);
+            .eq('id', negocioId);
 
         return new Response('ok', { status: 200 });
 

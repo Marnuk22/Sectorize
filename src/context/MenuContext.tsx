@@ -11,7 +11,7 @@ interface MenuContextType {
     cargando: boolean;
     obtenerProductoPorId: (id: string) => Producto | undefined;
     filtrarPorCategoria: (nombre: string) => Producto[];
-    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => Promise<void>;
+    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => Promise<void>;
     recargarProductos: () => Promise<void>;
     editarProducto: (id: string, cambios: Partial<Producto>) => Promise<void>;
     borrarProducto: (id: string) => Promise<void>;
@@ -27,11 +27,70 @@ interface MenuContextType {
 
 const MenuContext = createContext<MenuContextType | undefined>(undefined);
 
+// Campos que en modo catálogo compartido viven en `producto_sucursal`
+// (propios de cada sucursal) en vez de en `productos` (compartido).
+const CAMPOS_SUCURSAL = ['stock_actual', 'stock_minimo', 'precio_venta', 'precio_costo'] as const;
+type CampoSucursal = typeof CAMPOS_SUCURSAL[number];
+
+const separarCambios = (cambios: Partial<Producto>) => {
+    const sucursal: Partial<Record<CampoSucursal, unknown>> = {};
+    const compartidos: Partial<Producto> = {};
+    for (const [key, value] of Object.entries(cambios)) {
+        if ((CAMPOS_SUCURSAL as readonly string[]).includes(key)) {
+            sucursal[key as CampoSucursal] = value;
+        } else {
+            (compartidos as Record<string, unknown>)[key] = value;
+        }
+    }
+    return { sucursal, compartidos };
+};
+
 export const MenuProvider = ({ children }: { children: ReactNode }) => {
-    const { localId } = useAuth();
+    const { localId, local, sucursales } = useAuth();
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [cargando, setCargando] = useState(true);
+    const [compartidoForzado, setCompartidoForzado] = useState(false);
+
+    // Catálogo compartido a nivel negocio: solo aplica cuando el negocio
+    // tiene 2+ sucursales (ver Etapa 1). `sucursales` sale de una consulta a
+    // `locales` filtrada por RLS: el dueño ve TODAS las del negocio, pero un
+    // encargado/empleado solo ve la propia (por diseño, Etapa 3) — así que
+    // `sucursales.length > 1` da falso negativo para esos roles aunque el
+    // negocio sí sea compartido. `compartidoForzado` (abajo) cubre ese caso.
+    const compartido = sucursales.length > 1 || compartidoForzado;
+    const negocioId = local?.negocio_id ?? null;
+
+    // Para encargado/empleado (sucursales.length === 1 siempre, sea o no
+    // compartido el negocio): un chequeo mínimo contra producto_sucursal,
+    // que sí pueden leer para su propia sucursal (Etapa 5b), confirma si el
+    // negocio está en modo compartido sin necesitar ver las otras sucursales.
+    useEffect(() => {
+        if (!localId || sucursales.length > 1) return;
+        let activo = true;
+        supabase.from('producto_sucursal').select('producto_id', { count: 'exact', head: true }).eq('local_id', localId)
+            .then(({ count }) => { if (activo) setCompartidoForzado((count ?? 0) > 0); });
+        return () => { activo = false; };
+    }, [localId, sucursales.length]);
+
+    // Combina la fila de `productos` con su `producto_sucursal` embebido
+    // (si vino, modo compartido) en la misma forma `Producto` de siempre —
+    // así ningún componente de Inventario necesita saber en qué modo está.
+    const aplanar = (fila: any): Producto => {
+        const ps = fila.producto_sucursal?.[0];
+        if (!ps) return fila as Producto;
+        const { producto_sucursal, ...base } = fila;
+        return { ...base, ...ps } as Producto;
+    };
+
+    const queryProductos = () =>
+        compartido && negocioId
+            ? supabase.from('productos')
+                .select('*, producto_sucursal!inner(stock_actual, stock_minimo, precio_venta, precio_costo)')
+                .eq('negocio_id', negocioId)
+                .eq('producto_sucursal.local_id', localId)
+                .order('nombre')
+            : supabase.from('productos').select('*').eq('local_id', localId).order('nombre');
 
     useEffect(() => {
         if (!localId) return;
@@ -42,11 +101,11 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             setCargando(true);
             try {
                 const [{ data: prods }, { data: cats }] = await Promise.all([
-                    supabase.from('productos').select('*').eq('local_id', localId).order('nombre'),
+                    queryProductos(),
                     supabase.from('categorias').select('*').eq('local_id', localId).order('orden'),
                 ]);
                 if (!activo) return;
-                if (prods) setProductos(prods as Producto[]);
+                if (prods) setProductos(prods.map(aplanar));
                 if (cats) setCategorias(cats as Categoria[]);
             } catch (err) {
                 console.error('Error cargando menú:', err);
@@ -57,54 +116,107 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
 
         cargar();
         return () => { activo = false; };
-    }, [localId]);
+        // `compartido`/`negocioId` en las deps: cuando el dueño agrega su 2da
+        // sucursal, `sucursales` cambia pero `localId` no — sin esto el
+        // context no se enteraría de que hay que leer por el camino nuevo.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [localId, compartido, negocioId]);
 
     const obtenerProductoPorId = (id: string) => productos.find(p => p.id === id);
 
     const filtrarPorCategoria = (nombre: string) =>
         productos.filter(p => p.categoria === nombre);
 
-    const agregarProducto = async (nuevo: Omit<Producto, 'id' | 'local_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => {
-        const { data, error } = await supabase
-            .from('productos')
-            .insert({ ...nuevo, local_id: localId })
-            .select()
-            .single();
-        if (error) throw error;
-        setProductos(prev => [...prev, data as Producto]);
+    const agregarProducto = async (nuevo: Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => {
+        if (compartido && negocioId) {
+            const { stock_actual, stock_minimo, precio_venta, precio_costo, ...compartidos } = nuevo;
+
+            const { data: creado, error } = await supabase
+                .from('productos')
+                .insert({ ...compartidos, precio_venta, precio_costo, negocio_id: negocioId })
+                .select()
+                .single();
+            if (error) throw error;
+
+            // La sucursal activa se lleva el stock que puso el usuario; el
+            // resto de las sucursales del negocio arrancan en 0 (mismo
+            // criterio que la migración automática de agregar_sucursal).
+            const filasSucursal = sucursales.map(s => ({
+                producto_id: creado.id,
+                local_id: s.id,
+                stock_actual: s.id === localId ? stock_actual : 0,
+                stock_minimo: s.id === localId ? stock_minimo : 0,
+                precio_venta,
+                precio_costo,
+            }));
+            const { error: errorStock } = await supabase.from('producto_sucursal').insert(filasSucursal);
+            if (errorStock) throw errorStock;
+
+            setProductos(prev => [...prev, { ...creado, stock_actual, stock_minimo, precio_venta, precio_costo } as Producto]);
+        } else {
+            const { data, error } = await supabase
+                .from('productos')
+                .insert({ ...nuevo, local_id: localId })
+                .select()
+                .single();
+            if (error) throw error;
+            setProductos(prev => [...prev, data as Producto]);
+        }
     };
 
     const recargarProductos = async () => {
         if (!localId) return;
-        const { data } = await supabase
-            .from('productos')
-            .select('*')
-            .eq('local_id', localId)
-            .order('nombre');
-        if (data) setProductos(data as Producto[]);
+        const { data } = await queryProductos();
+        if (data) setProductos(data.map(aplanar));
     };
 
     const editarProducto = async (id: string, cambios: Partial<Producto>) => {
-        const { data, error } = await supabase
-            .from('productos')
-            .update({ ...cambios, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .select()
-            .single();
-        if (error) throw error;
-        setProductos(prev => prev.map(p => p.id === id ? data as Producto : p));
+        if (compartido) {
+            const { sucursal, compartidos } = separarCambios(cambios);
+
+            if (Object.keys(compartidos).length > 0) {
+                const { error } = await supabase
+                    .from('productos')
+                    .update({ ...compartidos, updated_at: new Date().toISOString() })
+                    .eq('id', id);
+                if (error) throw error;
+            }
+            if (Object.keys(sucursal).length > 0) {
+                const { error } = await supabase
+                    .from('producto_sucursal')
+                    .update(sucursal)
+                    .eq('producto_id', id)
+                    .eq('local_id', localId);
+                if (error) throw error;
+            }
+            setProductos(prev => prev.map(p => p.id === id ? { ...p, ...cambios } : p));
+        } else {
+            const { data, error } = await supabase
+                .from('productos')
+                .update({ ...cambios, updated_at: new Date().toISOString() })
+                .eq('id', id)
+                .select()
+                .single();
+            if (error) throw error;
+            setProductos(prev => prev.map(p => p.id === id ? data as Producto : p));
+        }
     };
 
     const actualizarPreciosMasivo = async (cambios: { id: string; precio_venta: number }[]) => {
         if (cambios.length === 0) return;
 
-        // Actualizar todos en paralelo (más rápido que uno por uno en serie)
+        // Actualizar todos en paralelo (más rápido que uno por uno en serie).
+        // En modo compartido, el ajuste masivo es por sucursal (producto_sucursal).
         const resultados = await Promise.all(
             cambios.map(c =>
-                supabase
-                    .from('productos')
-                    .update({ precio_venta: c.precio_venta })
-                    .eq('id', c.id)
+                compartido
+                    ? supabase.from('producto_sucursal')
+                        .update({ precio_venta: c.precio_venta })
+                        .eq('producto_id', c.id)
+                        .eq('local_id', localId)
+                    : supabase.from('productos')
+                        .update({ precio_venta: c.precio_venta })
+                        .eq('id', c.id)
             )
         );
 
@@ -131,6 +243,13 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         if (count && count > 0) {
             // Tiene ventas: no se puede borrar, se protege el historial
             throw new Error('TIENE_VENTAS');
+        }
+
+        // En modo compartido hay que borrar primero las filas de
+        // producto_sucursal (la FK no tiene ON DELETE CASCADE).
+        if (compartido) {
+            const { error: errorHijos } = await supabase.from('producto_sucursal').delete().eq('producto_id', id);
+            if (errorHijos) throw errorHijos;
         }
 
         // No tiene ventas: borrar

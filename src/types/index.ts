@@ -5,7 +5,7 @@ import type { UnidadMedida } from "../config/unidades";
 // ============================================
 // ENUMS — espejo exacto de los CHECK de la DB
 // ============================================
-export type RolUsuario    = 'admin' | 'empleado';
+export type RolUsuario    = 'dueño' | 'encargado' | 'empleado';
 export type EstadoArqueo  = 'abierto' | 'cerrado';
 export type EstadoVenta   = 'abierta' | 'cerrada' | 'cancelada';
 export type MetodoPago    = string
@@ -29,17 +29,28 @@ export interface Local {
     slug: string | null;
     whatsapp: string | null;
     catalogo_activo: boolean;
+    negocio_id: string;
+}
+
+export interface Negocio {
+    id: string;
+    nombre: string;
+    dueño_id: string | null;
+    creado_at: string;
     suscripcion_estado: 'prueba' | 'activa' | 'vencida' | 'cancelada';
     suscripcion_id: string | null;
     suscripcion_vence: string | null;
     prueba_vence: string | null;
+    multisucursal: boolean;
 }
 
 export interface Perfil {
     id:             string;
-    local_id:       string;
+    local_id:       string | null;
+    negocio_id:     string | null;
     nombre_usuario: string;
     rol:            RolUsuario;
+    activo:         boolean;
     creado_at:      string;
     updated_at:     string;
 }
@@ -76,7 +87,8 @@ export interface Categoria {
 
 export interface Producto {
     id:            string;
-    local_id:      string;
+    local_id:      string | null;
+    negocio_id:    string | null;
     nombre:        string;
     descripcion:   string | null;
     categoria:     string | null;
