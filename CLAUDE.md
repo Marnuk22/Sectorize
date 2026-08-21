@@ -94,13 +94,13 @@ Receipt/comanda printing goes through `src/logic/qz.ts` (QZ Tray websocket bridg
 - **Stacking-context gotcha**: `opacity` and `active:scale`/`transform` create a stacking context and will trap a child's `z-index` and make floating menus render translucent/behind siblings. Never put them on a card that contains a floating menu (the ⋯ actions menu). Apply `opacity` only to the info block, keep the actions row outside it.
 - Components are organized by domain under `src/Components/<Dominio>/` (`Auth/`, `Inventario/`, `Usuario/`, `afiliados/`, `mesa/`, `mostrador/`, `planes/`, `ventas/`); top-level files (`Board.tsx`, `NavBar.tsx`, etc.) are cross-domain shells.
 
-## MercadoPago subscription billing (in progress)
+## MercadoPago subscription billing
 
-- Model: **automatic subscription** (Preapproval), $28.000 ARS/month, subscription WITHOUT associated plan (`auto_recurring` inline + `status: 'pending'` → returns `init_point` to redirect). The 7-day free trial is managed by Vallis (`prueba_vence` on `locales`), NOT by MercadoPago.
-- `locales` has `suscripcion_estado` (`prueba`/`activa`/`vencida`/`cancelada`, default `prueba`), `suscripcion_id`, `suscripcion_vence`, `prueba_vence`.
-- `suscribir` creates the subscription and saves `suscripcion_id`; `external_reference = local_id` is the thread the webhook uses. `webhook-mp` re-queries MP for the real status (doesn't trust the notification), translates it, and updates the local; it always responds 200 to avoid MP retry loops.
-- **Known open issue:** `payer_email` in a `pending` subscription is the email MercadoPago ties the payer to — it forces the payer to log in with that exact email. A local whose email differs from the payer's MercadoPago account gets blocked. Planned fix: add a "MercadoPago email" field in `PanelMiPlan` and send THAT as `payer_email`, instead of `user.email`.
-- **Going to production** = swap the `MP_ACCESS_TOKEN` secret to the real `APP_USR-` token, set `payer_email` back to the payer's real email, configure the webhook in the production tab of the MP panel, redeploy. No code rewrite.
+- Model: **automatic subscription** (Preapproval), $30.000 ARS/month, subscription WITHOUT associated plan (`auto_recurring` inline + `status: 'pending'` → returns `init_point` to redirect). The 14-day free trial is managed by Vallis (`prueba_vence` on `negocios`), NOT by MercadoPago.
+- Billing is evaluated at the **negocio** level, not per sucursal (see the Etapa 3.5 multisucursal migration in ROADMAP history): `negocios` has `suscripcion_estado` (`prueba`/`activa`/`vencida`/`cancelada`, default `prueba`), `suscripcion_id`, `suscripcion_vence`, `prueba_vence`.
+- `suscribir` creates the subscription with `external_reference = negocio_id` (with a fallback that resolves via `local_id` for older subscriptions created before the multisucursal migration) and saves `suscripcion_id`. `webhook-mp` re-queries MP for the real status (doesn't trust the notification), translates it, and updates the negocio; it always responds 200 to avoid MP retry loops.
+- `payer_email` is a configurable field in `PanelMiPlan` (instead of always using `user.email`), so the dueño can point the subscription at whichever MercadoPago account should actually be charged — this was the fix for locals whose signup email differed from their MercadoPago account.
+- **In production**: `MP_ACCESS_TOKEN` is the real `APP_USR-` token, the webhook is configured in the production tab of the MP panel, and real subscriptions are confirmed charging.
 
 ## Developer context
 

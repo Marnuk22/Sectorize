@@ -181,9 +181,10 @@ const FormRegistro = () => {
             <div className="flex items-start gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
                 <Sparkles size={18} className="text-violet-600 shrink-0 mt-0.5" />
                 <div>
-                    <p className="text-sm font-bold text-violet-800">Vallis está en fase de prueba</p>
+                    <p className="text-sm font-bold text-violet-800">14 días gratis para probar Vallis</p>
                     <p className="text-xs text-violet-600 mt-0.5">
-                        El acceso es gratuito por tiempo limitado. Vas a tener todas las funciones disponibles.
+                        Vas a tener todas las funciones disponibles sin cargo. Después, seguís con una
+                        suscripción mensual que podés cancelar cuando quieras.
                     </p>
                 </div>
             </div>
@@ -224,6 +225,22 @@ const FormRegistro = () => {
                     </button>
                 }
             />
+
+            <label className="flex items-start gap-2 text-xs text-slate-500">
+                <input type="checkbox" required className="mt-0.5 accent-violet-600" />
+                <span>
+                    Acepto los{' '}
+                    <a
+                        href="https://vallis.com.ar/terminos"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-violet-600 underline"
+                    >
+                        Términos y Condiciones
+                    </a>{' '}
+                    de Vallis.
+                </span>
+            </label>
 
             {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             <button
