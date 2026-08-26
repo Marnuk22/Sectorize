@@ -233,7 +233,7 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         const nuevoTotal = Math.max(0, sumaSubtotales - cambios.descuento);
         const editadoEn = new Date();
 
-        const { error } = await supabase
+        const { data, error } = await supabase
             .from('ventas')
             .update({
                 metodo_pago: cambios.metodo_pago,
@@ -241,9 +241,12 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
                 total: nuevoTotal,
                 editado_en: editadoEn.toISOString(),
             })
-            .eq('id', ventaId);
+            .eq('id', ventaId)
+            .select('id')
+            .maybeSingle();
 
         if (error) throw error;
+        if (!data) throw new Error('No se pudo editar la venta (sin permiso)');
 
         setVentas(prev => prev.map(v => v.id === ventaId
             ? { ...v, metodo_pago: cambios.metodo_pago, descuento: cambios.descuento, total: nuevoTotal, editadoEn }
