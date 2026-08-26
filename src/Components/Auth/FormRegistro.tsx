@@ -238,6 +238,15 @@ const FormRegistro = () => {
                     >
                         Términos y Condiciones
                     </a>{' '}
+                    y la{' '}
+                    <a
+                        href="https://vallis.com.ar/privacidad"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-violet-600 underline"
+                    >
+                        Política de Privacidad
+                    </a>{' '}
                     de Vallis.
                 </span>
             </label>
