@@ -4,8 +4,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')!;
 
 Deno.serve(async (req) => {
+    // Esta función solo la debe llamar el trigger de la base (trigger_avisar_stock_bajo),
+    // nunca un cliente externo: usa el service role y no valida quién la llama más allá
+    // de este secreto compartido.
+    if (req.headers.get('x-vallis-secret') !== INTERNAL_FUNCTION_SECRET) {
+        return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+    }
+
     const { producto_id } = await req.json();
     if (!producto_id) {
         return new Response(JSON.stringify({ error: 'Falta producto_id' }), { status: 400 });
@@ -22,6 +30,12 @@ Deno.serve(async (req) => {
 
     if (error || !prod) {
         return new Response(JSON.stringify({ error: 'Producto no encontrado' }), { status: 404 });
+    }
+
+    // El trigger solo llama acá cuando el cruce ya ocurrió, pero se revalida
+    // acá también por las dudas (defensa en profundidad).
+    if (prod.stock_minimo <= 0 || prod.stock_actual > prod.stock_minimo) {
+        return new Response(JSON.stringify({ error: 'El producto no está en stock bajo' }), { status: 200 });
     }
 
     // Buscar el mail del dueño

@@ -4,8 +4,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')!;
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+    // Solo la debe llamar el cron diario (resumen-stock-diario), nunca un cliente externo.
+    if (req.headers.get('x-vallis-secret') !== INTERNAL_FUNCTION_SECRET) {
+        return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
+    }
+
     // Cliente con service_role: puede leer todos los locales (sin RLS)
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
