@@ -63,14 +63,19 @@ Deno.serve(async (req) => {
             if (!localValido) return json({ error: 'Sucursal inválida' }, 400);
 
             // El trigger on_auth_user_created (ya activo en la DB) crea la fila
-            // en `perfiles` leyendo local_id/nombre_usuario/rol de user_metadata
-            // — el mismo mecanismo que usa el alta del dueño. Acá solo falta
-            // completar negocio_id, que el trigger no conoce.
+            // en `perfiles`, pero desde la corrección de seguridad de
+            // handle_new_user() ya NO confía en local_id/rol de user_metadata
+            // (por eso ya no importa que se los pasemos acá): siempre inserta
+            // con local_id = NULL y rol = 'empleado'. Acá, que ya validamos
+            // arriba que el dueño solo puede asignar una sucursal de su propio
+            // negocio_id y un rol de ROLES_VALIDOS, es donde de verdad se
+            // completan negocio_id, local_id y rol — vía este UPDATE con el
+            // service role, no vía el trigger.
             const { data: creado, error: errorCrear } = await supabase.auth.admin.createUser({
                 email: email.trim(),
                 password,
                 email_confirm: true,
-                user_metadata: { nombre_usuario: nombre_usuario.trim(), rol, local_id },
+                user_metadata: { nombre_usuario: nombre_usuario.trim() },
             });
             if (errorCrear || !creado.user) {
                 return json({ error: errorCrear?.message ?? 'No se pudo crear el usuario' }, 400);
@@ -78,7 +83,7 @@ Deno.serve(async (req) => {
 
             const { data: actualizado, error: errorNegocio } = await supabase
                 .from('perfiles')
-                .update({ negocio_id: perfilCaller.negocio_id })
+                .update({ negocio_id: perfilCaller.negocio_id, local_id, rol })
                 .eq('id', creado.user.id)
                 .select('id')
                 .maybeSingle();

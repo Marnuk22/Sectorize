@@ -4,13 +4,15 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const INTERNAL_FUNCTION_SECRET = Deno.env.get('INTERNAL_FUNCTION_SECRET')!;
+const ALERTA_STOCK_SECRET = Deno.env.get('ALERTA_STOCK_SECRET')!;
 
 Deno.serve(async (req) => {
     // Esta función solo la debe llamar el trigger de la base (trigger_avisar_stock_bajo),
     // nunca un cliente externo: usa el service role y no valida quién la llama más allá
-    // de este secreto compartido.
-    if (req.headers.get('x-vallis-secret') !== INTERNAL_FUNCTION_SECRET) {
+    // de este secreto compartido. El secreto vive en Supabase Vault del lado de la
+    // función avisar_stock_bajo() (no hardcodeado en el SQL) y acá se compara contra
+    // esta misma variable de entorno, dedicada a este par trigger/función.
+    if (req.headers.get('x-vallis-secret') !== ALERTA_STOCK_SECRET) {
         return new Response(JSON.stringify({ error: 'No autorizado' }), { status: 401 });
     }
 
