@@ -31,12 +31,15 @@ Deno.serve(async (req) => {
         // Buscar el negocio del usuario (la suscripción es por negocio, no por sucursal)
         const { data: perfil } = await supabase
             .from('perfiles')
-            .select('local_id, negocio_id')
+            .select('local_id, negocio_id, rol')
             .eq('id', user.id)
             .single();
 
         if (!perfil || !perfil.negocio_id) {
             return new Response(JSON.stringify({ error: 'Sin negocio' }), { status: 400, headers: cors });
+        }
+        if (perfil.rol !== 'dueño') {
+            return new Response(JSON.stringify({ error: 'Solo el dueño puede gestionar la suscripción' }), { status: 403, headers: cors });
         }
 
         // Email de la cuenta de MercadoPago del pagador (puede diferir del email de login)

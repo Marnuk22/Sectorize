@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Sparkles, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
@@ -15,10 +15,13 @@ const diasRestantes = (fecha: string | null): number => {
 };
 
 const PanelMiPlan = () => {
-    const { negocio, user } = useAuth();
+    const { negocio, user, perfil, refrescar } = useAuth();
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
     const [emailMP, setEmailMP] = useState(user?.email ?? '');
+    const [confirmarCancelar, setConfirmarCancelar] = useState(false);
+    const [cancelando, setCancelando] = useState(false);
+    const [errorCancelar, setErrorCancelar] = useState('');
 
     const estado = negocio?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(negocio?.prueba_vence ?? null);
@@ -26,6 +29,33 @@ const PanelMiPlan = () => {
     // "activa" según la DB no alcanza: si el webhook nunca la marcó vencida,
     // hay que chequear la fecha real (estadoAcceso) para saber si sigue vigente.
     const activaVigente = estado === 'activa' && estadoAcceso(negocio) === 'ok';
+    const puedeCancelar = perfil?.rol === 'dueño' && !!negocio?.suscripcion_id && estado !== 'cancelada';
+
+    const handleCancelar = async () => {
+        setCancelando(true);
+        setErrorCancelar('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No hay sesión activa');
+
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cancelar-suscripcion`,
+                {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${session.access_token}` },
+                }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'No se pudo cancelar la suscripción');
+
+            await refrescar();
+            setConfirmarCancelar(false);
+        } catch (err: any) {
+            setErrorCancelar(err.message ?? 'Ocurrió un error');
+        } finally {
+            setCancelando(false);
+        }
+    };
 
     const handleSuscribirse = async () => {
         setCargando(true);
@@ -168,6 +198,50 @@ const PanelMiPlan = () => {
                     </Boton>
                 )}
             </Tarjeta>
+
+            {puedeCancelar && (
+                <Tarjeta padding="lg">
+                    {!confirmarCancelar ? (
+                        <button
+                            onClick={() => setConfirmarCancelar(true)}
+                            className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 transition-colors"
+                        >
+                            <XCircle size={15} />
+                            Cancelar suscripción
+                        </button>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-sm text-stone-600">
+                                Se corta la renovación automática. Vas a seguir teniendo acceso hasta el
+                                final del período ya pagado — después, la cuenta queda bloqueada.
+                            </p>
+                            {errorCancelar && (
+                                <div className="flex items-center gap-2 p-2.5 bg-red-50 rounded-xl text-red-600 text-xs">
+                                    <AlertCircle size={14} className="shrink-0" /> {errorCancelar}
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Boton
+                                    variante="secundario"
+                                    onClick={() => { setConfirmarCancelar(false); setErrorCancelar(''); }}
+                                    disabled={cancelando}
+                                    className="flex-1"
+                                >
+                                    Volver
+                                </Boton>
+                                <Boton
+                                    variante="peligro"
+                                    onClick={handleCancelar}
+                                    disabled={cancelando}
+                                    className="flex-1"
+                                >
+                                    {cancelando ? 'Cancelando...' : 'Sí, cancelar'}
+                                </Boton>
+                            </div>
+                        </div>
+                    )}
+                </Tarjeta>
+            )}
         </div>
     );
 };

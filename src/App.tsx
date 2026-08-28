@@ -4,6 +4,7 @@ import NavBar from './Components/NavBar.tsx';
 import type { SeccionPDV as seccionPdv } from './Components/NavBar.tsx';
 import Board from './Components/Board.tsx';
 import PantallaInicio from './Components/PantallaInicio.tsx';
+import PantallaRestablecerPassword from './Components/Auth/PantallaRestablecerPassword.tsx';
 import AccesoSuscripcion from './Components/AccesoSuscripcion.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { SalonProvider, MenuProvider, VentasProvider, ImpresorasProvider } from './context';
@@ -56,7 +57,12 @@ function LayoutPrincipal() {
 }
 
 function AppContent() {
-    const { user, loading, localId } = useAuth();
+    const { user, loading, localId, recuperandoPassword } = useAuth();
+
+    // Prioridad sobre todo lo demás: el usuario llegó desde el link de
+    // "olvidé mi contraseña" y tiene que fijar la nueva antes de cualquier
+    // otra cosa, sin importar si ya hay una sesión/local cacheados.
+    if (recuperandoPassword) return <PantallaRestablecerPassword />;
 
     if (loading && !localId) return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50">

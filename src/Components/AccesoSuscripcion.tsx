@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Sparkles, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { BLOQUEO_ACTIVO, diasGraciaRestantes, estadoAcceso } from '../logic/suscripcion';
 import PanelLateral from './Usuario/PanelLateral';
@@ -16,25 +16,41 @@ const PanelPago = ({ abierto, onCerrar }: PanelPagoProps) => (
     </PanelLateral>
 );
 
-const PantallaBloqueo = ({ onPagar }: { onPagar: () => void }) => (
-    <div className="h-full flex items-center justify-center bg-stone-50 p-6">
-        <div className="max-w-sm w-full text-center bg-white border border-stone-200 rounded-2xl p-8">
-            <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
-                <AlertCircle size={24} className="text-red-500" />
+const PantallaBloqueo = ({ onPagar }: { onPagar: () => void }) => {
+    const { signOut } = useAuth();
+
+    return (
+        <div className="h-full flex items-center justify-center bg-stone-50 p-6">
+            <div className="max-w-sm w-full text-center bg-white border border-stone-200 rounded-2xl p-8">
+                <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+                    <AlertCircle size={24} className="text-red-500" />
+                </div>
+                <h2 className="font-bold text-stone-800 text-lg mb-1">Tu suscripción venció</h2>
+                <p className="text-sm text-stone-500 mb-6">
+                    Regularizá tu suscripción a Vallis para seguir usando el sistema.
+                </p>
+                <button
+                    onClick={onPagar}
+                    className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                    Ir a pagar
+                </button>
+
+                {/* Sin esto, una cuenta bloqueada queda sin forma de salir —
+                    todo el resto de la app (incluido el menú de usuario) está
+                    tapado por esta pantalla. */}
+                <div className="flex items-center justify-center mt-5 pt-5 border-t border-stone-100">
+                    <button
+                        onClick={signOut}
+                        className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-red-500 transition-colors"
+                    >
+                        <LogOut size={13} /> Cerrar sesión
+                    </button>
+                </div>
             </div>
-            <h2 className="font-bold text-stone-800 text-lg mb-1">Tu suscripción venció</h2>
-            <p className="text-sm text-stone-500 mb-6">
-                Regularizá tu suscripción a Vallis para seguir usando el sistema.
-            </p>
-            <button
-                onClick={onPagar}
-                className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-            >
-                Ir a pagar
-            </button>
         </div>
-    </div>
-);
+    );
+};
 
 const BannerGracia = ({ dias, onPagar }: { dias: number; onPagar: () => void }) => (
     <div className="shrink-0 bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-center gap-3 flex-wrap">

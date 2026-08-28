@@ -11,6 +11,8 @@ interface AuthContextType {
     sucursales: Local[];
     localId: string | null;
     loading: boolean;
+    recuperandoPassword: boolean;
+    salirDeRecuperacion: () => void;
     signOut: () => Promise<void>;
     actualizarLocal: (cambios: Partial<Local>) => Promise<void>;
     cambiarSucursal: (id: string) => void;
@@ -74,6 +76,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         console.log("🔒 [Auth] Estado inicial Caché detectado:", { hasUser: !!hasUser, hasPerfil: !!hasPerfil });
         return !(hasUser && hasPerfil);
     });
+
+    // Se activa cuando el usuario llega desde el link de "olvidé mi
+    // contraseña" del mail: Supabase crea una sesión válida (evento
+    // PASSWORD_RECOVERY), pero no hay que dejarlo entrar directo a la app
+    // con esa sesión — primero tiene que fijar la contraseña nueva.
+    const [recuperandoPassword, setRecuperandoPassword] = useState(false);
 
     const cargarPerfil = async (authUser: User) => {
         console.log("📡 [Auth] Buscando perfil en DB para el usuario:", authUser.id);
@@ -189,6 +197,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             (event, session) => {
                 console.log(`🔄 [Auth Event] Supabase dice: ${event}`, { sessionPresent: !!session });
 
+                if (event === 'PASSWORD_RECOVERY') {
+                    setRecuperandoPassword(true);
+                    setLoading(false);
+                    return;
+                }
+
                 if (session) {
                     setUser(session.user);
                     localStorage.setItem('vallis_user', JSON.stringify(session.user));
@@ -215,6 +229,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         };
     }, []);
 
+    // Se llama cuando ya se fijó la contraseña nueva (o si el usuario se
+    // arrepiente y quiere volver al login): cierra la sesión de recuperación
+    // y vuelve a la pantalla normal.
+    const salirDeRecuperacion = () => {
+        setRecuperandoPassword(false);
+    };
+
     const signOut = async () => {
         console.log("🚪 [Auth] Cerrando sesión...");
         setLoading(true);
@@ -233,7 +254,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, perfil, local, negocio, sucursales, localId, loading, signOut, actualizarLocal, cambiarSucursal, refrescar }}>
+        <AuthContext.Provider value={{ user, perfil, local, negocio, sucursales, localId, loading, recuperandoPassword, salirDeRecuperacion, signOut, actualizarLocal, cambiarSucursal, refrescar }}>
             {children}
         </AuthContext.Provider>
     );

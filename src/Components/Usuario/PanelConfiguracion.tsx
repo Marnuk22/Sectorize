@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Check, Banknote, CreditCard, ArrowLeftRight, Wallet, Plus, X } from 'lucide-react';
+import { Check, Banknote, CreditCard, ArrowLeftRight, Wallet, Plus, X, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import ModalCambiarPassword from './ModalCambiarPassword';
 
 interface Props {
     onCerrar: () => void;
@@ -40,6 +41,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
     const [guardando, setGuardando] = useState(false);
     const [guardado, setGuardado] = useState(false);
     const [error, setError] = useState('');
+    const [modalPassword, setModalPassword] = useState(false);
 
     const metodosCustom = metodos.filter(m => !idsBase.includes(m));
 
@@ -191,6 +193,20 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
             >
                 {guardado ? <><Check size={16} /> Guardado</> : guardando ? 'Guardando...' : 'Guardar configuración'}
             </button>
+
+            {/* Seguridad */}
+            <div className="pt-4 border-t border-stone-100">
+                <label className="text-xs font-medium text-stone-500 uppercase">Seguridad</label>
+                <button
+                    onClick={() => setModalPassword(true)}
+                    className="w-full flex items-center gap-2.5 p-3 mt-2 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors text-left"
+                >
+                    <Lock size={18} className="text-stone-400" />
+                    <span className="text-sm text-stone-700">Cambiar contraseña</span>
+                </button>
+            </div>
+
+            <ModalCambiarPassword isOpen={modalPassword} onClose={() => setModalPassword(false)} />
         </div>
     );
 };
