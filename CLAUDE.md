@@ -58,7 +58,9 @@ When adding a field that exists in the DB, add it to the DB entity interface; on
 
 ### Backend: Supabase (Postgres + Auth + Edge Functions)
 
-- No local migrations directory — schema changes are managed directly against the Supabase project via the SQL Editor (see `supabase/.temp/project-ref`). There is no versioned SQL; keep a note of triggers/functions/policies since they live only in Supabase, not the repo.
+- Schema changes are versioned migrations in `supabase/migrations/`: `supabase migration new <nombre>` + `supabase db push`. Never apply schema changes directly via the SQL Editor or an MCP/CLI query tool (`execute_sql`, `db query`) — those are read-only inspection tools now, not a change channel. One logical fix per migration file, don't mix unrelated changes.
+- `db push`/`db pull`/`db diff` need **Docker Desktop running locally** (the CLI provisions a shadow database through it). If it's not installed/running, those commands fail with a Docker connection error — install/start Docker Desktop rather than working around it.
+- **Migration history gotcha:** if the remote project was ever schema-managed by hand (direct SQL, no migrations) before adopting this workflow, `supabase_migrations.schema_migrations` on the remote can end up out of sync with local files. Fix with `supabase migration repair --status reverted <stale-remote-only-versions>` (clears entries with no local file) and `--status applied <local-only-versions>` (marks local files already reflected in the remote as applied) — then `supabase db diff` should report no drift.
 - Edge Functions in `supabase/functions/<name>/index.ts` are independent Deno scripts (own `deno.json` import map, `Deno.serve`, manual CORS headers, manual JWT check via `supabase.auth.getUser()`). Current functions: `suscribir` / `crear-plan-mp` / `webhook-mp` (MercadoPago subscription billing), `alerta-stock` / `resumen-stock` (stock email alerts).
 - Frontend Supabase client is a single instance at `src/lib/supabase.ts`, configured from `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`.
 

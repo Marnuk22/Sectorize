@@ -45,7 +45,6 @@ const PanelMiPlan = () => {
                     body: JSON.stringify({ payer_email: emailMP }),
                 }
             );
-
             const data = await res.json();
             if (!res.ok || !data.init_point) {
                 throw new Error(data.error ?? 'No se pudo iniciar la suscripción');
