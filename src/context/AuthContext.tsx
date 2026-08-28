@@ -21,6 +21,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Detecta el link de "olvidé mi contraseña" leyendo la URL directamente,
+// en vez de depender del evento PASSWORD_RECOVERY de supabase-js: el cliente
+// arranca a procesar la URL (y puede limpiar el hash) apenas se crea el
+// módulo, ANTES de que AuthContext llegue a suscribirse con
+// onAuthStateChange — si gana esa carrera, el evento se dispara al aire y
+// a nosotros nos llega un INITIAL_SESSION corriente en su lugar, sin forma
+// de distinguirlo. Leer la URL acá, de forma sincrónica en el primer
+// render, no puede perder esa carrera: nada asincrónico corre antes que el
+// primer render de React.
+const esLinkDeRecuperacion = (): boolean => {
+    if (typeof window === 'undefined') return false;
+    return window.location.hash.includes('type=recovery') || window.location.search.includes('type=recovery');
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [user, setUser] = useState<User | null>(() => {
         try {
@@ -78,10 +92,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     // Se activa cuando el usuario llega desde el link de "olvidé mi
-    // contraseña" del mail: Supabase crea una sesión válida (evento
-    // PASSWORD_RECOVERY), pero no hay que dejarlo entrar directo a la app
-    // con esa sesión — primero tiene que fijar la contraseña nueva.
-    const [recuperandoPassword, setRecuperandoPassword] = useState(false);
+    // contraseña" del mail: Supabase crea una sesión válida, pero no hay
+    // que dejarlo entrar directo a la app con esa sesión — primero tiene
+    // que fijar la contraseña nueva. Arranca en true si la URL ya trae el
+    // link de recuperación (ver esLinkDeRecuperacion arriba); el evento
+    // PASSWORD_RECOVERY de onAuthStateChange más abajo queda como
+    // respaldo, por si el chequeo sincrónico no lo agarra en algún caso.
+    const [recuperandoPassword, setRecuperandoPassword] = useState(esLinkDeRecuperacion);
 
     const cargarPerfil = async (authUser: User) => {
         console.log("📡 [Auth] Buscando perfil en DB para el usuario:", authUser.id);
