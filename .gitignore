@@ -16,6 +16,13 @@ dist
 dist-ssr
 *.local
 
+# Estado local del CLI de Supabase (se regenera solo)
+supabase/.temp/
+
+# Dumps de schema de referencia (no versionados; la fuente de verdad es supabase/migrations/)
+schema_actual.sql
+schema_propio.sql
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
