@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vallis - Test Grabación de Audio</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0f172a;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #f1f5f9;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .card {
+      max-width: 480px;
+      width: 100%;
+      background: #1e293b;
+      border-radius: 16px;
+      padding: 32px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 4px;
+    }
+    p.sub {
+      color: #94a3b8;
+      margin: 0 0 24px;
+      font-size: 0.9rem;
+    }
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    #btnRecord {
+      background: #ef4444;
+      color: white;
+    }
+    #btnStop {
+      background: #334155;
+      color: #f1f5f9;
+    }
+    #btnDownload {
+      background: #22d3ee;
+      color: #0f172a;
+    }
+    .timer {
+      text-align: center;
+      font-size: 2rem;
+      font-family: monospace;
+      margin: 8px 0 20px;
+      color: #f1f5f9;
+    }
+    .rec-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 8px;
+      vertical-align: middle;
+      opacity: 0;
+    }
+    .rec-dot.active {
+      opacity: 1;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    audio {
+      width: 100%;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    .ok { background: #16a34a22; color: #4ade80; }
+    .err { background: #dc262622; color: #f87171; }
+    .wait { background: #ca8a0422; color: #facc15; }
+    #log {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Test grabación de audio 🎙️</h1>
+    <p class="sub">Graba desde el micrófono, escuchá el resultado y descargalo.</p>
+
+    <div class="timer"><span class="rec-dot" id="dot"></span><span id="time">00:00</span></div>
+
+    <span id="status" class="status wait">Esperando permiso de micrófono</span>
+
+    <div class="row">
+      <button id="btnRecord" onclick="startRecording()">● Grabar</button>
+      <button id="btnStop" onclick="stopRecording()" disabled>■ Detener</button>
+    </div>
+
+    <audio id="player" controls></audio>
+
+    <button id="btnDownload" onclick="downloadAudio()" disabled style="margin-bottom:20px;">
+      ⬇ Descargar grabación
+    </button>
+
+    <label>Log de eventos</label>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let mediaRecorder;
+    let chunks = [];
+    let audioBlob;
+    let stream;
+    let startTime;
+    let timerInterval;
+
+    const player = document.getElementById('player');
+    const logEl = document.getElementById('log');
+    const statusEl = document.getElementById('status');
+    const btnRecord = document.getElementById('btnRecord');
+    const btnStop = document.getElementById('btnStop');
+    const btnDownload = document.getElementById('btnDownload');
+    const dot = document.getElementById('dot');
+    const timeEl = document.getElementById('time');
+
+    function log(msg) {
+      const t = new Date().toLocaleTimeString('es-AR');
+      logEl.textContent += `[${t}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function setStatus(text, cls) {
+      statusEl.textContent = text;
+      statusEl.className = 'status ' + cls;
+    }
+
+    function formatTime(ms) {
+      const totalSec = Math.floor(ms / 1000);
+      const min = String(Math.floor(totalSec / 60)).padStart(2, '0');
+      const sec = String(totalSec % 60).padStart(2, '0');
+      return `${min}:${sec}`;
+    }
+
+    async function startRecording() {
+      chunks = [];
+      player.style.display = 'none';
+      btnDownload.disabled = true;
+
+      try {
+        log('Solicitando acceso al micrófono...');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        log('Permiso concedido. Track de audio obtenido.');
+
+        // Elegimos un mimeType soportado (varía por navegador)
+        const mimeCandidates = [
+          'audio/webm;codecs=opus',
+          'audio/webm',
+          'audio/mp4',
+          'audio/ogg;codecs=opus'
+        ];
+        const mimeType = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m)) || '';
+        log('mimeType elegido: ' + (mimeType || 'default del navegador'));
+
+        mediaRecorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) {
+            chunks.push(e.data);
+            log('Chunk recibido: ' + e.data.size + ' bytes');
+          }
+        };
+
+        mediaRecorder.onstop = () => {
+          audioBlob = new Blob(chunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+          const url = URL.createObjectURL(audioBlob);
+          player.src = url;
+          player.style.display = 'block';
+          btnDownload.disabled = false;
+          setStatus('Grabación lista ✓ (' + (audioBlob.size / 1024).toFixed(1) + ' KB)', 'ok');
+          log('Grabación finalizada. Tamaño total: ' + audioBlob.size + ' bytes');
+          stream.getTracks().forEach(t => t.stop());
+        };
+
+        mediaRecorder.onerror = (e) => {
+          log('Error en MediaRecorder: ' + e.error);
+          setStatus('Error al grabar', 'err');
+        };
+
+        mediaRecorder.start();
+        startTime = Date.now();
+        timerInterval = setInterval(() => {
+          timeEl.textContent = formatTime(Date.now() - startTime);
+        }, 200);
+
+        dot.classList.add('active');
+        btnRecord.disabled = true;
+        btnStop.disabled = false;
+        setStatus('Grabando...', 'wait');
+        log('Grabación iniciada.');
+
+      } catch (err) {
+        log('Error al acceder al micrófono: ' + err.name + ' - ' + err.message);
+        setStatus('Sin acceso al micrófono', 'err');
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+      }
+      clearInterval(timerInterval);
+      dot.classList.remove('active');
+      btnRecord.disabled = false;
+      btnStop.disabled = true;
+      log('Deteniendo grabación...');
+    }
+
+    function downloadAudio() {
+      if (!audioBlob) return;
+      const ext = (mediaRecorder.mimeType || '').includes('mp4') ? 'm4a' : 'webm';
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(audioBlob);
+      a.download = 'grabacion-vallis.' + ext;
+      a.click();
+      log('Descarga iniciada: grabacion-vallis.' + ext);
+    }
+
+    // Chequeo inicial de soporte
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      setStatus('Navegador sin soporte de grabación', 'err');
+      btnRecord.disabled = true;
+      log('Este navegador no soporta getUserMedia o MediaRecorder.');
+    }
+  </script>
+</body>
+</html>
