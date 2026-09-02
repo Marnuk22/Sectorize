@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Loader2, AlertCircle, AlertTriangle, Trash2, Plus, ArrowLeft, Mic } from 'lucide-react';
+import { X, Loader2, AlertCircle, AlertTriangle, Trash2, Plus, ArrowLeft, Mic, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useMenu } from '../../context/MenuContext';
 import { supabase } from '../../lib/supabase';
@@ -29,7 +29,7 @@ interface Props {
     onCerrar: () => void;
 }
 
-type Paso = 'grabar' | 'procesando' | 'revisar';
+type Paso = 'grabar' | 'procesando' | 'revisar' | 'guardando';
 
 const idLocal = () => Math.random().toString(36).slice(2);
 
@@ -37,12 +37,14 @@ const inputClase = 'w-full border border-stone-200 rounded-lg px-2 py-1.5 text-x
 
 const ModalCargaAudio = ({ onCerrar }: Props) => {
     const { local } = useAuth();
-    const { categorias } = useMenu();
+    const { categorias, agregarProducto, agregarCategoria } = useMenu();
     const [paso, setPaso] = useState<Paso>('grabar');
     const [audio, setAudio] = useState<Blob | null>(null);
     const [transcripcion, setTranscripcion] = useState('');
     const [productos, setProductos] = useState<ProductoRevision[]>([]);
     const [error, setError] = useState('');
+    const [progreso, setProgreso] = useState(0);
+    const [resultado, setResultado] = useState<{ ok: number; fallidos: number } | null>(null);
 
     const handleProcesar = async () => {
         if (!audio) return;
@@ -95,15 +97,65 @@ const ModalCargaAudio = ({ onCerrar }: Props) => {
         ]);
     };
 
-    const hayNombresVacios = productos.some(p => !p.nombre.trim());
+    // El nombre es obligatorio para poder identificar el producto, y el
+    // precio porque precio_venta no es nullable en la base (un producto sin
+    // precio se podría vender gratis por error) — cantidad sí puede faltar,
+    // el producto arranca con stock 0 y se carga después.
+    const hayCamposObligatoriosFaltantes = productos.some(p => !p.nombre.trim() || p.precio === null);
 
-    // TODO (Fase 3): acá va la inserción real al inventario — por cada fila,
-    // algo como agregarProducto() de useMenu() (o una función bulk nueva),
-    // mapeando tipo -> tipo_venta/unidad_medida y cantidad -> stock inicial.
-    // Por ahora solo cierra el modal; es el punto de integración de la Fase 3.
-    const confirmarProductos = (productosAConfirmar: ProductoRevision[]) => {
-        console.log('Productos a cargar (TODO Fase 3):', productosAConfirmar);
-        onCerrar();
+    // Fase 3: inserción real al inventario. Reusa agregarProducto() de
+    // useMenu(), que ya sabe resolver catálogo compartido vs. directo según
+    // el negocio (ver MenuContext.tsx) — no hace falta lógica nueva para eso
+    // acá. Va secuencial (no Promise.all) y con progreso, mismo patrón que
+    // ModalImportar.tsx, para poder reportar cuántos fallaron sin perder los
+    // que sí funcionaron.
+    const confirmarProductos = async (productosAConfirmar: ProductoRevision[]) => {
+        setPaso('guardando');
+        setProgreso(0);
+
+        // Categorías nuevas que el usuario escribió a mano (no estaban en
+        // useMenu().categorias) — se crean antes para que el producto quede
+        // filtrable en el sidebar de Inventario, no solo con el texto suelto.
+        const nombresExistentes = new Set(categorias.map(c => c.nombre));
+        const categoriasNuevas = [...new Set(
+            productosAConfirmar
+                .map(p => p.categoria.trim())
+                .filter(nombre => nombre && !nombresExistentes.has(nombre))
+        )];
+        for (const nombre of categoriasNuevas) {
+            try { await agregarCategoria(nombre); } catch (err) { console.error('No se pudo crear la categoría', nombre, err); }
+        }
+
+        let ok = 0;
+        let fallidos = 0;
+        for (let i = 0; i < productosAConfirmar.length; i++) {
+            const p = productosAConfirmar[i];
+            try {
+                await agregarProducto({
+                    nombre: p.nombre.trim(),
+                    descripcion: null,
+                    categoria: p.categoria.trim() || null,
+                    precio_venta: p.precio ?? 0,
+                    precio_costo: null,
+                    stock_actual: p.cantidad ?? 0,
+                    stock_minimo: 0,
+                    codigo_barras: null,
+                    activo: true,
+                    tipo_venta: p.tipo,
+                    unidad_medida: p.tipo === 'granel' ? 'kg' : 'unidad',
+                    favorito: false,
+                    publicado: false,
+                    imagen_url: null,
+                });
+                ok++;
+            } catch (err) {
+                console.error(`Error cargando "${p.nombre}":`, err);
+                fallidos++;
+            }
+            setProgreso(Math.round(((i + 1) / productosAConfirmar.length) * 100));
+        }
+
+        setResultado({ ok, fallidos });
     };
 
     return (
@@ -143,6 +195,31 @@ const ModalCargaAudio = ({ onCerrar }: Props) => {
                         <div className="flex flex-col items-center justify-center gap-3 py-16">
                             <Loader2 size={32} className="text-violet-600 animate-spin" />
                             <p className="text-sm text-stone-500">Transcribiendo y extrayendo productos... puede tardar unos segundos.</p>
+                        </div>
+                    )}
+
+                    {paso === 'guardando' && !resultado && (
+                        <div className="flex flex-col items-center justify-center gap-3 py-16">
+                            <Loader2 size={32} className="text-violet-600 animate-spin" />
+                            <p className="text-sm text-stone-500">Cargando productos al inventario... {progreso}%</p>
+                            <div className="w-full max-w-xs h-2 bg-stone-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-violet-600 transition-all" style={{ width: `${progreso}%` }} />
+                            </div>
+                        </div>
+                    )}
+
+                    {paso === 'guardando' && resultado && (
+                        <div className="text-center py-6 space-y-3">
+                            <div className="inline-flex p-4 bg-green-100 rounded-full">
+                                <CheckCircle2 size={32} className="text-green-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-stone-800 text-lg">Carga completada</h3>
+                                <p className="text-sm text-stone-500 mt-1">
+                                    Se cargaron <strong className="text-green-600">{resultado.ok}</strong> productos al inventario
+                                    {resultado.fallidos > 0 && <>, <strong className="text-red-500">{resultado.fallidos}</strong> fallaron</>}.
+                                </p>
+                            </div>
                         </div>
                     )}
 
@@ -221,10 +298,20 @@ const ModalCargaAudio = ({ onCerrar }: Props) => {
                         </button>
                         <button
                             onClick={() => confirmarProductos(productos)}
-                            disabled={hayNombresVacios || productos.length === 0}
+                            disabled={hayCamposObligatoriosFaltantes || productos.length === 0}
                             className="flex-1 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white rounded-xl text-sm font-bold"
                         >
                             Confirmar {productos.length} producto{productos.length === 1 ? '' : 's'}
+                        </button>
+                    </div>
+                )}
+                {paso === 'guardando' && resultado && (
+                    <div className="p-5 border-t border-stone-200 shrink-0">
+                        <button
+                            onClick={onCerrar}
+                            className="w-full py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-bold"
+                        >
+                            Listo
                         </button>
                     </div>
                 )}
@@ -262,13 +349,13 @@ const FilaProducto = ({ producto, categorias, onCambio, onBorrar }: FilaProducto
                     <input
                         type="number"
                         step="any"
-                        className={inputClase}
+                        className={`${inputClase} ${faltaPrecio ? 'border-red-400 focus:ring-red-400' : ''}`}
                         value={producto.precio ?? ''}
                         onChange={e => onCambio({ precio: e.target.value === '' ? null : Number(e.target.value) })}
                         placeholder="$"
                     />
                     {faltaPrecio && (
-                        <span title="Falta el precio"><AlertTriangle size={12} className="text-amber-500 shrink-0" /></span>
+                        <span title="Falta el precio (obligatorio)"><AlertTriangle size={12} className="text-red-500 shrink-0" /></span>
                     )}
                 </div>
             </td>
