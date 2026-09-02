@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
 import ModalImportar from '../Inventario/ModalImportar';
 import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
+import ModalCargaAudio from '../Inventario/ModalCargaAudio';
 import { TrendingUp } from 'lucide-react';
 import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
@@ -16,6 +17,7 @@ const ContenedorInventario = () => {
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
     const [modalStock, setModalStock] = useState<Producto | null>(null);
     const [modalImportar, setModalImportar] = useState(false);
+    const [modalCargaAudio, setModalCargaAudio] = useState(false);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [agregandoCategoria, setAgregandoCategoria] = useState(false);
     const [confirmarBorrar, setConfirmarBorrar] = useState<Producto | null>(null);
@@ -105,6 +107,12 @@ const ContenedorInventario = () => {
                     className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
                 >
                     <Upload size={16} /> Importar
+                </button>
+                <button
+                    onClick={() => setModalCargaAudio(true)}
+                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
+                >
+                    <Mic size={16} /> Cargar por audio
                 </button>
                 <button
                     onClick={() => setModalPrecios(true)}
@@ -264,6 +272,10 @@ const ContenedorInventario = () => {
 
             {modalPrecios && (
                 <ModalAjustePrecios onCerrar={() => setModalPrecios(false)} />
+            )}
+
+            {modalCargaAudio && (
+                <ModalCargaAudio onCerrar={() => setModalCargaAudio(false)} />
             )}
 
             {confirmarBorrar && (
