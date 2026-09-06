@@ -29,7 +29,10 @@ const ContenedorInventario = () => {
     const productosFiltrados = productos.filter(p => {
         const catActiva = categorias.find(c => c.id === categoriaActiva);
         const porCategoria = !categoriaActiva || p.categoria === catActiva?.nombre;
-        const porBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
+        const textoBusqueda = busqueda.toLowerCase();
+        const porBusqueda =
+            p.nombre.toLowerCase().includes(textoBusqueda) ||
+            (p.codigo_barras?.toLowerCase().includes(textoBusqueda) ?? false);
         return porCategoria && porBusqueda;
     });
 
@@ -97,7 +100,7 @@ const ContenedorInventario = () => {
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                     <input
                         className="w-full sm:w-48 pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        placeholder="Buscar producto..."
+                        placeholder="Buscar por nombre o código de barras..."
                         value={busqueda}
                         onChange={e => setBusqueda(e.target.value)}
                     />
