@@ -17,10 +17,10 @@ export const imprimirComanda = async (opciones: OpcionesComanda) => {
         return;
     }
 
-    if (opciones.impresoras.length === 0) {
-        alert('No hay impresoras configuradas para comandas. Configurá una desde el menú → Impresoras.');
-        return;
-    }
+    // Sin impresoras configuradas: caso normal para un local que no imprime,
+    // no un error — se skipea en silencio (antes tiraba un alert() en CADA
+    // venta, molestando a cualquiera que no use impresoras).
+    if (opciones.impresoras.length === 0) return;
     const datos: DatosComanda = {
         local: opciones.local,
         mesa: opciones.mesa,
@@ -58,10 +58,9 @@ export const imprimirTicket = async (opciones: OpcionesTicket) => {
         console.warn('No hay items para el ticket');
         return;
     }
-    if (opciones.impresoras.length === 0) {
-        alert('No hay impresoras configuradas para tickets. Configurá una desde el menú → Impresoras.');
-        return;
-    }
+    // Ver comentario equivalente en imprimirComanda: sin impresoras
+    // configuradas es normal, no un error.
+    if (opciones.impresoras.length === 0) return;
     const datos: DatosTicket = {
         local: opciones.local,
         mesa: opciones.mesa,
@@ -89,10 +88,9 @@ interface OpcionesArqueo extends Omit<DatosArqueo, never> {
 }
 
 export const imprimirArqueo = async (opciones: OpcionesArqueo) => {
-    if (opciones.impresoras.length === 0) {
-        alert('No hay impresoras configuradas para tickets. Configurá una desde el menú → Impresoras.');
-        return;
-    }
+    // Ver comentario equivalente en imprimirComanda: sin impresoras
+    // configuradas es normal, no un error.
+    if (opciones.impresoras.length === 0) return;
 
     const { impresoras, ...datos } = opciones;
     const texto = generarReporteArqueo(datos as DatosArqueo);
