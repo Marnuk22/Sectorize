@@ -1,25 +1,38 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import type { ItemPedidoUI, MesaUI, MetodoPago, VentaUI, ArqueoUI } from '../types';
+import type { ItemPedidoUI, MesaUI, MetodoPago, VentaUI, ArqueoUI, MovimientoCajaUI, MotivoRetiro } from '../types';
 
 interface VentasContextType {
     historialVentas: VentaUI[];
     arqueoActivo: ArqueoUI | null;
     ArqueosHistorial: ArqueoUI[];
+    movimientosCaja: MovimientoCajaUI[];
     MetodosPago: MetodoPago[];
     cargando: boolean;
     registrarVenta: (items: ItemPedidoUI[], total: number, mesa: MesaUI, metodoPago: MetodoPago) => Promise<void>;
+    retirarEfectivo: (monto: number, motivoCategoria: MotivoRetiro, nota?: string) => Promise<void>;
+    ingresarEfectivo: (monto: number, nota?: string) => Promise<void>;
     abrirArqueo: (montoInicial: number) => Promise<void>;
     cerrarArqueo: (montoFinalReal: number) => Promise<void>;
 }
 
 const VentasContext = createContext<VentasContextType | undefined>(undefined);
 
+const mapMovimiento = (m: any): MovimientoCajaUI => ({
+    id: m.id,
+    tipo: m.tipo,
+    monto: m.monto,
+    motivoCategoria: m.motivo_categoria,
+    nota: m.nota,
+    fecha: new Date(m.creado_at),
+});
+
 export const VentasProvider = ({ children }: { children: ReactNode }) => {
     const { localId, user } = useAuth();
     const [historialVentas, setHistorialVentas] = useState<VentaUI[]>([]);
     const [ArqueosHistorial, setArqueosHistorial] = useState<ArqueoUI[]>([]);
+    const [movimientosCaja, setMovimientosCaja] = useState<MovimientoCajaUI[]>([]);
     const [cargando, setCargando] = useState(true);
 
     const arqueoActivo = ArqueosHistorial.find(a => a.estado === 'abierto') ?? null;
@@ -45,6 +58,7 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
                         id: a.id,
                         montoInicial: a.monto_inicial,
                         montoFinalReal: a.monto_final_real,
+                        montoFinalEsperado: a.monto_final_esperado,
                         fechaApertura: new Date(a.fecha_apertura),
                         fechaCierre: a.fecha_cierre ? new Date(a.fecha_cierre) : null,
                         estado: a.estado,
@@ -52,11 +66,18 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
 
                     const arqueoAbierto = arqueos.find(a => a.estado === 'abierto');
                     if (arqueoAbierto) {
-                        const { data: ventas } = await supabase
-                            .from('ventas')
-                            .select('*')
-                            .eq('arqueo_id', arqueoAbierto.id)
-                            .order('fecha', { ascending: false });
+                        const [{ data: ventas }, { data: movimientos }] = await Promise.all([
+                            supabase
+                                .from('ventas')
+                                .select('*')
+                                .eq('arqueo_id', arqueoAbierto.id)
+                                .order('fecha', { ascending: false }),
+                            supabase
+                                .from('movimientos_caja')
+                                .select('*')
+                                .eq('arqueo_id', arqueoAbierto.id)
+                                .order('creado_at', { ascending: false }),
+                        ]);
 
                         if (!activo) return;
 
@@ -70,6 +91,15 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
                                 metodoPago: v.metodo_pago,
                             })));
                         }
+
+                        if (movimientos) {
+                            setMovimientosCaja(movimientos.map(mapMovimiento));
+                        }
+                    } else {
+                        // Sin arqueo abierto (ej. se cambió de sucursal): no
+                        // dejar movimientos/ventas de una caja vieja visibles.
+                        setHistorialVentas([]);
+                        setMovimientosCaja([]);
                     }
                 }
             } catch (err) {
@@ -125,6 +155,52 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
         }, ...prev]);
     };
 
+
+    const retirarEfectivo = async (monto: number, motivoCategoria: MotivoRetiro, nota?: string) => {
+        if (!localId || !user) throw new Error('Sin sesión activa');
+        if (!arqueoActivo) throw new Error('No hay arqueo abierto');
+        if (monto <= 0) throw new Error('El monto tiene que ser mayor a cero');
+
+        const { data, error } = await supabase
+            .from('movimientos_caja')
+            .insert({
+                local_id: localId,
+                arqueo_id: arqueoActivo.id,
+                tipo: 'retiro',
+                monto,
+                motivo_categoria: motivoCategoria,
+                nota: nota?.trim() || null,
+                usuario_id: user.id,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        setMovimientosCaja(prev => [mapMovimiento(data), ...prev]);
+    };
+
+    const ingresarEfectivo = async (monto: number, nota?: string) => {
+        if (!localId || !user) throw new Error('Sin sesión activa');
+        if (!arqueoActivo) throw new Error('No hay arqueo abierto');
+        if (monto <= 0) throw new Error('El monto tiene que ser mayor a cero');
+
+        const { data, error } = await supabase
+            .from('movimientos_caja')
+            .insert({
+                local_id: localId,
+                arqueo_id: arqueoActivo.id,
+                tipo: 'deposito',
+                monto,
+                nota: nota?.trim() || null,
+                usuario_id: user.id,
+            })
+            .select()
+            .single();
+
+        if (error) throw error;
+        setMovimientosCaja(prev => [mapMovimiento(data), ...prev]);
+    };
+
     const abrirArqueo = async (montoInicial: number) => {
         if (!localId || !user) return;
         if (arqueoActivo) throw new Error('Ya hay un arqueo abierto');
@@ -141,23 +217,50 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
             id: data.id,
             montoInicial: data.monto_inicial,
             montoFinalReal: null,
+            montoFinalEsperado: null,
             fechaApertura: new Date(data.fecha_apertura),
             fechaCierre: null,
             estado: 'abierto',
         }, ...prev]);
+
+        // El trigger `registrar_apertura_caja` ya insertó la fila 'apertura'
+        // en movimientos_caja del lado de la base — se relee para que
+        // aparezca en la lista sin duplicar esa lógica acá.
+        const { data: movimientos } = await supabase
+            .from('movimientos_caja')
+            .select('*')
+            .eq('arqueo_id', data.id)
+            .order('creado_at', { ascending: false });
+
+        setMovimientosCaja(movimientos ? movimientos.map(mapMovimiento) : []);
     };
 
     const cerrarArqueo = async (montoFinalReal: number) => {
         if (!arqueoActivo) return;
 
-        const { data: ventas } = await supabase
-            .from('ventas')
-            .select('total')
-            .eq('arqueo_id', arqueoActivo.id)
-            .eq('estado', 'cerrada');
+        // Solo EFECTIVO entra en la caja — tarjeta/transferencia quedan
+        // afuera del esperado (antes esto sumaba TODOS los métodos de pago,
+        // lo cual era un bug: una venta con tarjeta no pone plata física en
+        // el cajón). Se re-consulta la base en vez de confiar en el estado
+        // cacheado del cliente, mismo criterio que ya usaba este cierre.
+        const [{ data: ventas }, { data: movimientos }] = await Promise.all([
+            supabase
+                .from('ventas')
+                .select('total')
+                .eq('arqueo_id', arqueoActivo.id)
+                .eq('estado', 'cerrada')
+                .eq('metodo_pago', 'efectivo'),
+            supabase
+                .from('movimientos_caja')
+                .select('tipo, monto')
+                .eq('arqueo_id', arqueoActivo.id)
+                .in('tipo', ['retiro', 'deposito']),
+        ]);
 
-        const totalVentas = ventas?.reduce((acc, v) => acc + v.total, 0) ?? 0;
-        const montoEsperado = arqueoActivo.montoInicial + totalVentas;
+        const totalVentasEfectivo = ventas?.reduce((acc, v) => acc + v.total, 0) ?? 0;
+        const totalDepositos = movimientos?.filter(m => m.tipo === 'deposito').reduce((acc, m) => acc + m.monto, 0) ?? 0;
+        const totalRetiros = movimientos?.filter(m => m.tipo === 'retiro').reduce((acc, m) => acc + m.monto, 0) ?? 0;
+        const montoEsperado = arqueoActivo.montoInicial + totalVentasEfectivo + totalDepositos - totalRetiros;
 
         const { data, error } = await supabase
             .from('arqueos')
@@ -180,10 +283,11 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
 
         setArqueosHistorial(prev => prev.map(a =>
             a.id === arqueoActivo.id
-                ? { ...a, montoFinalReal, fechaCierre: new Date(), estado: 'cerrado' as const }
+                ? { ...a, montoFinalReal, montoFinalEsperado: montoEsperado, fechaCierre: new Date(), estado: 'cerrado' as const }
                 : a
         ));
         setHistorialVentas([]);
+        setMovimientosCaja([]);
     };
 
     return (
@@ -191,11 +295,14 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
             historialVentas,
             arqueoActivo,
             ArqueosHistorial,
+            movimientosCaja,
             MetodosPago: ['efectivo', 'tarjeta', 'transferencia', 'otro'],
             cargando,
             registrarVenta,
             abrirArqueo,
             cerrarArqueo,
+            retirarEfectivo,
+            ingresarEfectivo,
         }}>
             {children}
         </VentasContext.Provider>

@@ -12,6 +12,9 @@ export type MetodoPago    = string
 export type EstadoPedido  = 'pendiente' | 'preparando' | 'listo' | 'entregado';
 export type TipoMembresia = 'por_tiempo' | 'por_asistencias' | 'clase_suelta';
 export type EstadoSuscripcion = 'activa' | 'vencida' | 'cancelada';
+export type TipoMovimientoCaja = 'apertura' | 'venta_efectivo' | 'retiro' | 'deposito';
+export type MotivoRetiro = 'proveedor' | 'banco' | 'gasto' | 'otro';
+export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion';
 
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
@@ -118,6 +121,30 @@ export interface Arqueo {
     estado:                EstadoArqueo;
     fecha_apertura:        string;
     fecha_cierre:          string | null;
+}
+
+export interface MovimientoStock {
+    id:               string;
+    local_id:         string;
+    producto_id:      string;
+    cantidad:         number;
+    motivo:           MotivoMovimientoStock;
+    costo_unitario:   number | null;
+    nota:             string | null;
+    usuario_id:       string;
+    creado_at:        string;
+}
+
+export interface MovimientoCaja {
+    id:                string;
+    local_id:          string;
+    arqueo_id:         string;
+    tipo:              TipoMovimientoCaja;
+    monto:             number;
+    motivo_categoria:  MotivoRetiro | null;
+    nota:              string | null;
+    usuario_id:        string;
+    creado_at:         string;
 }
 
 export interface Venta {
@@ -243,12 +270,31 @@ export interface VentaUI {
 }
 
 export interface ArqueoUI {
+    id:                    string;
+    montoInicial:          number;
+    montoFinalReal:        number | null;
+    montoFinalEsperado:    number | null;
+    fechaApertura:         Date;
+    fechaCierre:           Date | null;
+    estado:                EstadoArqueo;
+}
+
+export interface MovimientoCajaUI {
+    id:               string;
+    tipo:             TipoMovimientoCaja;
+    monto:            number;
+    motivoCategoria:  MotivoRetiro | null;
+    nota:             string | null;
+    fecha:            Date;
+}
+
+export interface MovimientoStockUI {
     id:              string;
-    montoInicial:    number;
-    montoFinalReal:  number | null;
-    fechaApertura:   Date;
-    fechaCierre:     Date | null;
-    estado:          EstadoArqueo;
+    cantidad:        number;
+    motivo:          MotivoMovimientoStock;
+    costoUnitario:   number | null;
+    nota:            string | null;
+    fecha:           Date;
 }
 
 // Venta con relaciones cargadas (para historial)

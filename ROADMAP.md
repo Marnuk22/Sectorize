@@ -94,6 +94,115 @@ Cambio estructural grande: hoy Vallis asume "un usuario = un local". Este MVP in
 
 ---
 
+## 📒 Libros de movimientos (caja + stock)
+
+Dos libros de auditoría nuevos — **caja** (efectivo) y **stock** (mercadería) — más una corrección al cálculo de la alerta de arqueo, que hoy depende de que los movimientos de caja estén registrados. **Orden obligatorio: Movimientos de caja → Alerta de arqueo → Movimientos de stock** (caja primero porque la alerta depende de que retiros/depósitos existan; stock al final porque es independiente).
+
+### Decisiones ya cerradas (no reabrir sin motivo)
+- La "sesión de caja abierta" es la fila de `arqueos` con `estado='abierto'` que ya existe hoy (`arqueoActivo` en `VentasContext`) — no se crea un concepto nuevo, `movimientos_caja.arqueo_id` referencia `arqueos(id)` directo.
+- Solo EFECTIVO entra en la caja/arqueo. Tarjeta/transferencia quedan afuera del cálculo de esperado (esto corrige un bug real: hoy `montoEsperado` suma todos los métodos de pago, no solo efectivo).
+- `movimientos_caja` es un libro de solo-inserción (append-only): no hay ningún total cacheado que sumar-y-pisar en JS, así que no necesita RPC transaccional — el esperado se recalcula siempre en vivo sumando la tabla con el signo según `tipo`.
+- `movimientos_stock` SÍ necesita RPC transaccional porque `productos.stock_actual` / `producto_sucursal.stock_actual` son columnas cacheadas: sumar en JS y pisar tiene condición de carrera con dos ingresos simultáneos.
+- El flujo de ventas (enfoque A) no se toca: las ventas siguen descontando stock por el trigger existente `descontar_stock()`, sin re-enrutar por `movimientos_stock` todavía (el campo `cantidad` con signo ya deja la puerta abierta a eso a futuro).
+- Retiro/depósito de caja: mismos actores que hoy pueden abrir/cerrar su caja (dueño + encargado + empleado, cada uno sobre su sucursal vía `sucursales_del_usuario()`) — a confirmar si se prefiere restringir a dueño/encargado.
+- Movimientos de stock (ingreso/ajuste/merma) y su kardex: dueño + encargado (`sucursales_gestionables()`), igual que quién ya puede editar productos/costos hoy — empleado no ve costos ni edita stock.
+
+### 1. Movimientos de caja (retiros y depósitos) — PRIMERO
+**Qué hace:** dos acciones "Retirar efectivo" / "Depositar efectivo" en la pantalla de caja (modal con `ModalBase`, monto + motivo), que registran el movimiento contra la sesión de caja abierta. Lista de movimientos del día visible en la caja (`Tarjeta`/`FilaDato`).
+
+**Modelo de datos:**
+```sql
+create table movimientos_caja (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references locales(id),      -- sucursal activa
+  arqueo_id uuid not null references arqueos(id),      -- sesión de caja
+  tipo text not null check (tipo in ('apertura','venta_efectivo','retiro','deposito')),
+  monto numeric(10,2) not null check (monto > 0),      -- siempre positivo, el signo se deriva de `tipo`
+  motivo_categoria text,                               -- solo para 'retiro': proveedor|banco|gasto|otro
+  nota text,
+  usuario_id uuid not null references perfiles(id),
+  creado_at timestamptz not null default now()
+);
+```
+- El signo NO se guarda: `apertura`/`venta_efectivo`/`deposito` suman, `retiro` resta — se deriva en cada cálculo/lectura.
+- Filas `apertura` y `venta_efectivo` se generan solas vía trigger (no las escribe el frontend): `AFTER INSERT ON arqueos` (cuando `estado='abierto'`) inserta la fila `apertura`; `AFTER INSERT ON ventas` (cuando `metodo_pago='efectivo'` y `arqueo_id` no es null) inserta la fila `venta_efectivo`. Así el libro queda completo sin duplicar lógica en el frontend ni tocar `registrarVenta`.
+- `retiro`/`deposito` los inserta el frontend directo (INSERT simple, sin RPC — no hay condición de carrera en un libro append-only).
+- RLS: policy de INSERT/SELECT para `retiro`/`deposito` sobre `sucursales_del_usuario()` + `estado_acceso_local(local_id) <> 'bloqueado'`; las filas `apertura`/`venta_efectivo` las inserta el trigger (`SECURITY DEFINER`, no necesita policy de INSERT para el usuario).
+
+**Archivos:** migración nueva (`movimientos_caja` + 2 triggers + RLS); `VentasContext.tsx` (`retirarEfectivo`/`ingresarEfectivo` reales, hoy son stubs que solo hacen `console.log`); `ContenedorArqueo.tsx` (botones + modales + lista del día, con `ModalBase`).
+
+- [x] Migración: tabla + triggers (`apertura`, `venta_efectivo`) + RLS.
+- [x] `VentasContext`: implementar `retirarEfectivo`/`ingresarEfectivo` de verdad + cargar movimientos del arqueo activo.
+- [x] `ContenedorArqueo`: botones "Retirar"/"Depositar" (`ModalBase` + `Campo`), lista de movimientos del día.
+- [x] Tope de retiro: no se puede retirar más efectivo del que hay en caja. Doble capa — `ModalMovimientoCaja` valida contra el esperado en vivo (feedback inmediato) y el trigger `validar_retiro_caja` (BEFORE INSERT, bloquea la fila de `arqueos` para serializar) lo re-valida en la base, a prueba de dos retiros simultáneos.
+
+### 2. Alerta de arqueo (esperado + colores + historial) — SEGUNDO, depende del punto 1
+**Qué hace:** extiende el cálculo de esperado para incluir retiros/depósitos, corrige el filtro para que sea solo efectivo, y agrega color según la diferencia — tanto en el arqueo en curso como en un historial de arqueos nuevo (hoy no existe ninguna pantalla que liste cierres pasados; `ArqueosHistorial` se carga pero nunca se renderiza).
+
+**Fórmula (reemplaza la actual, que suma todos los métodos de pago):**
+```
+esperado_efectivo = fondo_apertura + ventas_efectivo + depósitos − retiros
+                   = SUM(monto con signo) sobre movimientos_caja del arqueo
+diferencia = contado − esperado_efectivo
+```
+- Tolerancia de redondeo chica (ej. ±$1) → "Cuadró" (verde/neutro).
+- `diferencia < -tolerancia` → rojo, "Faltó $X".
+- `diferencia > tolerancia` → ámbar, "Sobró $X" (también anomalía).
+
+**Archivos:**
+- `VentasContext.tsx`: `cerrarArqueo` reemplaza la query a `ventas` por una suma sobre `movimientos_caja` (o vista/función SQL `calcular_esperado_efectivo(arqueo_id)`, a definir en la implementación); `ArqueoUI` gana `montoFinalEsperado`.
+- `ContenedorArqueo.tsx`: el cálculo de `montoEsperado`/`diferencia` en vivo pasa a leer del mismo lugar; colores según la regla de arriba (hoy es binario `diferencia >= 0` verde / rojo, sin ámbar ni tolerancia).
+- Nuevo: sección/pantalla "Historial de arqueos" (dentro de `ContenedorArqueo` o como tab nueva en `ContenedorVentas`, a decidir en la implementación) listando `ArqueosHistorial` con `Tarjeta`/`FilaDato`/`Etiqueta`, fila coloreada según la misma regla.
+
+- [x] Cálculo en `cerrarArqueo` extendido: suma `movimientos_caja` (retiro/depósito) + ventas filtradas por `metodo_pago = 'efectivo'` (antes sumaba todos los métodos — bug corregido).
+- [x] `ArqueoUI` + mapeo: agregado `montoFinalEsperado`.
+- [x] Colores con tolerancia (`clasificarDiferencia` en `src/logic/arqueoServices.ts`, reusado por el arqueo activo y el historial) en `ContenedorArqueo` (arqueo activo).
+- [x] Pantalla "Historial de arqueos" (`HistorialArqueos.tsx`, colapsable desde `ContenedorArqueo`) con el mismo color por fila.
+
+### 3. Movimientos de stock (ingreso de mercadería + kardex) — TERCERO, independiente de 1 y 2
+**Qué hace:** libro de auditoría de stock al lado de `productos.stock_actual`/`producto_sucursal.stock_actual` (que siguen siendo la verdad). Pantalla de "Ingreso de mercadería" (recepción por lote, suma explícita antes→después, nunca reemplaza) + historial (kardex) por producto.
+
+**Modelo de datos:**
+```sql
+create table movimientos_stock (
+  id uuid primary key default gen_random_uuid(),
+  local_id uuid not null references locales(id),        -- sucursal activa
+  producto_id uuid not null references productos(id),
+  cantidad numeric not null,                            -- CON signo: + ingreso, − ajuste/merma
+  motivo text not null check (motivo in ('ingreso','ajuste','merma','devolucion')),  -- extensible a 'venta' a futuro
+  costo_unitario numeric,                                -- opcional, habilita margen después
+  nota text,
+  usuario_id uuid not null references perfiles(id),
+  creado_at timestamptz not null default now()
+);
+```
+**RPC transaccional (obligatoria, evita la condición de carrera):**
+```sql
+registrar_movimiento_stock(p_producto_id uuid, p_local_id uuid, p_cantidad numeric,
+                            p_motivo text, p_costo_unitario numeric default null, p_nota text default null)
+```
+- Rama compartido (existe fila en `producto_sucursal` para `producto_id`+`local_id`): `UPDATE producto_sucursal SET stock_actual = stock_actual + p_cantidad ...` — mismo criterio de ramificación que `editarProducto`/`CAMPOS_SUCURSAL` en `MenuContext.tsx`.
+- Rama directa: `UPDATE productos SET stock_actual = stock_actual + p_cantidad WHERE id = ... AND local_id = ...`.
+- Ambas ramas + el `INSERT` en `movimientos_stock` van en la misma función (una sola transacción implícita) — nunca se lee el stock en el front para sumarlo.
+- `SECURITY INVOKER` (no definer): se apoya en las RLS de `productos`/`producto_sucursal` que ya existen (dueño/encargado gestionan) en vez de duplicar el chequeo de permisos adentro.
+- Devuelve `stock_anterior`/`stock_nuevo` para el "Tenías 15 → quedan 35" sin round-trip extra.
+
+**Pantalla "Ingreso de mercadería":** tabla editable (buscador con autocomplete + fila producto/cantidad/costo opcional), mismo patrón de fila editable que `ModalCargaAudio.tsx` (tabla con inputs, agregar/borrar fila) pero para productos EXISTENTES —confirmación secuencial (no `Promise.all`, mismo patrón que `ModalImportar`) llamando la RPC por fila, con progreso. Alta de producto nuevo desde acá (opcional si es fácil): crear con stock 0 vía `agregarProducto`, después la RPC con el stock deseado como primer movimiento `'ingreso'` (evita contar el stock inicial dos veces).
+
+**Kardex por producto:** panel/modal nuevo, `SELECT` sobre `movimientos_stock` filtrado por `producto_id`, ordenado por fecha, listado con `Tarjeta`/`FilaDato` (fecha, tipo, cantidad con signo, usuario, nota).
+
+**RLS:** `movimientos_stock` INSERT/SELECT sobre `sucursales_gestionables()` + `estado_acceso_local(local_id) <> 'bloqueado'` (dueño+encargado, igual que quién edita productos/costos hoy).
+
+**Archivos:** migración nueva (`movimientos_stock` + RPC + RLS); `MenuContext.tsx` (nueva función que llama la RPC, ej. `registrarIngresoStock`); `ModalIngresoMercaderia.tsx` nuevo (botón en topbar de `ContenedorInventario.tsx`, junto a Importar/Cargar por audio/Ajustar precios); `PanelKardexProducto.tsx` (o similar) nuevo, accesible desde el menú ⋯ de cada producto.
+
+- [x] Migración: tabla + RPC transaccional (`registrar_movimiento_stock`, con `SELECT ... FOR UPDATE` para serializar concurrencia) + RLS.
+- [x] `MenuContext`: `registrarMovimientoStock` invoca la RPC y actualiza `productos` en memoria con el resultado; `agregarProducto` ahora devuelve el producto creado (antes `Promise<void>`) para poder encadenar el primer movimiento 'ingreso'.
+- [x] `ModalIngresoMercaderia`: búsqueda + tabla editable (existentes y altas nuevas) + antes→después explícito + confirmación secuencial con progreso.
+- [x] Botón "Ingreso de mercadería" en `ContenedorInventario`.
+- [x] Kardex por producto (`ModalKardexProducto` + `useKardexProducto`, entrada desde el menú ⋯ → "Historial de stock").
+
+---
+
 ## 🟢 Features de la app (frontend)
 
 - [x] **Exportar historial de ventas a Excel (.xlsx)** — en el navegador con SheetJS, dos hojas (Ventas + Detalle). Incluye N° de venta en ambas hojas (para cruzarlas), fila de totales en la hoja Ventas, columna "Modificado" que se omite si ninguna venta exportada fue editada, y montos como número real (no texto) con formato de moneda.

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
-import type { Producto, Categoria } from '../types';
+import type { Producto, Categoria, MotivoMovimientoStock } from '../types';
 
 //context para manejar el menú de productos y categorías, incluyendo funciones para CRUD y ajustes de stock.
 
@@ -11,7 +11,7 @@ interface MenuContextType {
     cargando: boolean;
     obtenerProductoPorId: (id: string) => Producto | undefined;
     filtrarPorCategoria: (nombre: string) => Producto[];
-    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => Promise<void>;
+    agregarProducto: (nuevo: Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => Promise<Producto>;
     recargarProductos: () => Promise<void>;
     editarProducto: (id: string, cambios: Partial<Producto>) => Promise<void>;
     borrarProducto: (id: string) => Promise<void>;
@@ -19,6 +19,13 @@ interface MenuContextType {
     toggleFavorito: (id: string, favorito: boolean) => Promise<void>;
     togglePublicado: (id: string, publicado: boolean) => Promise<void>;
     ajustarStock: (id: string, cantidad: number) => Promise<void>;
+    registrarMovimientoStock: (
+        productoId: string,
+        cantidad: number,
+        motivo: MotivoMovimientoStock,
+        costoUnitario?: number | null,
+        nota?: string | null
+    ) => Promise<{ stockAnterior: number; stockNuevo: number }>;
     agregarCategoria: (nombre: string, icono?: string) => Promise<void>;
     editarCategoria: (id: string, nombre: string, icono?: string) => Promise<void>;
     borrarCategoria: (id: string) => Promise<void>;
@@ -152,7 +159,9 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             const { error: errorStock } = await supabase.from('producto_sucursal').insert(filasSucursal);
             if (errorStock) throw errorStock;
 
-            setProductos(prev => [...prev, { ...creado, stock_actual, stock_minimo, precio_venta, precio_costo } as Producto]);
+            const productoCreado = { ...creado, stock_actual, stock_minimo, precio_venta, precio_costo } as Producto;
+            setProductos(prev => [...prev, productoCreado]);
+            return productoCreado;
         } else {
             const { data, error } = await supabase
                 .from('productos')
@@ -161,6 +170,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
                 .single();
             if (error) throw error;
             setProductos(prev => [...prev, data as Producto]);
+            return data as Producto;
         }
     };
 
@@ -285,6 +295,38 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         await editarProducto(id, { stock_actual: Math.max(0, producto.stock_actual + cantidad) });
     };
 
+    // Suma/resta stock de forma atómica vía RPC (a diferencia de
+    // ajustarStock de arriba, que lee el stock en el front y lo pisa — tiene
+    // condición de carrera con dos ingresos simultáneos). Además deja
+    // registro en movimientos_stock (kardex) para poder auditar de dónde
+    // salió cada cambio.
+    const registrarMovimientoStock = async (
+        productoId: string,
+        cantidad: number,
+        motivo: MotivoMovimientoStock,
+        costoUnitario: number | null = null,
+        nota: string | null = null,
+    ) => {
+        if (!localId) throw new Error('Sin sesión activa');
+
+        const { data, error } = await supabase.rpc('registrar_movimiento_stock', {
+            p_producto_id: productoId,
+            p_local_id: localId,
+            p_cantidad: cantidad,
+            p_motivo: motivo,
+            p_costo_unitario: costoUnitario,
+            p_nota: nota,
+        });
+        if (error) throw error;
+
+        const fila = Array.isArray(data) ? data[0] : data;
+        if (!fila) throw new Error('La RPC no devolvió el stock actualizado');
+
+        setProductos(prev => prev.map(p => p.id === productoId ? { ...p, stock_actual: fila.stock_nuevo } : p));
+
+        return { stockAnterior: fila.stock_anterior as number, stockNuevo: fila.stock_nuevo as number };
+    };
+
     const agregarCategoria = async (nombre: string, icono?: string) => {
         const { data, error } = await supabase
             .from('categorias')
@@ -318,6 +360,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             obtenerProductoPorId, filtrarPorCategoria,
             agregarProducto, recargarProductos, editarProducto, borrarProducto,
             toggleActivo, toggleFavorito, togglePublicado, ajustarStock,
+            registrarMovimientoStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,
         }}>

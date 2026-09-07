@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
@@ -7,6 +7,8 @@ import ModalStock from '../Inventario/ModalStock';
 import ModalImportar from '../Inventario/ModalImportar';
 import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
 import ModalCargaAudio from '../Inventario/ModalCargaAudio';
+import ModalIngresoMercaderia from '../Inventario/ModalIngresoMercaderia';
+import ModalKardexProducto from '../Inventario/ModalKardexProducto';
 import { TrendingUp } from 'lucide-react';
 import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
@@ -18,6 +20,8 @@ const ContenedorInventario = () => {
     const [modalStock, setModalStock] = useState<Producto | null>(null);
     const [modalImportar, setModalImportar] = useState(false);
     const [modalCargaAudio, setModalCargaAudio] = useState(false);
+    const [modalIngreso, setModalIngreso] = useState(false);
+    const [modalKardex, setModalKardex] = useState<Producto | null>(null);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [agregandoCategoria, setAgregandoCategoria] = useState(false);
     const [confirmarBorrar, setConfirmarBorrar] = useState<Producto | null>(null);
@@ -122,6 +126,12 @@ const ContenedorInventario = () => {
                     className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
                 >
                     <TrendingUp size={16} /> Ajustar precios
+                </button>
+                <button
+                    onClick={() => setModalIngreso(true)}
+                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
+                >
+                    <PackagePlus size={16} /> Ingreso de mercadería
                 </button>
                 <button
                     onClick={() => setModalProducto(null)}
@@ -245,6 +255,7 @@ const ContenedorInventario = () => {
                                                 onToggleActivo={() => toggleActivo(prod.id, !prod.activo)}
                                                 onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
                                                 onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
+                                                onVerKardex={() => setModalKardex(prod)}
                                             />
                                         </>
                                     }
@@ -279,6 +290,14 @@ const ContenedorInventario = () => {
 
             {modalCargaAudio && (
                 <ModalCargaAudio onCerrar={() => setModalCargaAudio(false)} />
+            )}
+
+            {modalIngreso && (
+                <ModalIngresoMercaderia onCerrar={() => setModalIngreso(false)} />
+            )}
+
+            {modalKardex && (
+                <ModalKardexProducto producto={modalKardex} onCerrar={() => setModalKardex(null)} />
             )}
 
             {confirmarBorrar && (
@@ -344,9 +363,10 @@ interface MenuAccionesProps {
     onToggleActivo: () => void;
     onToggleFavorito: () => void;
     onTogglePublicado: () => void;
+    onVerKardex: () => void;
 }
 
-const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado }: MenuAccionesProps) => {
+const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
 
     const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
@@ -383,6 +403,10 @@ const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavo
                         <button className={item} onClick={() => { onTogglePublicado(); setAbierto(false); }}>
                             <Globe size={12} className={prod.publicado ? 'text-sky-500' : 'text-stone-400'} />
                             {prod.publicado ? 'Quitar del catálogo' : 'Publicar en catálogo'}
+                        </button>
+
+                        <button className={item} onClick={() => { onVerKardex(); setAbierto(false); }}>
+                            <History size={12} className="text-stone-400" /> Historial de stock
                         </button>
 
                         <div className="h-px bg-stone-100 my-1" />

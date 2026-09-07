@@ -1,22 +1,51 @@
 import { useState } from 'react';
 import { useVentas } from '../../context/VentasContext';
-import { Lock, Unlock, TrendingUp, ShoppingBag } from 'lucide-react';
+import { Lock, Unlock, TrendingUp, ShoppingBag, ArrowUpCircle, ArrowDownCircle, History } from 'lucide-react';
 import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
 import { imprimirArqueo } from '../../logic/impresion';
-import { Tarjeta, SeccionDatos, FilaDato } from '../ui/ComponentesBase';
+import { clasificarDiferencia, type EstadoDiferencia } from '../../logic/arqueoServices';
+import { Tarjeta, SeccionDatos, FilaDato, Etiqueta } from '../ui/ComponentesBase';
+import ModalMovimientoCaja from './ModalMovimientoCaja';
+import HistorialArqueos from './HistorialArqueos';
+
+// Estilos por estado de diferencia — mismo criterio en el arqueo en curso y
+// en HistorialArqueos. "Sobro" usa ámbar vía override (no es uno de los 4
+// tonos de ComponentesBase), mismo patrón que ya usa ModalCargaAudio para
+// "Confianza baja".
+const ESTILOS_DIFERENCIA: Record<EstadoDiferencia, { fondo: string; texto: string; label: (n: number) => string }> = {
+    cuadro: { fondo: 'bg-green-100', texto: 'text-green-700', label: () => 'Cuadró' },
+    falto:  { fondo: 'bg-red-100', texto: 'text-red-700', label: n => `Faltó $${Math.abs(n).toLocaleString()}` },
+    sobro:  { fondo: 'bg-amber-100', texto: 'text-amber-700', label: n => `Sobró $${Math.abs(n).toLocaleString()}` },
+};
+
+const LABELS_MOTIVO_RETIRO: Record<string, string> = {
+    proveedor: 'Pago a proveedor',
+    banco: 'Depósito bancario',
+    gasto: 'Gasto',
+    otro: 'Otro',
+};
 
 const ContenedorArqueo = () => {
-    const { arqueoActivo, historialVentas, abrirArqueo, cerrarArqueo } = useVentas();
+    const { arqueoActivo, historialVentas, movimientosCaja, abrirArqueo, cerrarArqueo } = useVentas();
     const [montoInicial, setMontoInicial] = useState('');
     const [montoReal, setMontoReal] = useState('');
     const [confirmandoCierre, setConfirmandoCierre] = useState(false);
     const [cargando, setCargando] = useState(false);
     const [error, setError] = useState('');
+    const [modalMovimiento, setModalMovimiento] = useState<'retiro' | 'deposito' | null>(null);
+    const [mostrarHistorial, setMostrarHistorial] = useState(false);
     const { impresorasDeTickets } = useImpresoras();
     const { local } = useAuth();
 
+    // Solo retiros/depósitos se muestran acá — apertura y venta_efectivo ya
+    // se ven reflejados en "Monto inicial"/"Total vendido" más abajo.
+    const movimientosDelDia = movimientosCaja.filter(m => m.tipo === 'retiro' || m.tipo === 'deposito');
+
+    // "Total vendido" es una métrica de NEGOCIO (todos los métodos de pago);
+    // el esperado de caja es una métrica de EFECTIVO — no son lo mismo, ver
+    // el gotcha en CLAUDE.md ("solo el efectivo vive en la caja").
     const totalVentas = historialVentas.reduce((acc, v) => acc + v.total, 0);
     const cantidadVentas = historialVentas.length;
 
@@ -25,8 +54,21 @@ const ContenedorArqueo = () => {
         return acc;
     }, {} as Record<string, number>);
 
-    const montoEsperado = arqueoActivo ? arqueoActivo.montoInicial + totalVentas : 0;
+    const totalVentasEfectivo = historialVentas
+        .filter(v => v.metodoPago === 'efectivo')
+        .reduce((acc, v) => acc + v.total, 0);
+    const totalDepositos = movimientosCaja
+        .filter(m => m.tipo === 'deposito')
+        .reduce((acc, m) => acc + m.monto, 0);
+    const totalRetiros = movimientosCaja
+        .filter(m => m.tipo === 'retiro')
+        .reduce((acc, m) => acc + m.monto, 0);
+
+    const montoEsperado = arqueoActivo
+        ? arqueoActivo.montoInicial + totalVentasEfectivo + totalDepositos - totalRetiros
+        : 0;
     const diferencia = parseFloat(montoReal || '0') - montoEsperado;
+    const estiloDiferencia = ESTILOS_DIFERENCIA[clasificarDiferencia(diferencia)];
 
     const handleAbrirArqueo = async () => {
         const monto = parseFloat(montoInicial);
@@ -110,11 +152,14 @@ const ContenedorArqueo = () => {
                     {cargando ? 'Abriendo...' : 'Abrir caja'}
                 </button>
             </Tarjeta>
+
+            <BotonHistorial mostrar={mostrarHistorial} onToggle={() => setMostrarHistorial(v => !v)} />
         </div>
     );
 
     // Con arqueo abierto
     return (
+        <>
         <div className="space-y-4">
             {/* Header arqueo activo */}
             <FilaDato
@@ -126,6 +171,49 @@ const ContenedorArqueo = () => {
                 subetiqueta={`Desde ${arqueoActivo.fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
                 valor={<span className="text-sm text-green-700">Inicial: ${arqueoActivo.montoInicial.toLocaleString()}</span>}
             />
+            {/* Retiro / depósito de efectivo */}
+            <div className="grid grid-cols-2 gap-3">
+                <button
+                    onClick={() => setModalMovimiento('retiro')}
+                    className="flex items-center justify-center gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                    <ArrowUpCircle size={16} /> Retirar efectivo
+                </button>
+                <button
+                    onClick={() => setModalMovimiento('deposito')}
+                    className="flex items-center justify-center gap-2 border-2 border-green-200 text-green-700 hover:bg-green-50 font-bold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                    <ArrowDownCircle size={16} /> Depositar efectivo
+                </button>
+            </div>
+
+            {/* Movimientos del día (retiros/depósitos) */}
+            {movimientosDelDia.length > 0 && (
+                <Tarjeta className="space-y-2.5">
+                    <p className="text-xs font-bold text-stone-400 uppercase tracking-wide">Movimientos de caja</p>
+                    {movimientosDelDia.map(m => (
+                        <div key={m.id} className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                                {m.tipo === 'retiro'
+                                    ? <ArrowUpCircle size={15} className="text-red-500 shrink-0" />
+                                    : <ArrowDownCircle size={15} className="text-green-600 shrink-0" />}
+                                <div className="min-w-0">
+                                    <p className="text-sm text-stone-700 truncate">
+                                        {m.tipo === 'retiro' ? LABELS_MOTIVO_RETIRO[m.motivoCategoria ?? 'otro'] : (m.nota || 'Depósito')}
+                                    </p>
+                                    <p className="text-xs text-stone-400">
+                                        {m.fecha.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                                        {m.tipo === 'retiro' && m.nota && ` · ${m.nota}`}
+                                    </p>
+                                </div>
+                            </div>
+                            <Etiqueta tono={m.tipo === 'retiro' ? 'alerta' : 'exito'} className="shrink-0">
+                                {m.tipo === 'retiro' ? '−' : '+'}${m.monto.toLocaleString()}
+                            </Etiqueta>
+                        </div>
+                    ))}
+                </Tarjeta>
+            )}
 
             {/* Resumen de ventas */}
             <div className="grid grid-cols-2 gap-3">
@@ -192,10 +280,10 @@ const ContenedorArqueo = () => {
 
                     {/* Diferencia en tiempo real */}
                     {montoReal && (
-                        <div className={`p-3 rounded-xl text-center ${diferencia >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
+                        <div className={`p-3 rounded-xl text-center ${estiloDiferencia.fondo}`}>
                             <p className="text-xs text-stone-500 mb-1">Diferencia</p>
-                            <p className={`text-xl font-black ${diferencia >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                {diferencia >= 0 ? '+' : ''}{diferencia.toLocaleString()}
+                            <p className={`text-xl font-black ${estiloDiferencia.texto}`}>
+                                {estiloDiferencia.label(diferencia)}
                             </p>
                         </div>
                     )}
@@ -219,8 +307,42 @@ const ContenedorArqueo = () => {
                     </div>
                 </Tarjeta>
             )}
+
+            <BotonHistorial mostrar={mostrarHistorial} onToggle={() => setMostrarHistorial(v => !v)} />
         </div>
+
+        <ModalMovimientoCaja
+            tipo={modalMovimiento ?? 'retiro'}
+            abierto={modalMovimiento !== null}
+            onCerrar={() => setModalMovimiento(null)}
+            disponible={montoEsperado}
+        />
+        </>
     );
 };
+
+// --- Historial de arqueos, colapsado por defecto para no saturar la
+// pantalla de caja (que ya tiene bastante contenido propio). ---
+interface BotonHistorialProps {
+    mostrar: boolean;
+    onToggle: () => void;
+}
+
+const BotonHistorial = ({ mostrar, onToggle }: BotonHistorialProps) => (
+    <div className="pt-2">
+        <button
+            onClick={onToggle}
+            className="flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 font-medium"
+        >
+            <History size={15} />
+            {mostrar ? 'Ocultar historial de arqueos' : 'Ver historial de arqueos'}
+        </button>
+        {mostrar && (
+            <div className="mt-3">
+                <HistorialArqueos />
+            </div>
+        )}
+    </div>
+);
 
 export default ContenedorArqueo;
