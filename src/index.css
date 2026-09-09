@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+/* Oculta la scrollbar en tiras horizontales de scroll (sidebar de
+   categorías, NavBar, topbar de Inventario en mobile) — la clase ya se
+   usaba en varios lugares pero nunca estaba definida. */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}

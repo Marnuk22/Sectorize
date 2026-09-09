@@ -98,47 +98,56 @@ const ContenedorInventario = () => {
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
             {/* Topbar */}
-            <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 shrink-0">
-                <h2 className="text-lg font-bold text-stone-800 w-full sm:flex-1 sm:w-auto">Inventario</h2>
-                <div className="relative flex-1 sm:flex-none">
-                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                    <input
-                        className="w-full sm:w-48 pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        placeholder="Buscar por nombre o código de barras..."
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                    />
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 shrink-0">
+                <h2 className="text-lg font-bold text-stone-800 sm:flex-1">Inventario</h2>
+
+                {/* En mobile esto es una tira con scroll horizontal — con
+                    flex-wrap común, 5 botones + buscador terminan pidiendo
+                    más filas de las que entran en pantalla y el contenedor
+                    padre (overflow-hidden) recorta las últimas opciones en
+                    vez de mostrarlas. Con scroll horizontal ninguna opción
+                    queda inalcanzable. */}
+                <div className="flex items-center gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap sm:overflow-visible">
+                    <div className="relative shrink-0 sm:flex-none">
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                        <input
+                            className="w-48 pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            placeholder="Buscar por nombre o código de barras..."
+                            value={busqueda}
+                            onChange={e => setBusqueda(e.target.value)}
+                        />
+                    </div>
+                    <button
+                        onClick={() => setModalImportar(true)}
+                        className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap shrink-0"
+                    >
+                        <Upload size={16} /> Importar
+                    </button>
+                    <button
+                        onClick={() => setModalCargaAudio(true)}
+                        className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap shrink-0"
+                    >
+                        <Mic size={16} /> Cargar por audio
+                    </button>
+                    <button
+                        onClick={() => setModalPrecios(true)}
+                        className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap shrink-0"
+                    >
+                        <TrendingUp size={16} /> Ajustar precios
+                    </button>
+                    <button
+                        onClick={() => setModalIngreso(true)}
+                        className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap shrink-0"
+                    >
+                        <PackagePlus size={16} /> Ingreso de mercadería
+                    </button>
+                    <button
+                        onClick={() => setModalProducto(null)}
+                        className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap shrink-0"
+                    >
+                        <Plus size={16} /> Nuevo producto
+                    </button>
                 </div>
-                <button
-                    onClick={() => setModalImportar(true)}
-                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
-                >
-                    <Upload size={16} /> Importar
-                </button>
-                <button
-                    onClick={() => setModalCargaAudio(true)}
-                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
-                >
-                    <Mic size={16} /> Cargar por audio
-                </button>
-                <button
-                    onClick={() => setModalPrecios(true)}
-                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
-                >
-                    <TrendingUp size={16} /> Ajustar precios
-                </button>
-                <button
-                    onClick={() => setModalIngreso(true)}
-                    className="flex items-center gap-2 border border-stone-200 hover:bg-stone-50 text-stone-600 px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
-                >
-                    <PackagePlus size={16} /> Ingreso de mercadería
-                </button>
-                <button
-                    onClick={() => setModalProducto(null)}
-                    className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap"
-                >
-                    <Plus size={16} /> Nuevo producto
-                </button>
             </div>
 
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
