@@ -27,6 +27,12 @@ schema_propio.sql
 .vscode/*
 !.vscode/extensions.json
 .idea
+
+# Tooling local de Claude Code (skills, scripts de esas skills) — no es
+# código del proyecto, es config de la herramienta con la que se trabaja acá.
+# Estaba comiteado por error y hacía que GitHub contara Python como ~35% del
+# repo (los scripts de las skills), cuando Vallis no usa Python para nada.
+.claude/
 .DS_Store
 *.suo
 *.ntvs*
