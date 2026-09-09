@@ -84,6 +84,20 @@ Cambio estructural grande: hoy Vallis asume "un usuario = un local". Este MVP in
 
 ---
 
+## 🔴 Botón de Arrepentimiento (obligación legal, Resolución 424/2020 y modif.)
+
+Surgió de auditar `vallis-landing/terminos/` y `vallis-landing/privacidad/` (2026-09-08). Toda venta a distancia en Argentina tiene que ofrecer un **derecho de revocación de 10 días** con devolución real de lo cobrado — no alcanza con una cláusula de texto, la normativa de Comercio Interior exige un botón funcional. Es distinto del botón que ya existe:
+
+- **Ya existe (no confundir):** `PanelMiPlan` → "Cancelar suscripción" + Edge Function `cancelar-suscripcion` — corta la renovación automática (`PUT /preapproval/{id}` en MercadoPago) pero **no reembolsa** nada ya cobrado. Sirve para dar de baja hacia adelante, no para el arrepentimiento de una compra ya hecha.
+- **Falta:** un mecanismo que, dentro de los 10 días de haberse efectivizado un cobro, deshaga esa compra puntual y devuelva la plata.
+
+### Decisiones a tomar antes de implementar (preguntar/definir, no asumir)
+- [ ] Alcance real: dado que Vallis se vende como B2B (sección 3 de `terminos`), definir con el abogado si el Botón de Arrepentimiento aplica igual (la clasificación consumidor/no-consumidor del usuario quedó sin resolver a propósito — ver Cabos sueltos). Si aplica, no se puede resolver solo con más texto legal, hace falta el botón funcional.
+- [ ] Función de MercadoPago a usar: reembolso de un pago puntual vía `POST /v1/payments/{id}/refunds` (no es lo mismo que cancelar el `preapproval`) — nueva Edge Function, ej. `reembolsar-pago`, dueño-only, que además revierta `suscripcion_estado` en `negocios` si corresponde.
+- [ ] Dónde vive el botón en la UI: probablemente al lado de "Cancelar suscripción" en `PanelMiPlan`, visible solo dentro de la ventana de 10 días desde el último cobro (necesita guardar/consultar la fecha del último pago aprobado).
+
+---
+
 ## 🟡 Cabos sueltos (cortos, mejoran el pulido)
 
 - [ ] Mail de contacto en el catálogo público: campo en `locales` + agregarlo a `catalogo_publico()` + botón en la página. (WhatsApp ya funciona.)
@@ -224,6 +238,8 @@ registrar_movimiento_stock(p_producto_id uuid, p_local_id uuid, p_cantidad numer
 
 ## ⚫ Proyectos futuros (grandes, sin apuro)
 
+- [ ] **Productos vs. ingredientes (fabricación propia)** — para locales que producen lo que venden (panadería, pastelería, etc.), no solo revenden. Hoy `productos` es una sola entidad; esto necesitaría separar "ingredientes" (materia prima, con su propio stock, no se vende directo) de "productos" (lo que sí se vende), más una receta/BOM que vincule cada producto con los ingredientes que consume y en qué cantidad. Pregunta abierta a resolver antes de diseñar: ¿el descuento de ingredientes pasa en el momento de la VENTA del producto (consumo directo, receta como multiplicador), o en un paso previo de "producción por lote" (se arma una tanda de N panes, se descuentan los ingredientes ahí, y el pan queda con su propio stock independiente para vender)? Lo segundo es más realista para una panadería de verdad pero es bastante más trabajo — conviene validarlo con un cliente real antes de encarar. Puede apoyarse en `movimientos_stock` (el kardex ya construido) sumando un motivo nuevo tipo `'produccion'`.
+- [ ] **Inventario extra / depósito externo** — un segundo lugar de stock además de la sucursal de venta (ej. un galpón/depósito), con transferencias hacia/desde la sucursal. Conceptualmente parecido a `producto_sucursal` (que ya separa stock por sucursal) pero generalizado a una "ubicación" que puede ser una sucursal o un depósito. Podría reusar `movimientos_stock` con un motivo `'transferencia'` para registrar el traspaso. Definir si el depósito es exclusivo de un negocio o se puede compartir entre sucursales del mismo negocio.
 - [ ] Carrito en el catálogo: mutar la vidriera actual a tienda con pedidos. Requiere tabla de pedidos, notificación al comercio, estados de pedido, manejo de stock.
 - [ ] Cobro 2 — Marketplace: que los gimnasios cobren las cuotas a sus socios vía MercadoPago (OAuth por cada gimnasio, split de pagos, responsabilidad sobre plata de terceros).
 - [ ] Rubro reventa/celulares: inventario serializado (IMEI). Por ahora se carga cada equipo como producto individual con stock 1. Esperar feedback del amigo.
