@@ -183,7 +183,15 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
 
                 onCerrar();
             } catch (err: any) {
-                setError(err.message);
+                // 23505 = unique_violation (Postgres). El único unique que puede
+                // saltar acá es el de codigo_barras (ver migración
+                // codigo_barras_unico_por_negocio) — mensaje claro en vez del
+                // error crudo de Postgres.
+                if (err.code === '23505') {
+                    setError('Ya existe otro producto con ese código de barras.');
+                } else {
+                    setError(err.message);
+                }
             } finally {
                 setCargando(false);
             }
