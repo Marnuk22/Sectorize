@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { X, Search, Trash2, PackagePlus, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { X, Search, Trash2, PackagePlus, Loader2, CheckCircle2, ArrowRight, Camera } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import type { Producto } from '../../types';
+import ModalEscanerCamara from './ModalEscanerCamara';
 
 interface FilaExistente {
     id: string; // = producto.id
@@ -36,6 +37,7 @@ interface Props {
 const ModalIngresoMercaderia = ({ onCerrar }: Props) => {
     const { productos, agregarProducto, registrarMovimientoStock } = useMenu();
     const [busqueda, setBusqueda] = useState('');
+    const [modalEscaner, setModalEscaner] = useState(false);
     const [filas, setFilas] = useState<Fila[]>([]);
     const [guardando, setGuardando] = useState(false);
     const [progreso, setProgreso] = useState(0);
@@ -136,6 +138,7 @@ const ModalIngresoMercaderia = ({ onCerrar }: Props) => {
     };
 
     return (
+        <>
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
                 {/* Header */}
@@ -182,11 +185,18 @@ const ModalIngresoMercaderia = ({ onCerrar }: Props) => {
                             <div className="relative">
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                                 <input
-                                    className="w-full pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                    className="w-full pl-9 pr-9 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                                     placeholder="Buscar producto por nombre o código de barras..."
                                     value={busqueda}
                                     onChange={e => setBusqueda(e.target.value)}
                                 />
+                                <button
+                                    onClick={() => setModalEscaner(true)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-violet-600"
+                                    title="Escanear con la cámara"
+                                >
+                                    <Camera size={15} />
+                                </button>
                                 {busqueda.trim() && (
                                     <div className="absolute z-10 mt-1 w-full bg-white border border-stone-200 rounded-xl shadow-xl max-h-56 overflow-y-auto">
                                         {coincidencias.map(p => (
@@ -255,6 +265,13 @@ const ModalIngresoMercaderia = ({ onCerrar }: Props) => {
                 )}
             </div>
         </div>
+
+        <ModalEscanerCamara
+            abierto={modalEscaner}
+            onCerrar={() => setModalEscaner(false)}
+            onDetectar={codigo => { setBusqueda(codigo); setModalEscaner(false); }}
+        />
+        </>
     );
 };
 

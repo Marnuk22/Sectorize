@@ -45,6 +45,21 @@ export const imprimirTexto = async (texto: string, nombreImpresora?: string): Pr
     await qz.print(config, datos);
 };
 
+// Imprime ZPL crudo (etiquetas Zebra) — a diferencia de imprimirTexto, NO
+// agrega el trailer de corte ESC/POS (eso es específico de térmicas de
+// tickets/comandas y no aplica acá). El ZPL ya trae su propio ^XA...^XZ.
+export const imprimirZPL = async (zpl: string, nombreImpresora?: string): Promise<void> => {
+    await conectar();
+
+    const impresora = nombreImpresora
+        ? await qz.printers.find(nombreImpresora)
+        : await qz.printers.getDefault();
+
+    const config = qz.configs.create(impresora);
+
+    await qz.print(config, [zpl]);
+};
+
 // Devuelve la lista de impresoras instaladas que detecta QZ Tray
 export const listarImpresoras = async (): Promise<string[]> => {
     await conectar();

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Check, X, ChevronDown, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Check, X, ChevronDown, AlertTriangle, CheckCircle2, Camera } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useMostrador } from '../../context/MostradorContext';
 import { useVentas } from '../../context/VentasContext';
@@ -14,6 +14,7 @@ import { UNIDADES } from '../../config/unidades';
 import { useEscaner } from '../../hooks/useEscaner';
 import { useFavoritos } from '../../hooks/useFavoritos';
 import { TarjetaProducto } from '../ui/ComponentesBase';
+import ModalEscanerCamara from '../Inventario/ModalEscanerCamara';
 
 type TipoDescuento = 'monto' | 'porcentaje';
 
@@ -46,6 +47,7 @@ const ContenedorMostrador = () => {
 
     // Escaneo de código de barras
     const [avisoEscaner, setAvisoEscaner] = useState<string | null>(null);
+    const [modalEscaner, setModalEscaner] = useState(false);
 
     const handleEscaneo = (codigo: string) => {
         const prod = productos.find(p => p.codigo_barras === codigo);
@@ -159,11 +161,18 @@ const ContenedorMostrador = () => {
                     <div className="relative">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         <input
-                            className="w-full pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            className="w-full pl-9 pr-9 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                             placeholder="Buscar producto..."
                             value={busqueda}
                             onChange={e => setBusqueda(e.target.value)}
                         />
+                        <button
+                            onClick={() => setModalEscaner(true)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-violet-600"
+                            title="Escanear con la cámara"
+                        >
+                            <Camera size={15} />
+                        </button>
                     </div>
                     <div className="flex gap-1 overflow-x-auto pb-1">
                         <button
@@ -423,6 +432,12 @@ const ContenedorMostrador = () => {
                     {avisoEscaner}
                 </div>
             )}
+
+            <ModalEscanerCamara
+                abierto={modalEscaner}
+                onCerrar={() => setModalEscaner(false)}
+                onDetectar={codigo => { setModalEscaner(false); handleEscaneo(codigo); }}
+            />
         </div>
     );
 };

@@ -176,4 +176,79 @@ export const generarReporteArqueo = (datos: DatosArqueo): string => {
     lineas.push(centrar('Vallis'));
 
     return lineas.join('\n');
+}
+
+/* ------------------------------------------------------------------------ */
+/* Etiqueta de producto (ZPL, impresoras Zebra) — código de barras + nombre
+   + precio. A diferencia de comanda/ticket/arqueo (texto plano para
+   térmicas ESC/POS vía imprimirHTML), esto genera comandos ZPL crudos que
+   se mandan directo a la impresora con imprimirZPL (qz.ts).
+
+   Las posiciones se calculan en puntos a partir de dpi/anchoMm/altoMm —
+   nunca hardcodeadas — porque no hay una impresora/etiqueta física puntual
+   todavía: cada comercio configura la suya (ver PanelImpresoras). Alcance
+   actual: solo Zebra (ZPL nativo) — Argox usa PPLA/PPLB y aunque algunos
+   modelos emulan ZPL, no se puede validar sin hardware real, queda fuera
+   por ahora.
+
+   IMPORTANTE: esta plantilla no se pudo probar contra una impresora Zebra
+   real — el primer comercio que la use es quien valida en la práctica que
+   imprime bien (posiciones, legibilidad del código a la distancia típica
+   de un lector de mostrador, etc.). Si hace falta ajustar, tocar solo las
+   proporciones de acá abajo, no los `^FO`/`^A0`/`^BC`/`^BE` sueltos en el
+   armado del ZPL. */
+export interface DatosEtiqueta {
+    nombre: string;
+    precio: number;
+    codigoBarras: string;
+}
+
+export interface ConfigEtiquetaImpresora {
+    dpi: number;       // 203 | 300
+    anchoMm: number;
+    altoMm: number;
+}
+
+const mmAPuntos = (mm: number, dpi: number): number => Math.round((mm * dpi) / 25.4);
+
+// EAN-13 real: exactamente 13 dígitos numéricos (código de fábrica). Todo lo
+// demás —incluidos los generados, que arrancan con "V"— va como Code128.
+const esEAN13 = (codigo: string): boolean => /^\d{13}$/.test(codigo);
+
+export const generarEtiquetaZPL = (datos: DatosEtiqueta, config: ConfigEtiquetaImpresora): string => {
+    const { dpi, anchoMm, altoMm } = config;
+    const anchoPts = mmAPuntos(anchoMm, dpi);
+    const altoPts = mmAPuntos(altoMm, dpi);
+
+    // Proporciones respecto al DPI/alto, no puntos fijos — así la misma
+    // plantilla sirve tanto en 203 como en 300 dpi y con distintos tamaños
+    // de etiqueta.
+    const margen = Math.round(dpi * 0.04);
+    const altoTextoNombre = Math.round(dpi * 0.09);
+    const altoTextoPrecio = Math.round(dpi * 0.13);
+    const altoBarras = Math.max(Math.round(altoPts * 0.35), Math.round(dpi * 0.2));
+
+    // Code128 a este DPI no lee bien un texto larguísimo en el ancho típico
+    // de una etiqueta chica — se trunca, el nombre completo ya está en el
+    // sistema igual.
+    const nombreTruncado = datos.nombre.length > 28 ? datos.nombre.slice(0, 28) : datos.nombre;
+    const precioTexto = `$${datos.precio.toLocaleString('es-AR')}`;
+
+    const yNombre = margen;
+    const yPrecio = yNombre + altoTextoNombre + margen;
+    const yBarras = yPrecio + altoTextoPrecio + margen;
+
+    const comandoBarras = esEAN13(datos.codigoBarras)
+        ? `^BY2\n^FO${margen},${yBarras}^BEN,${altoBarras},Y,N\n^FD${datos.codigoBarras}^FS`
+        : `^BY2\n^FO${margen},${yBarras}^BCN,${altoBarras},Y,N,N\n^FD${datos.codigoBarras}^FS`;
+
+    return [
+        '^XA',
+        `^PW${anchoPts}`,
+        `^LL${altoPts}`,
+        `^FO${margen},${yNombre}^A0N,${altoTextoNombre},${altoTextoNombre}^FD${nombreTruncado}^FS`,
+        `^FO${margen},${yPrecio}^A0N,${altoTextoPrecio},${altoTextoPrecio}^FD${precioTexto}^FS`,
+        comandoBarras,
+        '^XZ',
+    ].join('\n');
 };

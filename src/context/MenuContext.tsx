@@ -19,6 +19,7 @@ interface MenuContextType {
     toggleFavorito: (id: string, favorito: boolean) => Promise<void>;
     togglePublicado: (id: string, publicado: boolean) => Promise<void>;
     ajustarStock: (id: string, cantidad: number) => Promise<void>;
+    generarCodigoBarras: (id: string) => Promise<void>;
     registrarMovimientoStock: (
         productoId: string,
         cantidad: number,
@@ -295,6 +296,20 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         await editarProducto(id, { stock_actual: Math.max(0, producto.stock_actual + cantidad) });
     };
 
+    // Genera un código propio para un producto sin codigo_barras cargado —
+    // determinístico a partir de su propio id (mismo producto siempre da el
+    // mismo código, sin necesitar reintentos ni un contador aparte). Prefijo
+    // "V" para que nunca choque con un EAN-13 real de fábrica (esos son
+    // siempre numéricos). NUNCA pisa un código ya cargado, sea real o no.
+    const generarCodigoBarras = async (id: string) => {
+        const producto = productos.find(p => p.id === id);
+        if (!producto) return;
+        if (producto.codigo_barras && producto.codigo_barras.trim()) return;
+
+        const codigo = 'V' + producto.id.replace(/-/g, '').slice(0, 12).toUpperCase();
+        await editarProducto(id, { codigo_barras: codigo });
+    };
+
     // Suma/resta stock de forma atómica vía RPC (a diferencia de
     // ajustarStock de arriba, que lee el stock en el front y lo pisa — tiene
     // condición de carrera con dos ingresos simultáneos). Además deja
@@ -360,6 +375,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             obtenerProductoPorId, filtrarPorCategoria,
             agregarProducto, recargarProductos, editarProducto, borrarProducto,
             toggleActivo, toggleFavorito, togglePublicado, ajustarStock,
+            generarCodigoBarras,
             registrarMovimientoStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,

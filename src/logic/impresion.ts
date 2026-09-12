@@ -1,5 +1,5 @@
-import { generarComanda, generarTicket, generarReporteArqueo, type DatosComanda, type DatosTicket, type DatosArqueo } from './comanda';
-import { imprimirHTML } from './qz';
+import { generarComanda, generarTicket, generarReporteArqueo, generarEtiquetaZPL, type DatosComanda, type DatosTicket, type DatosArqueo } from './comanda';
+import { imprimirHTML, imprimirZPL } from './qz';
 import type { ItemPedidoUI } from '../types';
 
 interface OpcionesComanda {
@@ -101,6 +101,47 @@ export const imprimirArqueo = async (opciones: OpcionesArqueo) => {
         } catch (err) {
             console.error(`Error al imprimir arqueo en ${impresora}:`, err);
             alert(`No se pudo imprimir en "${impresora}". Verificá que QZ Tray esté abierto.`);
+        }
+    }
+};
+
+interface ImpresoraEtiqueta {
+    nombreSistema: string;
+    dpi: number | null;
+    anchoMm: number | null;
+    altoMm: number | null;
+}
+
+interface OpcionesEtiqueta {
+    nombre: string;
+    precio: number;
+    codigoBarras: string;
+    impresoras: ImpresoraEtiqueta[];
+}
+
+// A diferencia de comanda/ticket/arqueo (imprimirHTML, mismo texto a
+// cualquier térmica), acá cada impresora necesita SU PROPIO dpi/ancho/alto
+// para calcular la plantilla ZPL — por eso recibe los objetos completos, no
+// solo los nombres de sistema.
+export const imprimirEtiqueta = async (opciones: OpcionesEtiqueta) => {
+    // Ver comentario equivalente en imprimirComanda: sin impresoras
+    // configuradas es normal, no un error.
+    if (opciones.impresoras.length === 0) return;
+
+    for (const impresora of opciones.impresoras) {
+        if (!impresora.dpi || !impresora.anchoMm || !impresora.altoMm) {
+            alert(`La impresora "${impresora.nombreSistema}" no tiene configurado el DPI o el tamaño de etiqueta. Configurala desde el menú → Impresoras.`);
+            continue;
+        }
+        const zpl = generarEtiquetaZPL(
+            { nombre: opciones.nombre, precio: opciones.precio, codigoBarras: opciones.codigoBarras },
+            { dpi: impresora.dpi, anchoMm: impresora.anchoMm, altoMm: impresora.altoMm }
+        );
+        try {
+            await imprimirZPL(zpl, impresora.nombreSistema);
+        } catch (err) {
+            console.error(`Error al imprimir etiqueta en ${impresora.nombreSistema}:`, err);
+            alert(`No se pudo imprimir en "${impresora.nombreSistema}". Verificá que QZ Tray esté abierto.`);
         }
     }
 };

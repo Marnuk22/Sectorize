@@ -17,6 +17,10 @@ const PanelImpresoras = () => {
     const [nombreSistema, setNombreSistema] = useState('');
     const [impComandas, setImpComandas] = useState(true);
     const [impTickets, setImpTickets] = useState(true);
+    const [impEtiquetas, setImpEtiquetas] = useState(false);
+    const [dpi, setDpi] = useState<203 | 300>(203);
+    const [anchoMm, setAnchoMm] = useState('50');
+    const [altoMm, setAltoMm] = useState('30');
 
     const detectar = async () => {
         setDetectando(true);
@@ -40,6 +44,10 @@ const PanelImpresoras = () => {
         setNombreSistema('');
         setImpComandas(true);
         setImpTickets(true);
+        setImpEtiquetas(false);
+        setDpi(203);
+        setAnchoMm('50');
+        setAltoMm('30');
         setAgregando(false);
     };
 
@@ -50,6 +58,10 @@ const PanelImpresoras = () => {
             nombre_sistema: nombreSistema,
             imprime_comandas: impComandas,
             imprime_tickets: impTickets,
+            imprime_etiquetas: impEtiquetas,
+            dpi: impEtiquetas ? dpi : null,
+            ancho_mm: impEtiquetas ? parseFloat(anchoMm) || null : null,
+            alto_mm: impEtiquetas ? parseFloat(altoMm) || null : null,
         });
         resetForm();
     };
@@ -105,6 +117,8 @@ const PanelImpresoras = () => {
                             impresora={imp}
                             onToggleComandas={() => editarImpresora(imp.id, { imprime_comandas: !imp.imprime_comandas })}
                             onToggleTickets={() => editarImpresora(imp.id, { imprime_tickets: !imp.imprime_tickets })}
+                            onToggleEtiquetas={() => editarImpresora(imp.id, { imprime_etiquetas: !imp.imprime_etiquetas })}
+                            onCambiarConfigEtiqueta={cambios => editarImpresora(imp.id, cambios)}
                             onBorrar={() => borrarImpresora(imp.id)}
                         />
                     ))
@@ -149,7 +163,47 @@ const PanelImpresoras = () => {
                             <input type="checkbox" checked={impTickets} onChange={e => setImpTickets(e.target.checked)} />
                             Tickets
                         </label>
+                        <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+                            <input type="checkbox" checked={impEtiquetas} onChange={e => setImpEtiquetas(e.target.checked)} />
+                            Etiquetas
+                        </label>
                     </div>
+
+                    {/* Solo Zebra (ZPL nativo) por ahora — ver comentario en comanda.ts */}
+                    {impEtiquetas && (
+                        <div className="grid grid-cols-3 gap-2 p-2 bg-white border border-stone-200 rounded-lg">
+                            <div>
+                                <label className="block text-[11px] text-stone-500 mb-1">DPI</label>
+                                <select
+                                    value={dpi}
+                                    onChange={e => setDpi(Number(e.target.value) as 203 | 300)}
+                                    className="w-full px-2 py-1.5 border border-stone-200 rounded-lg text-xs bg-white"
+                                >
+                                    <option value={203}>203</option>
+                                    <option value={300}>300</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-stone-500 mb-1">Ancho (mm)</label>
+                                <input
+                                    type="number" step="any" min="1"
+                                    value={anchoMm}
+                                    onChange={e => setAnchoMm(e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-stone-200 rounded-lg text-xs"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-stone-500 mb-1">Alto (mm)</label>
+                                <input
+                                    type="number" step="any" min="1"
+                                    value={altoMm}
+                                    onChange={e => setAltoMm(e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-stone-200 rounded-lg text-xs"
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex gap-2">
                         <Boton
                             variante="primario"
@@ -189,46 +243,108 @@ const PanelImpresoras = () => {
 };
 
 // Un ítem de impresora configurada
-const ImpresoraItem = ({ impresora, onToggleComandas, onToggleTickets, onBorrar }: {
+interface CambiosConfigEtiqueta {
+    dpi?: number | null;
+    ancho_mm?: number | null;
+    alto_mm?: number | null;
+}
+
+interface ImpresoraItemProps {
     impresora: Impresora;
     onToggleComandas: () => void;
     onToggleTickets: () => void;
+    onToggleEtiquetas: () => void;
+    onCambiarConfigEtiqueta: (cambios: CambiosConfigEtiqueta) => void;
     onBorrar: () => void;
-}) => (
-    <Tarjeta padding="sm">
-        <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-                <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center shrink-0">
-                    <Printer size={16} />
+}
+
+const ImpresoraItem = ({ impresora, onToggleComandas, onToggleTickets, onToggleEtiquetas, onCambiarConfigEtiqueta, onBorrar }: ImpresoraItemProps) => {
+    // Estado local para los inputs numéricos (se guardan al perder foco, no
+    // en cada tecla, para no disparar un UPDATE por cada dígito tipeado).
+    const [anchoLocal, setAnchoLocal] = useState(String(impresora.ancho_mm ?? ''));
+    const [altoLocal, setAltoLocal] = useState(String(impresora.alto_mm ?? ''));
+
+    return (
+        <Tarjeta padding="sm">
+            <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 bg-violet-100 text-violet-700 rounded-lg flex items-center justify-center shrink-0">
+                        <Printer size={16} />
+                    </div>
+                    <div className="min-w-0">
+                        <p className="font-bold text-stone-800 text-sm truncate">{impresora.nombre}</p>
+                        <p className="text-xs text-stone-400 truncate">{impresora.nombre_sistema}</p>
+                    </div>
                 </div>
-                <div className="min-w-0">
-                    <p className="font-bold text-stone-800 text-sm truncate">{impresora.nombre}</p>
-                    <p className="text-xs text-stone-400 truncate">{impresora.nombre_sistema}</p>
-                </div>
+                <button onClick={onBorrar} className="text-stone-300 hover:text-red-500 p-1 shrink-0">
+                    <Trash2 size={14} />
+                </button>
             </div>
-            <button onClick={onBorrar} className="text-stone-300 hover:text-red-500 p-1 shrink-0">
-                <Trash2 size={14} />
-            </button>
-        </div>
-        <div className="flex gap-2">
-            <button
-                onClick={onToggleComandas}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    impresora.imprime_comandas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-400 border border-stone-200'
-                }`}
-            >
-                {impresora.imprime_comandas ? '✓ ' : ''}Comandas
-            </button>
-            <button
-                onClick={onToggleTickets}
-                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                    impresora.imprime_tickets ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-400 border border-stone-200'
-                }`}
-            >
-                {impresora.imprime_tickets ? '✓ ' : ''}Tickets
-            </button>
-        </div>
-    </Tarjeta>
-);
+            <div className="flex gap-2">
+                <button
+                    onClick={onToggleComandas}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        impresora.imprime_comandas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-400 border border-stone-200'
+                    }`}
+                >
+                    {impresora.imprime_comandas ? '✓ ' : ''}Comandas
+                </button>
+                <button
+                    onClick={onToggleTickets}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        impresora.imprime_tickets ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-400 border border-stone-200'
+                    }`}
+                >
+                    {impresora.imprime_tickets ? '✓ ' : ''}Tickets
+                </button>
+                <button
+                    onClick={onToggleEtiquetas}
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                        impresora.imprime_etiquetas ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-stone-50 text-stone-400 border border-stone-200'
+                    }`}
+                >
+                    {impresora.imprime_etiquetas ? '✓ ' : ''}Etiquetas
+                </button>
+            </div>
+
+            {/* Solo Zebra (ZPL nativo) — ver comentario en comanda.ts */}
+            {impresora.imprime_etiquetas && (
+                <div className="grid grid-cols-3 gap-2 mt-2 p-2 bg-stone-50 rounded-lg">
+                    <div>
+                        <label className="block text-[10px] text-stone-500 mb-1">DPI</label>
+                        <select
+                            value={impresora.dpi ?? 203}
+                            onChange={e => onCambiarConfigEtiqueta({ dpi: Number(e.target.value) })}
+                            className="w-full px-2 py-1 border border-stone-200 rounded text-xs bg-white"
+                        >
+                            <option value={203}>203</option>
+                            <option value={300}>300</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-[10px] text-stone-500 mb-1">Ancho mm</label>
+                        <input
+                            type="number" step="any" min="1"
+                            value={anchoLocal}
+                            onChange={e => setAnchoLocal(e.target.value)}
+                            onBlur={() => onCambiarConfigEtiqueta({ ancho_mm: parseFloat(anchoLocal) || null })}
+                            className="w-full px-2 py-1 border border-stone-200 rounded text-xs"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] text-stone-500 mb-1">Alto mm</label>
+                        <input
+                            type="number" step="any" min="1"
+                            value={altoLocal}
+                            onChange={e => setAltoLocal(e.target.value)}
+                            onBlur={() => onCambiarConfigEtiqueta({ alto_mm: parseFloat(altoLocal) || null })}
+                            className="w-full px-2 py-1 border border-stone-200 rounded text-xs"
+                        />
+                    </div>
+                </div>
+            )}
+        </Tarjeta>
+    );
+};
 
 export default PanelImpresoras;

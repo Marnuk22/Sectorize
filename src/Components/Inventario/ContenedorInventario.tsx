@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
+import { useImpresoras } from '../../context/ImpresorasContext';
+import { imprimirEtiqueta } from '../../logic/impresion';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
 import ModalStock from '../Inventario/ModalStock';
@@ -9,11 +11,13 @@ import ModalAjustePrecios from '../Inventario/ModalAjustePrecios';
 import ModalCargaAudio from '../Inventario/ModalCargaAudio';
 import ModalIngresoMercaderia from '../Inventario/ModalIngresoMercaderia';
 import ModalKardexProducto from '../Inventario/ModalKardexProducto';
+import ModalEscanerCamara from '../Inventario/ModalEscanerCamara';
 import { TrendingUp } from 'lucide-react';
 import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto  } = useMenu();
+    const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto, generarCodigoBarras  } = useMenu();
+    const { impresorasDeEtiquetas } = useImpresoras();
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
@@ -22,6 +26,7 @@ const ContenedorInventario = () => {
     const [modalCargaAudio, setModalCargaAudio] = useState(false);
     const [modalIngreso, setModalIngreso] = useState(false);
     const [modalKardex, setModalKardex] = useState<Producto | null>(null);
+    const [modalEscaner, setModalEscaner] = useState(false);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [agregandoCategoria, setAgregandoCategoria] = useState(false);
     const [confirmarBorrar, setConfirmarBorrar] = useState<Producto | null>(null);
@@ -95,6 +100,21 @@ const ContenedorInventario = () => {
         setModalProducto(null);  // abre el modal en modo crear
     };
 
+    const handleImprimirEtiqueta = async (prod: Producto) => {
+        if (!prod.codigo_barras) return; // el botón no debería estar visible sin código, por las dudas
+        await imprimirEtiqueta({
+            nombre: prod.nombre,
+            precio: prod.precio_venta,
+            codigoBarras: prod.codigo_barras,
+            impresoras: impresorasDeEtiquetas().map(i => ({
+                nombreSistema: i.nombre_sistema,
+                dpi: i.dpi,
+                anchoMm: i.ancho_mm,
+                altoMm: i.alto_mm,
+            })),
+        });
+    };
+
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
             {/* Topbar */}
@@ -111,11 +131,18 @@ const ContenedorInventario = () => {
                     <div className="relative shrink-0 sm:flex-none">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
                         <input
-                            className="w-48 pl-9 pr-3 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                            className="w-48 pl-9 pr-9 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                             placeholder="Buscar por nombre o código de barras..."
                             value={busqueda}
                             onChange={e => setBusqueda(e.target.value)}
                         />
+                        <button
+                            onClick={() => setModalEscaner(true)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-violet-600"
+                            title="Escanear con la cámara"
+                        >
+                            <Camera size={15} />
+                        </button>
                     </div>
                     <button
                         onClick={() => setModalImportar(true)}
@@ -265,6 +292,8 @@ const ContenedorInventario = () => {
                                                 onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
                                                 onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
                                                 onVerKardex={() => setModalKardex(prod)}
+                                                onGenerarCodigo={() => generarCodigoBarras(prod.id)}
+                                                onImprimirEtiqueta={() => handleImprimirEtiqueta(prod)}
                                             />
                                         </>
                                     }
@@ -308,6 +337,12 @@ const ContenedorInventario = () => {
             {modalKardex && (
                 <ModalKardexProducto producto={modalKardex} onCerrar={() => setModalKardex(null)} />
             )}
+
+            <ModalEscanerCamara
+                abierto={modalEscaner}
+                onCerrar={() => setModalEscaner(false)}
+                onDetectar={codigo => { setBusqueda(codigo); setModalEscaner(false); }}
+            />
 
             {confirmarBorrar && (
                 <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -373,9 +408,11 @@ interface MenuAccionesProps {
     onToggleFavorito: () => void;
     onTogglePublicado: () => void;
     onVerKardex: () => void;
+    onGenerarCodigo: () => void;
+    onImprimirEtiqueta: () => void;
 }
 
-const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex }: MenuAccionesProps) => {
+const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, onGenerarCodigo, onImprimirEtiqueta }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
 
     const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
@@ -417,6 +454,17 @@ const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavo
                         <button className={item} onClick={() => { onVerKardex(); setAbierto(false); }}>
                             <History size={12} className="text-stone-400" /> Historial de stock
                         </button>
+
+                        {!prod.codigo_barras && (
+                            <button className={item} onClick={() => { onGenerarCodigo(); setAbierto(false); }}>
+                                <Barcode size={12} className="text-stone-400" /> Generar código de barras
+                            </button>
+                        )}
+                        {prod.codigo_barras && (
+                            <button className={item} onClick={() => { onImprimirEtiqueta(); setAbierto(false); }}>
+                                <Printer size={12} className="text-stone-400" /> Imprimir etiqueta
+                            </button>
+                        )}
 
                         <div className="h-px bg-stone-100 my-1" />
 

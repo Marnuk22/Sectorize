@@ -8,6 +8,13 @@ export interface Impresora {
     nombre_sistema: string;    // nombre real en QZ Tray
     imprime_comandas: boolean;
     imprime_tickets: boolean;
+    imprime_etiquetas: boolean;
+    // Solo tienen sentido cuando imprime_etiquetas = true (ver migración
+    // config_impresora_etiquetas) — determinan cómo se calculan las
+    // posiciones en la plantilla ZPL, nunca hardcodeadas.
+    dpi: number | null;
+    ancho_mm: number | null;
+    alto_mm: number | null;
 }
 
 interface ImpresorasContextType {
@@ -19,6 +26,7 @@ interface ImpresorasContextType {
     // Helpers: devuelven las impresoras que deben imprimir cada tipo de documento
     impresorasDeComandas: () => Impresora[];
     impresorasDeTickets: () => Impresora[];
+    impresorasDeEtiquetas: () => Impresora[];
 }
 
 const ImpresorasContext = createContext<ImpresorasContextType | undefined>(undefined);
@@ -93,12 +101,13 @@ export const ImpresorasProvider = ({ children }: { children: ReactNode }) => {
 
     const impresorasDeComandas = () => impresoras.filter(i => i.imprime_comandas);
     const impresorasDeTickets = () => impresoras.filter(i => i.imprime_tickets);
+    const impresorasDeEtiquetas = () => impresoras.filter(i => i.imprime_etiquetas);
 
     return (
         <ImpresorasContext.Provider value={{
             impresoras, cargando,
             agregarImpresora, editarImpresora, borrarImpresora,
-            impresorasDeComandas, impresorasDeTickets,
+            impresorasDeComandas, impresorasDeTickets, impresorasDeEtiquetas,
         }}>
             {children}
         </ImpresorasContext.Provider>
