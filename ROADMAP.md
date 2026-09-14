@@ -217,6 +217,25 @@ registrar_movimiento_stock(p_producto_id uuid, p_local_id uuid, p_cantidad numer
 
 ---
 
+## 🔵 Modo offline (cliente 1 sucursal, cortes de wifi esporádicos ~1h)
+
+Roadmap largo, se encara etapa por etapa — no asumir el alcance completo de una, cada una se pide y aprueba por separado.
+
+### Decisiones ya cerradas (no reabrir sin motivo)
+- Cliente de referencia: una sola sucursal, cortes de wifi esporádicos de ~1h (no un negocio ya offline-first).
+- `navigator.onLine` no alcanza solo (marca "online" con wifi sin internet real) — la detección real es un ping periódico a Supabase.
+
+### Etapa 1 — Detección de conexión + banner ✅
+- [x] `useConexion()` (`src/hooks/useConexion.ts`): ping cada 15s vía `supabase.from('locales').select('id', { count: 'exact', head: true }).limit(1)` (HEAD, no baja filas, funciona sea cual sea el rol/tenant), timeout de 6s por intento (`AbortController` + `.abortSignal()`). Ping nuevo aborta el anterior si seguía en vuelo (el más reciente decide el estado final, nunca uno viejo pisa a uno nuevo — chequeo de identidad del controller). Reacciona a los eventos `online`/`offline` del browser para no esperar el intervalo completo, pero sin confiar solo en ellos. Limpieza completa al desmontar (interval, listeners, abort del ping en vuelo).
+- [x] `BannerOffline` (`src/Components/BannerOffline.tsx`): mismo patrón visual que `BannerGracia` (`AccesoSuscripcion.tsx`) pero informativo puro, tono ámbar, "Sin conexión — vendiendo en modo local". Montado en `ContenedorVentas` y `ContenedorMostrador` únicamente (no Salón, no el resto de la app todavía).
+
+**Pendiente para etapas siguientes (sin diseñar todavía, no asumir alcance):**
+- [ ] Catálogo local (cache de productos/precios/stock para poder vender sin conexión).
+- [ ] Cola de ventas offline (registrar la venta local, reintentar el envío cuando vuelve la conexión).
+- [ ] Sincronización (reconciliar lo vendido offline contra el servidor al reconectar — conflictos de stock, etc.).
+
+---
+
 ## 🟢 Features de la app (frontend)
 
 - [x] **Exportar historial de ventas a Excel (.xlsx)** — en el navegador con SheetJS, dos hojas (Ventas + Detalle). Incluye N° de venta en ambas hojas (para cruzarlas), fila de totales en la hoja Ventas, columna "Modificado" que se omite si ninguna venta exportada fue editada, y montos como número real (no texto) con formato de moneda.

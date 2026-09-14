@@ -5,6 +5,7 @@ import ContenedorInventario from './Inventario/ContenedorInventario.tsx';
 import ContenedorMostrador from './mostrador/ContenedorMostrador.tsx';
 import ContenedorAfiliados from './afiliados/ContenedorAfiliados.tsx';
 import ContenedorInforme from './Informe/ContenedorInforme.tsx';
+import BannerOffline from './BannerOffline.tsx';
 
 interface BoardProps {
     seccionActiva: seccionPdv;
@@ -53,8 +54,11 @@ const Board = ({ seccionActiva }: BoardProps) => {
     };
 
     return (
-        <div className="h-full">
-            {renderContenido()}
+        <div className="h-full flex flex-col overflow-hidden">
+            <BannerOffline />
+            <div className="flex-1 min-h-0">
+                {renderContenido()}
+            </div>
         </div>
     );
 };
