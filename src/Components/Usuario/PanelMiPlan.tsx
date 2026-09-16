@@ -1,17 +1,29 @@
 import { useState } from 'react';
-import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle } from 'lucide-react';
+import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle, RotateCcw } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
 import { Tarjeta, Campo, Boton } from '../ui/ComponentesBase';
 
 const PRECIO = 30000;
+// Derecho de revocación (Resolución 424/2020 y modif.): 10 días desde el
+// cobro para arrepentirse y pedir el reembolso real, no solo cancelar.
+const VENTANA_DIAS_REEMBOLSO = 10;
 
 // Días entre hoy y una fecha (redondeado hacia arriba)
 const diasRestantes = (fecha: string | null): number => {
     if (!fecha) return 0;
     const ms = new Date(fecha).getTime() - Date.now();
     return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+};
+
+// fecha + N días, en ISO — para reusar diasRestantes() en vez de llamar
+// Date.now() de nuevo directo en el render (Date.now() ahí adentro rompe la
+// regla de pureza de componentes).
+const sumarDias = (fechaISO: string, dias: number): string => {
+    const fecha = new Date(fechaISO);
+    fecha.setDate(fecha.getDate() + dias);
+    return fecha.toISOString();
 };
 
 const PanelMiPlan = () => {
@@ -22,6 +34,10 @@ const PanelMiPlan = () => {
     const [confirmarCancelar, setConfirmarCancelar] = useState(false);
     const [cancelando, setCancelando] = useState(false);
     const [errorCancelar, setErrorCancelar] = useState('');
+    const [confirmarReembolso, setConfirmarReembolso] = useState(false);
+    const [reembolsando, setReembolsando] = useState(false);
+    const [errorReembolso, setErrorReembolso] = useState('');
+    const [avisoReembolso, setAvisoReembolso] = useState('');
 
     const estado = negocio?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(negocio?.prueba_vence ?? null);
@@ -30,6 +46,16 @@ const PanelMiPlan = () => {
     // hay que chequear la fecha real (estadoAcceso) para saber si sigue vigente.
     const activaVigente = estado === 'activa' && estadoAcceso(negocio) === 'ok';
     const puedeCancelar = perfil?.rol === 'dueño' && !!negocio?.suscripcion_id && estado !== 'cancelada';
+
+    // Ventana de 10 días desde el último pago aprobado — el chequeo real
+    // (server-side, no confiar solo en esto) vive en reembolsar-pago.
+    const diasRestantesReembolso = negocio?.ultimo_pago_fecha
+        ? diasRestantes(sumarDias(negocio.ultimo_pago_fecha, VENTANA_DIAS_REEMBOLSO))
+        : 0;
+    const puedeReembolsar = perfil?.rol === 'dueño'
+        && !!negocio?.ultimo_pago_id
+        && !negocio?.ultimo_pago_reembolsado
+        && diasRestantesReembolso > 0;
 
     const handleCancelar = async () => {
         setCancelando(true);
@@ -54,6 +80,34 @@ const PanelMiPlan = () => {
             setErrorCancelar(err.message ?? 'Ocurrió un error');
         } finally {
             setCancelando(false);
+        }
+    };
+
+    const handleReembolsar = async () => {
+        setReembolsando(true);
+        setErrorReembolso('');
+        setAvisoReembolso('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No hay sesión activa');
+
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reembolsar-pago`,
+                {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${session.access_token}` },
+                }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'No se pudo procesar el reembolso');
+
+            await refrescar();
+            setConfirmarReembolso(false);
+            if (data.aviso) setAvisoReembolso(data.aviso);
+        } catch (err: any) {
+            setErrorReembolso(err.message ?? 'Ocurrió un error');
+        } finally {
+            setReembolsando(false);
         }
     };
 
@@ -241,6 +295,57 @@ const PanelMiPlan = () => {
                         </div>
                     )}
                 </Tarjeta>
+            )}
+
+            {puedeReembolsar && (
+                <Tarjeta padding="lg">
+                    {!confirmarReembolso ? (
+                        <button
+                            onClick={() => setConfirmarReembolso(true)}
+                            className="flex items-center gap-2 text-sm text-stone-400 hover:text-violet-600 transition-colors"
+                        >
+                            <RotateCcw size={15} />
+                            Solicitar reembolso ({diasRestantesReembolso} día{diasRestantesReembolso === 1 ? '' : 's'} restantes)
+                        </button>
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-sm text-stone-600">
+                                Derecho de arrepentimiento: dentro de los 10 días del cobro podés pedir el
+                                reembolso real del último pago. Esto además cancela la suscripción — no se
+                                te va a volver a cobrar.
+                            </p>
+                            {errorReembolso && (
+                                <div className="flex items-center gap-2 p-2.5 bg-red-50 rounded-xl text-red-600 text-xs">
+                                    <AlertCircle size={14} className="shrink-0" /> {errorReembolso}
+                                </div>
+                            )}
+                            <div className="flex gap-2">
+                                <Boton
+                                    variante="secundario"
+                                    onClick={() => { setConfirmarReembolso(false); setErrorReembolso(''); }}
+                                    disabled={reembolsando}
+                                    className="flex-1"
+                                >
+                                    Volver
+                                </Boton>
+                                <Boton
+                                    variante="peligro"
+                                    onClick={handleReembolsar}
+                                    disabled={reembolsando}
+                                    className="flex-1"
+                                >
+                                    {reembolsando ? 'Procesando...' : 'Sí, reembolsar'}
+                                </Boton>
+                            </div>
+                        </div>
+                    )}
+                </Tarjeta>
+            )}
+
+            {avisoReembolso && (
+                <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 text-sm">
+                    <AlertCircle size={15} className="shrink-0" /> {avisoReembolso}
+                </div>
             )}
         </div>
     );

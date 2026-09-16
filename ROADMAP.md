@@ -91,10 +91,21 @@ Surgió de auditar `vallis-landing/terminos/` y `vallis-landing/privacidad/` (20
 - **Ya existe (no confundir):** `PanelMiPlan` → "Cancelar suscripción" + Edge Function `cancelar-suscripcion` — corta la renovación automática (`PUT /preapproval/{id}` en MercadoPago) pero **no reembolsa** nada ya cobrado. Sirve para dar de baja hacia adelante, no para el arrepentimiento de una compra ya hecha.
 - **Falta:** un mecanismo que, dentro de los 10 días de haberse efectivizado un cobro, deshaga esa compra puntual y devuelva la plata.
 
-### Decisiones a tomar antes de implementar (preguntar/definir, no asumir)
-- [ ] Alcance real: dado que Vallis se vende como B2B (sección 3 de `terminos`), definir con el abogado si el Botón de Arrepentimiento aplica igual (la clasificación consumidor/no-consumidor del usuario quedó sin resolver a propósito — ver Cabos sueltos). Si aplica, no se puede resolver solo con más texto legal, hace falta el botón funcional.
-- [ ] Función de MercadoPago a usar: reembolso de un pago puntual vía `POST /v1/payments/{id}/refunds` (no es lo mismo que cancelar el `preapproval`) — nueva Edge Function, ej. `reembolsar-pago`, dueño-only, que además revierta `suscripcion_estado` en `negocios` si corresponde.
-- [ ] Dónde vive el botón en la UI: probablemente al lado de "Cancelar suscripción" en `PanelMiPlan`, visible solo dentro de la ventana de 10 días desde el último cobro (necesita guardar/consultar la fecha del último pago aprobado).
+### Decisiones tomadas
+- [x] **Alcance real:** sin confirmación del abogado sobre si aplica dado el encuadre B2B — se decidió implementar igual, por las dudas (más seguro, y el mecanismo de reembolso es útil aunque termine no siendo obligatorio). La pregunta legal sigue abierta en paralelo, no bloqueó la implementación.
+- [x] **Deshace la compra entera, no solo la última cuota:** `reembolsar-pago` reembolsa Y cancela la suscripción atómicamente (mismo `PUT /preapproval/{id}` que ya usa `cancelar-suscripcion`) — si solo se reembolsara sin cancelar, el mes que viene se cobra de nuevo y el arrepentimiento no sirvió de nada.
+
+### Implementado ✅
+- [x] **Migración** (`negocios_ultimo_pago`): `negocios` gana `ultimo_pago_id`, `ultimo_pago_fecha`, `ultimo_pago_reembolsado` (capa extra de seguridad — MercadoPago ya rechaza un segundo reembolso sobre el mismo pago, confirmado en sandbox).
+- [x] **`webhook-mp`**: cuando `subscription_authorized_payment` confirma `payment.status === 'approved'`, además de lo que ya hacía, guarda `ultimo_pago_id`/`ultimo_pago_fecha` — necesario para saber QUÉ reembolsar y calcular la ventana de 10 días.
+- [x] **`supabase/functions/reembolsar-pago`** (nuevo, dueño-only): valida server-side la ventana de 10 días (nunca confía solo en el frontend), reembolso total vía `POST /v1/payments/{id}/refunds` (body vacío, con `X-Idempotency-Key`), y si sale bien cancela la suscripción. **Validado en sandbox con la MCP de MercadoPago** (pago de prueba real con tarjeta de test, reembolso confirmado `status: approved`, y confirmado que MP ya bloquea un segundo reembolso solo — `400 bad_request`).
+- [x] **`PanelMiPlan.tsx`**: botón "Solicitar reembolso" al lado de "Cancelar suscripción", con los días restantes de la ventana, mismo patrón de confirmación inline.
+- [x] **`types/index.ts`**: `Negocio` gana los 3 campos nuevos.
+
+### Pendiente antes de dar esto por cerrado
+- [ ] **Probar el flujo completo con una suscripción de prueba real** (autorizar un `preapproval` de verdad requiere click humano en el checkout de MercadoPago — no se pudo automatizar desde acá). Lo valida el dueño.
+- [ ] Deploy de `reembolsar-pago` y redeploy de `webhook-mp` (`supabase functions deploy`) — el código está commiteado pero el deploy es un canal aparte, no ocurre solo.
+- [ ] Resolución legal final con el abogado sobre si de verdad aplica (sigue sin bloquear lo ya construido).
 
 ---
 

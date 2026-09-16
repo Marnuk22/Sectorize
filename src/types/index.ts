@@ -45,6 +45,11 @@ export interface Negocio {
     suscripcion_vence: string | null;
     prueba_vence: string | null;
     multisucursal: boolean;
+    // Para el Botón de Arrepentimiento (reembolsar-pago) — último pago
+    // aprobado de la suscripción, cuándo, y si ya se reembolsó.
+    ultimo_pago_id: string | null;
+    ultimo_pago_fecha: string | null;
+    ultimo_pago_reembolsado: boolean;
 }
 
 export interface Perfil {

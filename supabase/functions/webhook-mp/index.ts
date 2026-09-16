@@ -62,6 +62,15 @@ Deno.serve(async (req) => {
                         suscripcion_estado: 'activa',
                         suscripcion_id: cobro.preapproval_id,
                         suscripcion_vence: sub.next_payment_date ?? null,
+                        // Para el Botón de Arrepentimiento (reembolsar-pago):
+                        // necesita saber CUÁL fue el último pago aprobado y
+                        // CUÁNDO, para poder reembolsarlo dentro de la
+                        // ventana de 10 días. cobro.payment sigue el mismo
+                        // shape del recurso Payment estándar de MP (id, status,
+                        // etc.), confirmado en sandbox al probar el reembolso.
+                        ultimo_pago_id: cobro.payment?.id ? String(cobro.payment.id) : null,
+                        ultimo_pago_fecha: new Date().toISOString(),
+                        ultimo_pago_reembolsado: false,
                     })
                     .eq('id', negocioId);
             }
