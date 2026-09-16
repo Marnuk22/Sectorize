@@ -189,7 +189,16 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     const filtrarPorCategoria = (nombre: string) =>
         productos.filter(p => p.categoria === nombre);
 
+    // Modificaciones de inventario offline: por ahora bloqueadas (Opción A,
+    // decidida junto con retiro/depósito/arqueo) — la Opción B (encolar,
+    // empezando por registrarMovimientoStock que ya es delta) queda anotada
+    // en el ROADMAP como consideración futura.
+    const requiereConexion = () => {
+        if (!online) throw new Error('No se puede editar el inventario sin conexión.');
+    };
+
     const agregarProducto = async (nuevo: Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>) => {
+        requiereConexion();
         if (compartido && negocioId) {
             const { stock_actual, stock_minimo, precio_venta, precio_costo, ...compartidos } = nuevo;
 
@@ -235,6 +244,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const editarProducto = async (id: string, cambios: Partial<Producto>) => {
+        requiereConexion();
         if (compartido) {
             const { sucursal, compartidos } = separarCambios(cambios);
 
@@ -267,6 +277,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const actualizarPreciosMasivo = async (cambios: { id: string; precio_venta: number }[]) => {
+        requiereConexion();
         if (cambios.length === 0) return;
 
         // Actualizar todos en paralelo (más rápido que uno por uno en serie).
@@ -296,6 +307,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const borrarProducto = async (id: string) => {
+        requiereConexion();
     // Verificar si el producto tiene ventas asociadas
         const { count, error: errorConteo } = await supabase
             .from('detalle_ventas')
@@ -327,6 +339,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const toggleFavorito = async (id: string, favorito: boolean) => {
+        requiereConexion();
         const { error } = await supabase
             .from('productos')
             .update({ favorito })
@@ -335,6 +348,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         setProductos(prev => prev.map(p => p.id === id ? { ...p, favorito } : p));
     };
     const togglePublicado = async (id: string, publicado: boolean) => {
+        requiereConexion();
         const { error } = await supabase
             .from('productos')
             .update({ publicado })
@@ -397,6 +411,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         nota: string | null = null,
     ) => {
         if (!localId) throw new Error('Sin sesión activa');
+        requiereConexion();
 
         const { data, error } = await supabase.rpc('registrar_movimiento_stock', {
             p_producto_id: productoId,
@@ -417,6 +432,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const agregarCategoria = async (nombre: string, icono?: string) => {
+        requiereConexion();
         const { data, error } = await supabase
             .from('categorias')
             .insert({ nombre, icono: icono ?? null, local_id: localId, orden: categorias.length })
@@ -427,6 +443,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const editarCategoria = async (id: string, nombre: string, icono?: string) => {
+        requiereConexion();
         const { data, error } = await supabase
             .from('categorias')
             .update({ nombre, icono: icono ?? null })
@@ -438,6 +455,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const borrarCategoria = async (id: string) => {
+        requiereConexion();
         const { error } = await supabase.from('categorias').delete().eq('id', id);
         if (error) throw error;
         setCategorias(prev => prev.filter(c => c.id !== id));
