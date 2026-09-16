@@ -103,8 +103,10 @@ Surgió de auditar `vallis-landing/terminos/` y `vallis-landing/privacidad/` (20
 - [x] **`types/index.ts`**: `Negocio` gana los 3 campos nuevos.
 
 ### Pendiente antes de dar esto por cerrado
-- [ ] **Probar el flujo completo con una suscripción de prueba real** (autorizar un `preapproval` de verdad requiere click humano en el checkout de MercadoPago — no se pudo automatizar desde acá). Lo valida el dueño.
-- [ ] Deploy de `reembolsar-pago` y redeploy de `webhook-mp` (`supabase functions deploy`) — el código está commiteado pero el deploy es un canal aparte, no ocurre solo.
+- [x] Deploy de `reembolsar-pago` y redeploy de `webhook-mp` — hecho (2026-09-16).
+- [ ] **🔴 URGENTE — probar el flujo completo antes de confiar en esto con un cliente real.** El código está deployado pero **nunca se probó de punta a punta** — solo se validó el reembolso en sí contra la API real de MercadoPago en sandbox (con la MCP), no el camino completo incluyendo `webhook-mp` guardando `ultimo_pago_id` desde una suscripción real. Receta ya armada, lista para correr (2026-09-16):
+  - **Parte 1 (gratis, sin esperar nada)** — valida `reembolsar-pago` en sí, la parte más riesgosa (la llamada real a la API): plantar a mano un `ultimo_pago_id` de un pago de sandbox ya creado (`1352052837`, $30.000, `status: approved`, vive en la cuenta real de MercadoPago en modo test) en un negocio de prueba (`CafeEjemplo`/`LocalPrueba`, **nunca** uno de un cliente real) vía `UPDATE negocios SET ultimo_pago_id = '1352052837', ultimo_pago_fecha = now(), ultimo_pago_reembolsado = false WHERE id = '...'` en el SQL Editor de Supabase, después clickear "Solicitar reembolso" en Mi Plan logueado como el dueño de ese negocio.
+  - **Parte 2 (plata real, ~$1.230 de comisión de MP que no vuelve)** — valida la cadena completa: suscribirse de verdad con una tarjeta real, esperar ~1h el primer cobro (MercadoPago no cobra al autorizar, cobra después), confirmar que `webhook-mp` guardó bien `ultimo_pago_id`/`ultimo_pago_fecha` solo, y ahí sí probar "Solicitar reembolso" desde la UI real.
 - [ ] Resolución legal final con el abogado sobre si de verdad aplica (sigue sin bloquear lo ya construido).
 
 ---
