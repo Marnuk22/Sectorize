@@ -36,7 +36,7 @@ const SalonContext = createContext<SalonContextType | undefined>(undefined);
 
 export const SalonProvider = ({ children }: { children: ReactNode }) => {
     const { registrarVenta } = useVentas();
-    const {recargarProductos} = useMenu();
+    const { recargarProductos, aplicarVentaOffline } = useMenu();
     const { localId } = useAuth();
     const [sectores, setSectores] = useState<Sector[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -188,8 +188,12 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         if (!mesa || mesa.pedidos.length === 0) return;
         const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
         try {
-            await registrarVenta(mesa.pedidos, total, mesa, metodoPago);
-            await recargarProductos();
+            const { offline } = await registrarVenta(mesa.pedidos, total, mesa, metodoPago);
+            if (offline) {
+                aplicarVentaOffline(mesa.pedidos.map(p => ({ id: p.id, cantidad: p.cantidad })));
+            } else {
+                await recargarProductos();
+            }
             setSectores(prev => prev.map(sector => ({
                 ...sector,
                 mesas: sector.mesas.map(m =>

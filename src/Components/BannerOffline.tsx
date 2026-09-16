@@ -1,5 +1,5 @@
 import { WifiOff } from 'lucide-react';
-import { useConexion } from '../hooks/useConexion';
+import { useConexion } from '../context/ConexionContext';
 
 // Etapa 1 del modo offline — solo detecta y avisa, no hace nada más todavía
 // (sin catálogo local, cola de ventas ni sincronización, eso es de etapas

@@ -18,7 +18,7 @@ const MostradorContext = createContext<MostradorContextType | undefined>(undefin
 
 export const MostradorProvider = ({ children }: { children: ReactNode }) => {
     const { registrarVenta } = useVentas();
-    const { recargarProductos } = useMenu();
+    const { recargarProductos, aplicarVentaOffline } = useMenu();
     const [carrito, setCarrito] = useState<ItemPedidoUI[]>([]);
 
     // El precio de cada ítem ya viene calculado al agregarlo (importante para granel)
@@ -111,8 +111,15 @@ export const MostradorProvider = ({ children }: { children: ReactNode }) => {
         aConfirmar: [],
         pedidos: carrito,
     };
-    await registrarVenta(carrito, totalACobrar, mesaVirtual, metodoPago);
-    await recargarProductos();
+    const { offline } = await registrarVenta(carrito, totalACobrar, mesaVirtual, metodoPago);
+    if (offline) {
+        // Sin conexión: la venta quedó encolada (Etapa 3), no hay nada que
+        // recargar del servidor — se descuenta el stock del catálogo local
+        // en vez de pedirle a Supabase el stock real.
+        aplicarVentaOffline(carrito.map(item => ({ id: item.id, cantidad: item.cantidad })));
+    } else {
+        await recargarProductos();
+    }
     vaciar();
 };
 

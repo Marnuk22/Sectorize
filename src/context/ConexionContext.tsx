@@ -1,13 +1,25 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 
 // Detecta si hay conexión REAL a Supabase — navigator.onLine solo no
 // alcanza, puede marcar "online" con wifi conectado pero sin internet real
 // (el caso típico de un corte de proveedor con el router todavía andando).
+//
+// Vive en un Context (no en un hook suelto) para que sea UN SOLO ping
+// compartido por toda la app — si cada consumidor (BannerOffline,
+// MenuContext, etc.) llamara su propia instancia, cada uno abriría su
+// propio timer y le pegaría a Supabase por su cuenta cada 15s, sin enterarse
+// entre sí.
 const INTERVALO_MS = 15000;
 const TIMEOUT_MS = 6000;
 
-export const useConexion = () => {
+interface ConexionContextType {
+    online: boolean;
+}
+
+const ConexionContext = createContext<ConexionContextType | undefined>(undefined);
+
+export const ConexionProvider = ({ children }: { children: ReactNode }) => {
     const [online, setOnline] = useState(true);
     const controllerRef = useRef<AbortController | null>(null);
     const montadoRef = useRef(true);
@@ -71,5 +83,15 @@ export const useConexion = () => {
         };
     }, [verificar]);
 
-    return { online };
+    return (
+        <ConexionContext.Provider value={{ online }}>
+            {children}
+        </ConexionContext.Provider>
+    );
+};
+
+export const useConexion = () => {
+    const context = useContext(ConexionContext);
+    if (!context) throw new Error('useConexion debe usarse dentro de ConexionProvider');
+    return context;
 };

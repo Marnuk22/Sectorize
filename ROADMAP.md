@@ -219,20 +219,51 @@ registrar_movimiento_stock(p_producto_id uuid, p_local_id uuid, p_cantidad numer
 
 ## 🔵 Modo offline (cliente 1 sucursal, cortes de wifi esporádicos ~1h)
 
-Roadmap largo, se encara etapa por etapa — no asumir el alcance completo de una, cada una se pide y aprueba por separado.
+Roadmap largo, se encara etapa por etapa — **no implementar todo de corrido**. Cada etapa se
+plantea (archivos a tocar/crear) y se espera confirmación antes de escribir código, igual que
+la Etapa 1; y no se pasa a proponer el plan de la siguiente etapa hasta que el dueño confirme
+que probó y quedó bien la anterior.
 
-### Decisiones ya cerradas (no reabrir sin motivo)
-- Cliente de referencia: una sola sucursal, cortes de wifi esporádicos de ~1h (no un negocio ya offline-first).
-- `navigator.onLine` no alcanza solo (marca "online" con wifi sin internet real) — la detección real es un ping periódico a Supabase.
+### Alcance (no reabrir sin motivo)
+- Cliente de referencia: **una sola sucursal, una sola caja vendiendo a la vez**, cortes de
+  wifi esporádicos de ~1h — no un negocio ya offline-first.
+- **Fuera de alcance a propósito, queda para el futuro:** multisucursal offline (cada sucursal
+  con su propia cola/reconciliación) y multi-dispositivo offline en la misma sucursal (dos
+  cajas vendiendo el mismo stock local sin verse entre sí — ahí el descuento optimista de
+  stock del espejo local podría pisarse entre dispositivos). Ninguna decisión de las etapas
+  de abajo debería asumir ese caso.
+- **También fuera de alcance a propósito:** cobro de membresías offline (`AfiliadosContext.asignarMembresia`) — el cliente de referencia es tienda/verdulería, no gimnasio; encolar ahí traería activar la suscripción del socio sin poder validarla hasta reconciliar. Hoy tira error explícito si está offline. Se evalúa con un caso real si en algún momento hay un cliente gimnasio con el mismo problema de wifi.
+- `navigator.onLine` no alcanza solo (marca "online" con wifi sin internet real) — la
+  detección real es un ping periódico a Supabase.
+- Cualquier librería nueva (ej. algo tipo Dexie para IndexedDB) se para y se pregunta antes
+  de instalar — explicando para qué serviría y la alternativa sin dependencia nueva. Hasta la
+  Etapa 3 inclusive no hizo falta ninguna, el `indexedDB` nativo alcanza.
 
 ### Etapa 1 — Detección de conexión + banner ✅
-- [x] `useConexion()` (`src/hooks/useConexion.ts`): ping cada 15s vía `supabase.from('locales').select('id', { count: 'exact', head: true }).limit(1)` (HEAD, no baja filas, funciona sea cual sea el rol/tenant), timeout de 6s por intento (`AbortController` + `.abortSignal()`). Ping nuevo aborta el anterior si seguía en vuelo (el más reciente decide el estado final, nunca uno viejo pisa a uno nuevo — chequeo de identidad del controller). Reacciona a los eventos `online`/`offline` del browser para no esperar el intervalo completo, pero sin confiar solo en ellos. Limpieza completa al desmontar (interval, listeners, abort del ping en vuelo).
-- [x] `BannerOffline` (`src/Components/BannerOffline.tsx`): mismo patrón visual que `BannerGracia` (`AccesoSuscripcion.tsx`) pero informativo puro, tono ámbar, "Sin conexión — vendiendo en modo local". Montado en `ContenedorVentas` y `ContenedorMostrador` únicamente (no Salón, no el resto de la app todavía).
+- [x] `useConexion()` — arrancó como hook (`src/hooks/useConexion.ts`) y después se mudó a `src/context/ConexionContext.tsx` (`ConexionProvider`, montado en `App.tsx` afuera de `VentasProvider`) para que sea un solo ping compartido por toda la app en vez de una instancia independiente por cada consumidor. Ping cada 15s vía `supabase.from('locales').select('id', { count: 'exact', head: true }).limit(1)` (HEAD, no baja filas, funciona sea cual sea el rol/tenant), timeout de 6s por intento (`AbortController` + `.abortSignal()`). Ping nuevo aborta el anterior si seguía en vuelo (el más reciente decide el estado final, nunca uno viejo pisa a uno nuevo — chequeo de identidad del controller). Reacciona a los eventos `online`/`offline` del browser para no esperar el intervalo completo, pero sin confiar solo en ellos. Limpieza completa al desmontar (interval, listeners, abort del ping en vuelo).
+- [x] `BannerOffline` (`src/Components/BannerOffline.tsx`): mismo patrón visual que `BannerGracia` (`AccesoSuscripcion.tsx`) pero informativo puro, tono ámbar, "Sin conexión — vendiendo en modo local". Montado una sola vez en `Board.tsx` (arriba del switch de módulos), visible en toda la app sin importar la sección activa — no repetido por Contenedor.
 
-**Pendiente para etapas siguientes (sin diseñar todavía, no asumir alcance):**
-- [ ] Catálogo local (cache de productos/precios/stock para poder vender sin conexión).
-- [ ] Cola de ventas offline (registrar la venta local, reintentar el envío cuando vuelve la conexión).
-- [ ] Sincronización (reconciliar lo vendido offline contra el servidor al reconectar — conflictos de stock, etc.).
+### Etapa 2 — Catálogo local de solo lectura ✅
+- [x] `src/logic/catalogoLocal.ts`: espejo en IndexedDB nativo del `Producto[]` ya aplanado (no las tablas `productos`/`producto_sucursal` crudas por separado — más simple, alcanza para mostrar el catálogo). Reemplazo completo en cada guardado (sin particionar por `local_id`, alcance de una sola sucursal). `guardarCatalogoLocal`/`leerCatalogoLocal`.
+- [x] `MenuContext`: helper único `cargarCatalogo()` (lo usan tanto la carga inicial como `recargarProductos()`, para que los dos queden sincronizados con el mirror de la misma forma) que chequea `online` **antes** de intentar la red — si ya sabe que está offline, va directo al mirror sin esperar timeout; si se creía online pero la red falla igual, mismo fallback. Escribe al mirror en cada éxito online (fire-and-forget, no bloquea el flujo si falla IndexedDB).
+
+### Etapa 3 — Ventas encoladas ✅
+- [x] `src/logic/colaVentas.ts`: cola en IndexedDB nativo, de solo AGREGAR (a diferencia del mirror de la Etapa 2, acá nunca se pisan entre sí). Cada venta encolada guarda `id` (UUID generado en el cliente — el mismo que se va a usar como id real en `ventas` al reconciliar en la Etapa 4, para que un reintento no la duplique), `localId`, `usuarioId`, `arqueoId`, `items`, `total`, `metodoPago`, `fecha`. `encolarVenta`/`leerColaVentas`/`quitarVentaDeCola` (esta última sin uso todavía, lista para la Etapa 4).
+- [x] `VentasContext.registrarVenta` pasó de `Promise<void>` a `Promise<{ offline: boolean }>` — si `!online`, encola en vez de insertar en Supabase y no lanza error (la venta "funciona" igual del lado del cajero: imprime ticket, vacía carrito, etc., porque QZ Tray es local y no depende de internet). El caller (`MostradorContext.cobrar`/`SalonContext.cerrarMesa`) decide con ese resultado si llama `recargarProductos()` (online) o el nuevo `MenuContext.aplicarVentaOffline(items)` (offline) — `VentasContext` no puede tocar `MenuContext` directo (`VentasProvider` está afuera de `MenuProvider`, gotcha ya documentado), así que le informa al caller en vez de acoplarse.
+- [x] `MenuContext.aplicarVentaOffline`: descuento optimista de stock en memoria + mirror local, mismo criterio que el trigger real `descontar_stock` (solo si `stock_minimo > 0`, nunca negativo) — el insert real todavía no pasó, va a disparar el trigger de verdad recién al reconciliar (Etapa 4).
+- [x] Arqueo bloqueado offline: `abrirArqueo`/`cerrarArqueo` (`VentasContext`) tiran error explícito si `!online`. Los botones "Abrir caja"/"Cerrar caja"/"Confirmar cierre" en `ContenedorArqueo.tsx` además quedan deshabilitados (con una leyenda ámbar) en vez de dejar clickear y mostrar el error después.
+- [x] Retiro/depósito de efectivo también bloqueado offline (gap encontrado probando la Etapa 3, no estaba en el alcance original) — mismo criterio que abrir/cerrar caja: `retirarEfectivo`/`ingresarEfectivo` tiran error explícito si `!online`, y los botones quedan deshabilitados. Se evaluó encolarlos igual que las ventas, pero se descartó: el trigger `validar_retiro_caja` (no dejar retirar más de lo que hay en caja) depende del saldo REAL en la base, y offline solo habría un saldo optimista con el mismo riesgo que el stock si algo falla al reconciliar.
+- [x] Membresías (`AfiliadosContext.asignarMembresia`) quedaron **fuera de alcance a propósito** — tira error explícito si está offline, no encola (ver "Alcance" arriba).
+
+### Etapa 4 — Reconciliación al volver la conexión ✅
+- [x] `src/logic/reconciliacion.ts` (`reconciliarVentas()`): procesa la cola en orden FIFO real (ordenada por `fecha`, no por orden de IndexedDB — con `id` tipo UUID no hay garantía de orden de inserción), secuencial (no `Promise.all`, mismo patrón que `ModalImportar`/`ModalIngresoMercaderia`). Por cada venta: INSERT en `ventas` + `detalle_ventas` con el mismo `id`/`fecha` originales (no nuevos — confirmado que `ventas.id`/`ventas.fecha` tienen default pero aceptan valor explícito). Si falla, **no se saca de la cola** (queda para revisión manual) y sigue con la siguiente.
+- [x] `src/hooks/useReconciliacionOffline.ts`: detecta la transición `false → true` de `useConexion()` y dispara la reconciliación. Vive en `LayoutPrincipal` (`App.tsx`), no adentro de `VentasContext` ni `MenuContext`, porque necesita refrescar los dos a la vez y ninguno puede ver al otro (mismo gotcha de orden de providers) — recibe `recargarProductos`/`recargarMovimientosCaja` como parámetros desde el único lugar que está adentro de ambos providers.
+- [x] `VentasContext.recargarMovimientosCaja()` (nuevo): el trigger `registrar_venta_efectivo_caja` recién dispara cuando el INSERT real pasa (no cuando se encoló), así que sin este refresco "Monto esperado en caja" queda de menos hasta el próximo reload — se llama automáticamente después de reconciliar.
+- [x] `ToastSincronizacion.tsx`: aviso "Sincronizando ventas pendientes..." → "N sincronizadas" / "N sincronizadas, M con error — revisar", mismo patrón visual que el toast de escaneo de `ContenedorMostrador`.
+- [ ] **Etapa 4.2 (anotada para más adelante, no encarar todavía):** panel de "ventas pendientes de sincronizar" para revisar a mano las que quedaron en la cola por haber fallado — hoy solo quedan en IndexedDB sin ninguna pantalla propia.
+
+### Etapa 5 — Pulido y prueba real
+- [ ] Prueba con un corte de wifi real (no solo simulado en devtools) antes de mostrárselo al cliente.
 
 ---
 

@@ -7,10 +7,12 @@ import PantallaInicio from './Components/PantallaInicio.tsx';
 import PantallaRestablecerPassword from './Components/Auth/PantallaRestablecerPassword.tsx';
 import AccesoSuscripcion from './Components/AccesoSuscripcion.tsx';
 import { AuthProvider, useAuth } from './context/AuthContext.tsx';
-import { SalonProvider, MenuProvider, VentasProvider, ImpresorasProvider } from './context';
+import { SalonProvider, MenuProvider, VentasProvider, ImpresorasProvider, ConexionProvider, useMenu, useVentas } from './context';
 import { MostradorProvider } from './context/MostradorContext';
 import { AfiliadosProvider } from './context/AfiliadosContext';
 import { useModulos } from './hooks/useModulos';
+import { useReconciliacionOffline } from './hooks/useReconciliacionOffline';
+import ToastSincronizacion from './Components/ToastSincronizacion.tsx';
 
 // Orden de prioridad de las secciones y a qué módulo pertenecen
 const SECCION_POR_MODULO: Record<string, seccionPdv> = {
@@ -26,6 +28,15 @@ const ORDEN_MODULOS = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ven
 // Componente interno que ya tiene acceso a los módulos
 function LayoutPrincipal() {
     const { modulos } = useModulos();
+
+    // Etapa 4 del modo offline: al volver la conexión, procesa la cola de
+    // ventas encoladas (Etapa 3) y refresca lo que haga falta. Vive acá (no
+    // adentro de VentasContext ni MenuContext) porque necesita los dos a la
+    // vez y ninguno puede ver al otro (VentasProvider está afuera de
+    // MenuProvider) — LayoutPrincipal sí está adentro de ambos.
+    const { recargarProductos } = useMenu();
+    const { recargarMovimientosCaja } = useVentas();
+    const { estado: estadoSync, resultado: resultadoSync } = useReconciliacionOffline(recargarProductos, recargarMovimientosCaja);
 
     // La primera sección disponible según los módulos del local
     const primeraSeccion = (): seccionPdv => {
@@ -52,6 +63,7 @@ function LayoutPrincipal() {
             <main className="flex-1 min-h-0 overflow-hidden">
                 <Board seccionActiva={seccion} />
             </main>
+            <ToastSincronizacion estado={estadoSync} resultado={resultadoSync} />
         </div>
     );
 }
@@ -76,21 +88,23 @@ function AppContent() {
     if (!user && !localId) return <PantallaInicio />;
 
     return (
-        <VentasProvider>
-            <MenuProvider>
-                <SalonProvider>
-                    <MostradorProvider>
-                        <AfiliadosProvider>
-                            <ImpresorasProvider>
-                                <AccesoSuscripcion>
-                                    <LayoutPrincipal />
-                                </AccesoSuscripcion>
-                            </ImpresorasProvider>
-                        </AfiliadosProvider>
-                    </MostradorProvider>
-                </SalonProvider>
-            </MenuProvider>
-        </VentasProvider>
+        <ConexionProvider>
+            <VentasProvider>
+                <MenuProvider>
+                    <SalonProvider>
+                        <MostradorProvider>
+                            <AfiliadosProvider>
+                                <ImpresorasProvider>
+                                    <AccesoSuscripcion>
+                                        <LayoutPrincipal />
+                                    </AccesoSuscripcion>
+                                </ImpresorasProvider>
+                            </AfiliadosProvider>
+                        </MostradorProvider>
+                    </SalonProvider>
+                </MenuProvider>
+            </VentasProvider>
+        </ConexionProvider>
     );
 }
 

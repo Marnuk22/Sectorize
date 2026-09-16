@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
+import { useConexion } from './ConexionContext';
+import { guardarCatalogoLocal, leerCatalogoLocal } from '../logic/catalogoLocal';
 import type { Producto, Categoria, MotivoMovimientoStock } from '../types';
 
 //context para manejar el menú de productos y categorías, incluyendo funciones para CRUD y ajustes de stock.
@@ -20,6 +22,7 @@ interface MenuContextType {
     togglePublicado: (id: string, publicado: boolean) => Promise<void>;
     ajustarStock: (id: string, cantidad: number) => Promise<void>;
     generarCodigoBarras: (id: string) => Promise<void>;
+    aplicarVentaOffline: (items: { id: string; cantidad: number }[]) => void;
     registrarMovimientoStock: (
         productoId: string,
         cantidad: number,
@@ -55,6 +58,7 @@ const separarCambios = (cambios: Partial<Producto>) => {
 
 export const MenuProvider = ({ children }: { children: ReactNode }) => {
     const { localId, local, sucursales } = useAuth();
+    const { online } = useConexion();
     const [productos, setProductos] = useState<Producto[]>([]);
     const [categorias, setCategorias] = useState<Categoria[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -100,6 +104,45 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
                 .order('nombre')
             : supabase.from('productos').select('*').eq('local_id', localId).order('nombre');
 
+    // Punto único de carga del catálogo — lo usan tanto la carga inicial
+    // como recargarProductos(), así los dos quedan sincronizados con el
+    // mirror local de la misma forma (Etapa 2 del modo offline).
+    //
+    // Si ya sabemos que no hay conexión (useConexion, Etapa 1), ni siquiera
+    // se intenta la red: se va directo al mirror, para que abrir Mostrador
+    // durante un corte sea instantáneo en vez de esperar un timeout. Si se
+    // creía online pero la red falla igual (el ping de useConexion todavía
+    // no se dio cuenta del corte), mismo fallback.
+    const cargarCatalogo = async (): Promise<Producto[]> => {
+        if (!online) {
+            try {
+                return await leerCatalogoLocal();
+            } catch (err) {
+                console.error('No se pudo leer el catálogo local:', err);
+                return [];
+            }
+        }
+
+        try {
+            const { data: prods, error } = await queryProductos();
+            if (error || !prods) throw error ?? new Error('Sin datos de productos');
+
+            const planos = prods.map(aplanar);
+            // No bloquea la carga: si guardar el mirror falla (cuota llena,
+            // Safari privado, etc.) no tiene que romper el flujo normal.
+            guardarCatalogoLocal(planos).catch(err => console.error('No se pudo guardar el catálogo local:', err));
+            return planos;
+        } catch (err) {
+            console.error('Error cargando productos de Supabase, se usa el catálogo local:', err);
+            try {
+                return await leerCatalogoLocal();
+            } catch (err2) {
+                console.error('Tampoco se pudo leer el catálogo local:', err2);
+                return [];
+            }
+        }
+    };
+
     useEffect(() => {
         if (!localId) return;
 
@@ -108,12 +151,18 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         const cargar = async () => {
             setCargando(true);
             try {
-                const [{ data: prods }, { data: cats }] = await Promise.all([
-                    queryProductos(),
-                    supabase.from('categorias').select('*').eq('local_id', localId).order('orden'),
+                const [prods, cats] = await Promise.all([
+                    cargarCatalogo(),
+                    // Sin mirror de categorías en esta etapa (alcance:
+                    // productos/producto_sucursal) — si está offline, se
+                    // skipea en vez de esperar el timeout, y quedan las que
+                    // ya había en memoria.
+                    online
+                        ? supabase.from('categorias').select('*').eq('local_id', localId).order('orden').then(r => r.data)
+                        : Promise.resolve(null),
                 ]);
                 if (!activo) return;
-                if (prods) setProductos(prods.map(aplanar));
+                setProductos(prods);
                 if (cats) setCategorias(cats as Categoria[]);
             } catch (err) {
                 console.error('Error cargando menú:', err);
@@ -127,6 +176,11 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         // `compartido`/`negocioId` en las deps: cuando el dueño agrega su 2da
         // sucursal, `sucursales` cambia pero `localId` no — sin esto el
         // context no se enteraría de que hay que leer por el camino nuevo.
+        // `online` deliberadamente NO está en las deps: este efecto decide
+        // red-vs-mirror en el momento en que corre (por localId/compartido/
+        // negocioId), no se propone re-disparar solo porque cambió la
+        // conexión a mitad de sesión — eso es tarea de la reconciliación
+        // (etapa futura), no de esta carga.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [localId, compartido, negocioId]);
 
@@ -177,8 +231,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
 
     const recargarProductos = async () => {
         if (!localId) return;
-        const { data } = await queryProductos();
-        if (data) setProductos(data.map(aplanar));
+        setProductos(await cargarCatalogo());
     };
 
     const editarProducto = async (id: string, cambios: Partial<Producto>) => {
@@ -296,6 +349,27 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
         await editarProducto(id, { stock_actual: Math.max(0, producto.stock_actual + cantidad) });
     };
 
+    // Descuento optimista de stock cuando una venta se encoló offline
+    // (Etapa 3 del modo offline) — el insert real en `ventas`/`detalle_ventas`
+    // todavía no pasó (pasa al reconciliar, Etapa 4, y ahí sí dispara el
+    // trigger `descontar_stock`), así que acá se aplica el mismo criterio a
+    // mano: solo si stock_minimo > 0 (productos con seguimiento), nunca
+    // negativo. Actualiza el estado en memoria Y el mirror local, para que
+    // la próxima venta offline ya vea el stock descontado.
+    const aplicarVentaOffline = (items: { id: string; cantidad: number }[]) => {
+        setProductos(prev => {
+            const actualizados = prev.map(p => {
+                const vendido = items.find(i => i.id === p.id);
+                if (!vendido || p.stock_minimo <= 0) return p;
+                return { ...p, stock_actual: Math.max(0, p.stock_actual - vendido.cantidad) };
+            });
+            guardarCatalogoLocal(actualizados).catch(err =>
+                console.error('No se pudo actualizar el catálogo local tras la venta offline:', err)
+            );
+            return actualizados;
+        });
+    };
+
     // Genera un código propio para un producto sin codigo_barras cargado —
     // determinístico a partir de su propio id (mismo producto siempre da el
     // mismo código, sin necesitar reintentos ni un contador aparte). Prefijo
@@ -375,7 +449,7 @@ export const MenuProvider = ({ children }: { children: ReactNode }) => {
             obtenerProductoPorId, filtrarPorCategoria,
             agregarProducto, recargarProductos, editarProducto, borrarProducto,
             toggleActivo, toggleFavorito, togglePublicado, ajustarStock,
-            generarCodigoBarras,
+            generarCodigoBarras, aplicarVentaOffline,
             registrarMovimientoStock,
             agregarCategoria, editarCategoria, borrarCategoria,
             actualizarPreciosMasivo,

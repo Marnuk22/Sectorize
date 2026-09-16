@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import type { Socio, Membresia, Suscripcion, SocioConEstado, MetodoPago } from '../types';
 import { useVentas } from './VentasContext';
+import { useConexion } from './ConexionContext';
 
 interface AfiliadosContextType {
     socios: SocioConEstado[];
@@ -66,6 +67,7 @@ const calcularEstado = (
 export const AfiliadosProvider = ({ children }: { children: ReactNode }) => {
     const { localId } = useAuth();
     const { registrarVenta } = useVentas();
+    const { online } = useConexion();
     const [socios, setSocios] = useState<SocioConEstado[]>([]);
     const [membresias, setMembresias] = useState<Membresia[]>([]);
     const [cargando, setCargando] = useState(true);
@@ -142,6 +144,13 @@ export const AfiliadosProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const asignarMembresia = async (socioId: string, membresiaId: string, metodoPago: MetodoPago) => {
+        // Fuera de alcance de la Etapa 3 del modo offline a propósito (ver
+        // ROADMAP.md): el cliente de referencia es tienda/verdulería, no un
+        // gimnasio, y encolar el cobro de una membresía traería activar la
+        // suscripción del socio más adelante sin haberla podido validar
+        // todavía — se evalúa con un caso real si hace falta.
+        if (!online) throw new Error('No se puede cobrar una membresía sin conexión.');
+
         const membresia = membresias.find(m => m.id === membresiaId);
         if (!membresia) throw new Error('Membresía no encontrada');
 

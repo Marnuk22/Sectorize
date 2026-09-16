@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useVentas } from '../../context/VentasContext';
+import { useConexion } from '../../context/ConexionContext';
 import { Lock, Unlock, TrendingUp, ShoppingBag, ArrowUpCircle, ArrowDownCircle, History } from 'lucide-react';
 import { labelMetodo, iconoMetodo } from '../../config/metodosPago';
 import { useImpresoras } from '../../context/ImpresorasContext';
@@ -29,6 +30,7 @@ const LABELS_MOTIVO_RETIRO: Record<string, string> = {
 
 const ContenedorArqueo = () => {
     const { arqueoActivo, historialVentas, movimientosCaja, abrirArqueo, cerrarArqueo } = useVentas();
+    const { online } = useConexion();
     const [montoInicial, setMontoInicial] = useState('');
     const [montoReal, setMontoReal] = useState('');
     const [confirmandoCierre, setConfirmandoCierre] = useState(false);
@@ -142,10 +144,11 @@ const ContenedorArqueo = () => {
                     onChange={e => setMontoInicial(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && handleAbrirArqueo()}
                 />
+                {!online && <p className="text-sm text-amber-600 text-center">Sin conexión — no se puede abrir la caja.</p>}
                 {error && <p className="text-sm text-red-500 text-center">{error}</p>}
                 <button
                     onClick={handleAbrirArqueo}
-                    disabled={cargando}
+                    disabled={cargando || !online}
                     className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"
                 >
                     <Unlock size={18} />
@@ -171,20 +174,26 @@ const ContenedorArqueo = () => {
                 subetiqueta={`Desde ${arqueoActivo.fechaApertura.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`}
                 valor={<span className="text-sm text-green-700">Inicial: ${arqueoActivo.montoInicial.toLocaleString()}</span>}
             />
-            {/* Retiro / depósito de efectivo */}
-            <div className="grid grid-cols-2 gap-3">
-                <button
-                    onClick={() => setModalMovimiento('retiro')}
-                    className="flex items-center justify-center gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold py-2.5 rounded-xl text-sm transition-colors"
-                >
-                    <ArrowUpCircle size={16} /> Retirar efectivo
-                </button>
-                <button
-                    onClick={() => setModalMovimiento('deposito')}
-                    className="flex items-center justify-center gap-2 border-2 border-green-200 text-green-700 hover:bg-green-50 font-bold py-2.5 rounded-xl text-sm transition-colors"
-                >
-                    <ArrowDownCircle size={16} /> Depositar efectivo
-                </button>
+            {/* Retiro / depósito de efectivo — bloqueado offline, mismo
+                criterio que abrir/cerrar caja (ver VentasContext). */}
+            <div className="space-y-1">
+                {!online && <p className="text-sm text-amber-600 text-center">Sin conexión — no se puede retirar ni depositar efectivo.</p>}
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={() => setModalMovimiento('retiro')}
+                        disabled={!online}
+                        className="flex items-center justify-center gap-2 border-2 border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:hover:bg-transparent font-bold py-2.5 rounded-xl text-sm transition-colors"
+                    >
+                        <ArrowUpCircle size={16} /> Retirar efectivo
+                    </button>
+                    <button
+                        onClick={() => setModalMovimiento('deposito')}
+                        disabled={!online}
+                        className="flex items-center justify-center gap-2 border-2 border-green-200 text-green-700 hover:bg-green-50 disabled:opacity-60 disabled:hover:bg-transparent font-bold py-2.5 rounded-xl text-sm transition-colors"
+                    >
+                        <ArrowDownCircle size={16} /> Depositar efectivo
+                    </button>
+                </div>
             </div>
 
             {/* Movimientos del día (retiros/depósitos) */}
@@ -257,13 +266,17 @@ const ContenedorArqueo = () => {
 
             {/* Cierre de caja */}
             {!confirmandoCierre ? (
-                <button
-                    onClick={() => setConfirmandoCierre(true)}
-                    className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                >
-                    <Lock size={18} />
-                    Cerrar caja
-                </button>
+                <div className="space-y-1">
+                    {!online && <p className="text-sm text-amber-600 text-center">Sin conexión — no se puede cerrar la caja.</p>}
+                    <button
+                        onClick={() => setConfirmandoCierre(true)}
+                        disabled={!online}
+                        className="w-full border-2 border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-60 disabled:hover:bg-transparent font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                    >
+                        <Lock size={18} />
+                        Cerrar caja
+                    </button>
+                </div>
             ) : (
                 <Tarjeta padding="lg" tono="neutral" className="space-y-3">
                     <p className="font-bold text-stone-700">¿Cuánto hay físicamente en caja?</p>
@@ -299,7 +312,7 @@ const ContenedorArqueo = () => {
                         </button>
                         <button
                             onClick={handleCerrarArqueo}
-                            disabled={cargando}
+                            disabled={cargando || !online}
                             className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white rounded-xl text-sm font-bold"
                         >
                             {cargando ? 'Cerrando...' : 'Confirmar cierre'}
