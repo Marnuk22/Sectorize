@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle, RotateCcw, Store } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
 import { Tarjeta, Campo, Boton } from '../ui/ComponentesBase';
 
 const PRECIO = 30000;
+// App "Vallis ERP" en Tiendanube Partners — id público, no es un secreto.
+const TIENDANUBE_APP_ID = '42195';
 // Derecho de revocación (Resolución 424/2020 y modif.): 10 días desde el
 // cobro para arrepentirse y pedir el reembolso real, no solo cancelar.
 const VENTANA_DIAS_REEMBOLSO = 10;
@@ -38,6 +40,9 @@ const PanelMiPlan = () => {
     const [reembolsando, setReembolsando] = useState(false);
     const [errorReembolso, setErrorReembolso] = useState('');
     const [avisoReembolso, setAvisoReembolso] = useState('');
+    const [conectandoTiendanube, setConectandoTiendanube] = useState(false);
+    const [errorTiendanube, setErrorTiendanube] = useState('');
+    const [avisoTiendanube, setAvisoTiendanube] = useState('');
 
     const estado = negocio?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(negocio?.prueba_vence ?? null);
@@ -56,6 +61,44 @@ const PanelMiPlan = () => {
         && !!negocio?.ultimo_pago_id
         && !negocio?.ultimo_pago_reembolsado
         && diasRestantesReembolso > 0;
+
+    // Al volver del callback de OAuth de Tiendanube, Vallis redirige acá con
+    // ?tiendanube=conectado|error. Se muestra el aviso una vez y se limpia
+    // la URL para que un refresh no lo vuelva a disparar.
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const resultado = params.get('tiendanube');
+        if (!resultado) return;
+
+        const mostrarResultado = () => {
+            if (resultado === 'conectado') setAvisoTiendanube('Tienda de Tiendanube conectada correctamente.');
+            else setErrorTiendanube('No se pudo conectar con Tiendanube. Probá de nuevo.');
+        };
+        mostrarResultado();
+
+        params.delete('tiendanube');
+        const query = params.toString();
+        const nuevaUrl = window.location.pathname + (query ? `?${query}` : '') + window.location.hash;
+        window.history.replaceState({}, '', nuevaUrl);
+    }, []);
+
+    const handleConectarTiendanube = async () => {
+        if (!negocio?.id) return;
+        setConectandoTiendanube(true);
+        setErrorTiendanube('');
+        try {
+            const token = crypto.randomUUID();
+            const { error: errInsert } = await supabase
+                .from('oauth_pendientes')
+                .insert({ token, negocio_id: negocio.id });
+            if (errInsert) throw errInsert;
+
+            window.location.href = `https://www.tiendanube.com/apps/${TIENDANUBE_APP_ID}/authorize?state=${token}`;
+        } catch (err: any) {
+            setErrorTiendanube(err.message ?? 'No se pudo iniciar la conexión con Tiendanube');
+            setConectandoTiendanube(false);
+        }
+    };
 
     const handleCancelar = async () => {
         setCancelando(true);
@@ -346,6 +389,39 @@ const PanelMiPlan = () => {
                 <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 text-sm">
                     <AlertCircle size={15} className="shrink-0" /> {avisoReembolso}
                 </div>
+            )}
+
+            {perfil?.rol === 'dueño' && (
+                <Tarjeta padding="lg">
+                    <h3 className="font-bold text-stone-800 mb-3">Integraciones</h3>
+
+                    {negocio?.tiendanube_store_id ? (
+                        <div className="flex items-center gap-2.5 p-3 rounded-xl border border-stone-200 text-sm text-stone-600">
+                            <Store size={18} className="text-green-600 shrink-0" />
+                            Conectado con Tiendanube (tienda #{negocio.tiendanube_store_id})
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleConectarTiendanube}
+                            disabled={conectandoTiendanube}
+                            className="w-full flex items-center gap-2.5 p-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors text-sm text-stone-700 disabled:opacity-60"
+                        >
+                            {conectandoTiendanube ? <Loader2 size={18} className="animate-spin shrink-0" /> : <Store size={18} className="shrink-0" />}
+                            Conectar con Tiendanube
+                        </button>
+                    )}
+
+                    {avisoTiendanube && (
+                        <div className="flex items-center gap-2 p-2.5 mt-2 bg-green-50 rounded-xl text-green-700 text-xs">
+                            <Check size={14} className="shrink-0" /> {avisoTiendanube}
+                        </div>
+                    )}
+                    {errorTiendanube && (
+                        <div className="flex items-center gap-2 p-2.5 mt-2 bg-red-50 rounded-xl text-red-600 text-xs">
+                            <AlertCircle size={14} className="shrink-0" /> {errorTiendanube}
+                        </div>
+                    )}
+                </Tarjeta>
             )}
         </div>
     );

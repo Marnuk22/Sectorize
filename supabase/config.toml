@@ -53,3 +53,9 @@ entrypoint = "./functions/webhook-mp/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/webhook-mp/*.html" ]
+
+[functions.tiendanube-oauth-callback]
+enabled = true
+verify_jwt = false
+import_map = "./functions/tiendanube-oauth-callback/deno.json"
+entrypoint = "./functions/tiendanube-oauth-callback/index.ts"

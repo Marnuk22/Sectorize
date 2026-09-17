@@ -50,6 +50,7 @@ export interface Negocio {
     ultimo_pago_id: string | null;
     ultimo_pago_fecha: string | null;
     ultimo_pago_reembolsado: boolean;
+    tiendanube_store_id: string | null;
 }
 
 export interface Perfil {

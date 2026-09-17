@@ -39,7 +39,13 @@ const TITULOS_PANEL: Record<PanelUsuario, string> = {
 
 const NavBar = ({ seccionActiva, setSeccionActiva }: NavBarProps) => {
     const { modulos } = useModulos();
-    const [panelAbierto, setPanelAbierto] = useState<PanelUsuario | null>(null);
+    // Si volvimos del callback de OAuth de Tiendanube (?tiendanube=...), hay
+    // que abrir "Mi plan" directo, porque ese panel es el que lee y muestra
+    // el resultado — si no, la página carga sin ningún panel abierto y el
+    // aviso de éxito/error nunca se ve.
+    const [panelAbierto, setPanelAbierto] = useState<PanelUsuario | null>(
+        () => new URLSearchParams(window.location.search).get('tiendanube') ? 'subscripcion' : null
+    );
 
     const ordenSecciones: string[] = ['salon', 'mostrador', 'suscripciones', 'inventario', 'ventas', 'informe'];
 

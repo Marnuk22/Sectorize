@@ -111,6 +111,21 @@ Surgió de auditar `vallis-landing/terminos/` y `vallis-landing/privacidad/` (20
 
 ---
 
+## 🟣 Conexión con Tiendanube (OAuth) ✅ — solo la conexión, sin sincronización todavía
+
+Primer paso de la integración con Tiendanube: conectar la tienda de un comercio a su `negocio` en Vallis vía OAuth. A propósito **no toca sincronización de catálogo ni webhooks de pedidos** — eso es una etapa aparte, para después.
+
+### Implementado ✅
+- [x] **Migración** (`tiendanube_oauth`): `negocios` gana `tiendanube_store_id` (visible). Tabla nueva `negocio_tiendanube` (`access_token`) sin ninguna policy de SELECT para el cliente — solo el service role la lee, para que el token nunca viaje al frontend de cualquier empleado vía el `select('*')` que hace `AuthContext` sobre `negocios`. Tabla nueva `oauth_pendientes` (token random de un solo uso + `negocio_id`, ventana de 10 min) para que el `state` de OAuth no sea el `negocio_id` en texto plano (mitiga un CSRF de account-linking).
+- [x] **Edge Function `tiendanube-oauth-callback`** (`verify_jwt = false`): valida el `state` contra `oauth_pendientes`, canjea el `code` por `access_token` contra la API de Tiendanube, guarda `store_id` y `access_token`, redirige a `app.vallis.com.ar/?tiendanube=conectado|error`.
+- [x] **Botón "Conectar con Tiendanube"** en `PanelMiPlan` (dueño-only, sección "Integraciones").
+- [x] **Probado en vivo contra la tienda demo "Vallis"** (2026-09-17): flujo completo funcionó, `tiendanube_store_id` quedó guardado. Se encontró y arregló un bug real en el camino: el aviso de éxito/error vivía dentro de `PanelMiPlan`, que no se monta solo al volver del redirect — se agregó auto-apertura del panel en `NavBar` cuando la URL trae `?tiendanube=`.
+
+### Pendiente
+- [ ] Sincronización de catálogo (productos Vallis → Tiendanube) y webhooks de pedidos (Tiendanube → Vallis) — diseño ya conversado, no arrancado.
+
+---
+
 ## 🟡 Cabos sueltos (cortos, mejoran el pulido)
 
 - [ ] Mail de contacto en el catálogo público: campo en `locales` + agregarlo a `catalogo_publico()` + botón en la página. (WhatsApp ya funciona.)
