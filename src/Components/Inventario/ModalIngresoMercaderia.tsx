@@ -120,6 +120,8 @@ const ModalIngresoMercaderia = ({ onCerrar }: Props) => {
                         favorito: false,
                         publicado: false,
                         imagen_url: null,
+                        tiendanube_producto_id: null,
+                        tiendanube_variant_id: null,
                     });
                     await registrarMovimientoStock(creado.id, cantidad, 'ingreso', costo);
                 } else {

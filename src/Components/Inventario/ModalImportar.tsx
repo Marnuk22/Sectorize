@@ -91,7 +91,9 @@ const ModalImportar = ({ onCerrar }: Props) => {
                     unidad_medida: p.unidad_medida,
                     favorito: false,
                     publicado: false,
-                    imagen_url: null
+                    imagen_url: null,
+                    tiendanube_producto_id: null,
+                    tiendanube_variant_id: null
                 });
                 ok++;
             } catch (err) {

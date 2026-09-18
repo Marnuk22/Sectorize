@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera, Store } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useImpresoras } from '../../context/ImpresorasContext';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { imprimirEtiqueta } from '../../logic/impresion';
 import type { Producto } from '../../types';
 import ModalProducto, { type DatosProducto } from '../Inventario/ModalProducto';
@@ -16,8 +18,11 @@ import { TrendingUp } from 'lucide-react';
 import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
 const ContenedorInventario = () => {
-    const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto, generarCodigoBarras  } = useMenu();
+    const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto, generarCodigoBarras, recargarProductos  } = useMenu();
     const { impresorasDeEtiquetas } = useImpresoras();
+    const { negocio } = useAuth();
+    const [sincronizandoTN, setSincronizandoTN] = useState<string | null>(null);
+    const [errorTN, setErrorTN] = useState('');
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
     const [busqueda, setBusqueda] = useState('');
     const [modalProducto, setModalProducto] = useState<Producto | null | undefined>(undefined);
@@ -115,6 +120,34 @@ const ContenedorInventario = () => {
         });
     };
 
+    const handleSincronizarTiendanube = async (prod: Producto) => {
+        setSincronizandoTN(prod.id);
+        setErrorTN('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No hay sesión activa');
+
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tiendanube-sync-producto`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ producto_id: prod.id }),
+                }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'No se pudo sincronizar con Tiendanube');
+            await recargarProductos();
+        } catch (err: any) {
+            setErrorTN(err.message ?? 'No se pudo sincronizar con Tiendanube');
+        } finally {
+            setSincronizandoTN(null);
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
             {/* Topbar */}
@@ -176,6 +209,15 @@ const ContenedorInventario = () => {
                     </button>
                 </div>
             </div>
+
+            {errorTN && (
+                <button
+                    onClick={() => setErrorTN('')}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 text-xs text-left shrink-0"
+                >
+                    {errorTN} (tocar para cerrar)
+                </button>
+            )}
 
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4 p-4 overflow-hidden">
                 {/* Sidebar categorías */}
@@ -294,6 +336,9 @@ const ContenedorInventario = () => {
                                                 onVerKardex={() => setModalKardex(prod)}
                                                 onGenerarCodigo={() => generarCodigoBarras(prod.id)}
                                                 onImprimirEtiqueta={() => handleImprimirEtiqueta(prod)}
+                                                mostrarTiendanube={!!negocio?.tiendanube_store_id && prod.tipo_venta === 'unidad'}
+                                                sincronizandoTiendanube={sincronizandoTN === prod.id}
+                                                onSincronizarTiendanube={() => handleSincronizarTiendanube(prod)}
                                             />
                                         </>
                                     }
@@ -410,9 +455,12 @@ interface MenuAccionesProps {
     onVerKardex: () => void;
     onGenerarCodigo: () => void;
     onImprimirEtiqueta: () => void;
+    mostrarTiendanube: boolean;
+    sincronizandoTiendanube: boolean;
+    onSincronizarTiendanube: () => void;
 }
 
-const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, onGenerarCodigo, onImprimirEtiqueta }: MenuAccionesProps) => {
+const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, onGenerarCodigo, onImprimirEtiqueta, mostrarTiendanube, sincronizandoTiendanube, onSincronizarTiendanube }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
 
     const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
@@ -463,6 +511,19 @@ const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavo
                         {prod.codigo_barras && (
                             <button className={item} onClick={() => { onImprimirEtiqueta(); setAbierto(false); }}>
                                 <Printer size={12} className="text-stone-400" /> Imprimir etiqueta
+                            </button>
+                        )}
+
+                        {mostrarTiendanube && (
+                            <button
+                                className={item}
+                                disabled={sincronizandoTiendanube}
+                                onClick={() => { onSincronizarTiendanube(); setAbierto(false); }}
+                            >
+                                <Store size={12} className={prod.tiendanube_producto_id ? 'text-sky-500' : 'text-stone-400'} />
+                                {sincronizandoTiendanube
+                                    ? 'Sincronizando...'
+                                    : prod.tiendanube_producto_id ? 'Actualizar en Tiendanube' : 'Publicar en Tiendanube'}
                             </button>
                         )}
 

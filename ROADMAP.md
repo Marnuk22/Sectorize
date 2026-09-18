@@ -122,7 +122,24 @@ Primer paso de la integración con Tiendanube: conectar la tienda de un comercio
 - [x] **Probado en vivo contra la tienda demo "Vallis"** (2026-09-17): flujo completo funcionó, `tiendanube_store_id` quedó guardado. Se encontró y arregló un bug real en el camino: el aviso de éxito/error vivía dentro de `PanelMiPlan`, que no se monta solo al volver del redirect — se agregó auto-apertura del panel en `NavBar` cuando la URL trae `?tiendanube=`.
 
 ### Pendiente
-- [ ] Sincronización de catálogo (productos Vallis → Tiendanube) y webhooks de pedidos (Tiendanube → Vallis) — diseño ya conversado, no arrancado.
+- [ ] Webhooks de pedidos (Tiendanube → Vallis, descuento de stock) — diseño ya conversado (`diseno-tiendanube-sync-catalogo-pedidos.md`), no arrancado. Necesita ampliar el `CHECK` de `movimientos_stock.motivo` (sumar `'venta_online'`) y resolver la idempotencia de reintentos del webhook (hasta 16, según su documentación).
+
+---
+
+## 🟣 Sincronización de catálogo Vallis → Tiendanube ✅ (código listo, falta deploy + primer test)
+
+Segunda etapa de la integración: subir nombre/precio/stock/visibilidad de los productos a la tienda online, más un empuje automático de SOLO stock (sin tocar nombre/precio/visibilidad) cuando el stock cambia en Vallis por una venta física o un ingreso/ajuste de mercadería.
+
+### Implementado ✅
+- [x] **Migración** (`tiendanube_sync_catalogo`): `productos` gana `tiendanube_producto_id`/`tiendanube_variant_id` (mapeo). `negocios` gana `tiendanube_local_id` (qué sucursal es "la" conectada a Tiendanube — Tiendanube tiene un solo número de stock por producto, no por sucursal). Función `empujar_stock_tiendanube` (`SECURITY DEFINER`, fire-and-forget vía `net.http_post`, igual que `avisar_stock_bajo` — nunca bloquea ni revierte la venta/ingreso si Tiendanube no responde). Se llama desde `descontar_stock()` (venta física) y `registrar_movimiento_stock()` (ingreso/ajuste), y solo si el movimiento pasó en la sucursal designada.
+- [x] **Edge Function `tiendanube-sync-producto`** (nueva, JWT normal, dueño/encargado): crea el producto en Tiendanube si no existe (`tiendanube_producto_id` null) o actualiza precio/stock/visibilidad si ya existe. Bloquea productos `tipo_venta: 'granel'` (no tienen sentido en un stock de e-commerce por unidad). Visibilidad bidireccional: oculta en stock 0, vuelve a mostrar con stock > 0 — **límite conocido:** si el comercio oculta un producto a mano en Tiendanube por otro motivo, el próximo sync desde Vallis se lo puede des-ocultar solo (no se distingue quién lo ocultó).
+- [x] **Botón "Publicar en Tiendanube" / "Actualizar en Tiendanube"** en el menú `⋯` de cada producto en Inventario, visible solo si el negocio está conectado.
+- [x] Investigación contra la documentación oficial de Tiendanube (headers de auth `Authorization: Bearer` + `User-Agent` obligatorio, shape exacto de `POST/PUT /products` y `/variants`, `visibility`/`published` mutuamente excluyentes).
+
+### Pendiente
+- [ ] **Deploy**: `supabase functions deploy tiendanube-sync-producto`.
+- [ ] **Completar `negocios.tiendanube_local_id`** a mano para el negocio de prueba ya conectado (columna nueva, no se autocompletó retroactivamente).
+- [ ] Probar en vivo: crear un producto nuevo desde el botón, editar precio/stock y volver a sincronizar, y confirmar que una venta física/ingreso de mercadería en la sucursal correcta empuja el stock solo (sin tocar nombre/precio/visibility).
 
 ---
 

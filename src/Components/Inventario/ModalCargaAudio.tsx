@@ -146,6 +146,8 @@ const ModalCargaAudio = ({ onCerrar }: Props) => {
                     favorito: false,
                     publicado: false,
                     imagen_url: null,
+                    tiendanube_producto_id: null,
+                    tiendanube_variant_id: null,
                 });
                 ok++;
             } catch (err) {

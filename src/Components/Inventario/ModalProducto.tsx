@@ -30,6 +30,8 @@ const CAMPOS_INICIALES = {
     favorito: false,
     publicado: false,
     imagen_url: null as string | null,
+    tiendanube_producto_id: null as string | null,
+    tiendanube_variant_id: null as string | null,
 };
 
 export type DatosProducto = typeof CAMPOS_INICIALES;
@@ -68,6 +70,8 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                 favorito: producto.favorito ?? false,
                 publicado: producto.publicado ?? false,
                 imagen_url: producto.imagen_url ?? null,
+                tiendanube_producto_id: producto.tiendanube_producto_id ?? null,
+                tiendanube_variant_id: producto.tiendanube_variant_id ?? null,
             });
             setSeguimientoStock(producto.stock_minimo > 0);
         }else if (datosIniciales) {

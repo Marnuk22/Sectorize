@@ -51,6 +51,7 @@ export interface Negocio {
     ultimo_pago_fecha: string | null;
     ultimo_pago_reembolsado: boolean;
     tiendanube_store_id: string | null;
+    tiendanube_local_id: string | null;
 }
 
 export interface Perfil {
@@ -115,6 +116,8 @@ export interface Producto {
     publicado: boolean;
     imagen_url: string | null;
     alerta_enviada: boolean;
+    tiendanube_producto_id: string | null;
+    tiendanube_variant_id: string | null;
 }
 
 export interface Arqueo {
