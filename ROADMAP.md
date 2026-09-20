@@ -126,13 +126,44 @@ Primer paso de la integración con Tiendanube: conectar la tienda de un comercio
 
 ---
 
-## 🟣 Pedidos Tiendanube → Vallis (descuento de stock) — código deployado, falta probar
+## 🟣 Pedidos Tiendanube → Vallis (descuento de stock) ✅ (descuento probado en vivo; falta probar cancelación)
 
 - [x] **Migración** (`tiendanube_pedidos_stock` + `cancelacion_requiere_pedido_procesado`): `movimientos_stock.usuario_id` nullable, motivos `venta_online`/`cancelacion_online`, tabla de idempotencia `tiendanube_pedidos_procesados`, RPC atómica `procesar_pedido_tiendanube` (solo `service_role`; misma regla que las ventas físicas: solo productos con seguimiento de stock, piso en 0, sucursal `tiendanube_local_id`, respeta catálogo compartido). Una cancelación solo repone si el pedido ya se había descontado.
 - [x] **Edge Function `tiendanube-webhook-pedido`** (`verify_jwt = false`): verifica la firma `x-linkedstore-hmac-sha256` (acepta hex o base64 — la doc no aclara cuál), pide el pedido, suma líneas por variante y llama a la RPC. Responde 500 ante errores para que Tiendanube reintente.
 - [x] **Registro automático** de los webhooks `order/created` y `order/cancelled` en `tiendanube-oauth-callback` (chequea con `GET /webhooks` antes de crear).
-- [ ] **Registrar los webhooks en la tienda demo ya conectada** (el registro automático solo corre al conectar) y probar en vivo: comprar en la tienda demo → stock baja en Vallis (kardex "Venta online"); cancelar el pedido → repone. Confirmar en el primer webhook real que la firma valida (hex vs base64).
+- [x] **Probado en vivo (2026-09-20):** el alta inicial falló con `403 Missing a required scope` (la app solo tenía permiso de productos). Se amplió el permiso de pedidos en Partners, se reconectó la tienda (botón "Reconectar" en Mi plan) y el callback registró solo los dos webhooks. Un pedido real de la tienda demo descontó stock (movimiento `venta_online`, pedido marcado como procesado, firma validada).
+- [ ] Probar en vivo la **cancelación** de un pedido (el stock debe volver a subir, movimiento `cancelacion_online`).
 - Límites conocidos: las ventas online **no** crean filas en `ventas` (no aparecen en reportes ni caja, solo mueven stock); no hay kits ni estados de envío; el push de stock de Vallis → Tiendanube usa `replace`, así que un pedido cancelado antes de que exista el webhook no repone.
+
+---
+
+## 🟣 Pendientes de Tiendanube (lista consolidada, 2026-09-20)
+
+Todo lo relacionado a la integración que sigue abierto, de más a menos importante.
+
+### Falta para dar la integración por probada
+- [ ] Probar en vivo la cancelación de un pedido (ver arriba).
+- [ ] Probar en vivo con **catálogo compartido** (negocio multisucursal): el push de stock y el webhook tienen rama para `producto_sucursal`, pero solo se probó el camino de producto directo.
+- [ ] **Deploy del frontend a producción** (botón "Reconectar", etiquetas del kardex "Venta online"/"Cancelación online"). Las funciones y migraciones ya están en producción.
+
+### Funcionalidad que falta
+- [ ] **Ventas online en el Historial de ventas** — hoy los pedidos de Tiendanube solo mueven stock, no crean filas en `ventas` (no aparecen en Historial, reportes ni caja). Etapa aparte, con plan propio. Decisiones abiertas: (1) ¿cuenta como venta al crearse el pedido o al pagarse? (habría que sumar el evento `order/paid`; hay pedidos "en espera de pago"); (2) `ventas.arqueo_id` es obligatorio y online no hay caja — definir a qué arqueo va o cómo se identifica el origen (ej. `origen = tiendanube`); (3) que no sume al "monto esperado en caja"; (4) cancelaciones → marcar la venta cancelada; (5) no descontar stock dos veces (el trigger de `detalle_ventas` no debe correr para estas).
+- [ ] **Elegir la sucursal de Tiendanube desde la UI.** `negocios.tiendanube_local_id` hoy se carga a mano por SQL. Debería auto-completarse cuando el negocio tiene una sola sucursal y pedirse al conectar si tiene varias. Sin esto, el push de stock y los pedidos no hacen nada (el webhook falla a propósito hasta que esté cargada).
+- [ ] **Sync de catálogo Tiendanube → Vallis.** Los productos creados directo en Tiendanube no existen en Vallis, y sus pedidos se saltean en silencio.
+- [ ] **Sync automático de nombre/precio/visibilidad** al editar un producto (hoy solo el botón manual; el push automático es solo de stock) y un "sincronizar todo" masivo.
+- [ ] **Desconectar la tienda** (no hay botón) y manejar la desinstalación de la app (`app/uninstalled`). Revisar también los webhooks obligatorios de privacidad de Tiendanube (`store/redact`, `customers/redact`, `customers/data_request`) — a confirmar si aplican a una app privada ("Para tus clientes") antes de distribuirla.
+- [ ] Refresco en vivo: el stock y el kardex no se actualizan solos cuando entra un pedido por webhook (hace falta recargar). Evaluar una suscripción realtime.
+
+### Robustez / límites conocidos
+- [ ] **El push de stock falla en silencio** (fire-and-forget): token vencido o revocado, tienda caída o `429` por rate limit (un ingreso masivo de mercadería puede disparar muchas llamadas) dejan a Tiendanube desactualizada hasta el próximo movimiento o un sync manual. Idea: mirar `net._http_response` y avisar en la UI, o un botón de resincronización.
+- [ ] La visibilidad se sincroniza en ambos sentidos: si el comercio oculta un producto a mano en Tiendanube, el próximo sync desde Vallis lo vuelve a mostrar.
+- [ ] Si el alta de un producto en Tiendanube sale bien pero falla guardar su id en Vallis, un reintento lo crea duplicado.
+- [ ] El endpoint de stock (`POST .../variants/stock`, con `id` de variante junto a `replace`) no está documentado para tiendas con **múltiples ubicaciones**; solo probado en una tienda de una ubicación. Si Tiendanube rechaza el `id` con 422, sacarlo.
+- [ ] Un pedido cancelado que se creó antes de registrarse el webhook no repone stock (a propósito, para no inflarlo); los reintentos de Tiendanube (hasta 16) fallarán sin efecto.
+- [ ] Productos a granel excluidos de la sync (Tiendanube vende por unidad). Kits y estados de envío quedan fuera de alcance.
+
+### Seguridad
+- [ ] El `client_secret` de la app de Tiendanube y el `access_token` de la tienda demo quedaron pegados en el historial de conversaciones de desarrollo. Considerar rotarlos antes de conectar una tienda real (rotar el secret en Partners + `supabase secrets set TIENDANUBE_CLIENT_SECRET=...`; el token se renueva reconectando).
 
 ---
 
