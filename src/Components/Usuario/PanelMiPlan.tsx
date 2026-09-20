@@ -398,7 +398,16 @@ const PanelMiPlan = () => {
                     {negocio?.tiendanube_store_id ? (
                         <div className="flex items-center gap-2.5 p-3 rounded-xl border border-stone-200 text-sm text-stone-600">
                             <Store size={18} className="text-green-600 shrink-0" />
-                            Conectado con Tiendanube (tienda #{negocio.tiendanube_store_id})
+                            <span className="flex-1">Conectado con Tiendanube (tienda #{negocio.tiendanube_store_id})</span>
+                            {/* Necesario cuando cambian los permisos de la app: Tiendanube
+                                emite un token nuevo solo si se vuelve a autorizar. */}
+                            <button
+                                onClick={handleConectarTiendanube}
+                                disabled={conectandoTiendanube}
+                                className="text-xs text-stone-400 hover:text-violet-600 disabled:opacity-60 shrink-0"
+                            >
+                                {conectandoTiendanube ? 'Redirigiendo...' : 'Reconectar'}
+                            </button>
                         </div>
                     ) : (
                         <button

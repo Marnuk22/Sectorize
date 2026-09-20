@@ -14,7 +14,7 @@ export type TipoMembresia = 'por_tiempo' | 'por_asistencias' | 'clase_suelta';
 export type EstadoSuscripcion = 'activa' | 'vencida' | 'cancelada';
 export type TipoMovimientoCaja = 'apertura' | 'venta_efectivo' | 'retiro' | 'deposito';
 export type MotivoRetiro = 'proveedor' | 'banco' | 'gasto' | 'otro';
-export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion';
+export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion' | 'venta_online' | 'cancelacion_online';
 
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
@@ -140,7 +140,7 @@ export interface MovimientoStock {
     motivo:           MotivoMovimientoStock;
     costo_unitario:   number | null;
     nota:             string | null;
-    usuario_id:       string;
+    usuario_id:       string | null;
     creado_at:        string;
 }
 

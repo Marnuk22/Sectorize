@@ -122,7 +122,17 @@ Primer paso de la integración con Tiendanube: conectar la tienda de un comercio
 - [x] **Probado en vivo contra la tienda demo "Vallis"** (2026-09-17): flujo completo funcionó, `tiendanube_store_id` quedó guardado. Se encontró y arregló un bug real en el camino: el aviso de éxito/error vivía dentro de `PanelMiPlan`, que no se monta solo al volver del redirect — se agregó auto-apertura del panel en `NavBar` cuando la URL trae `?tiendanube=`.
 
 ### Pendiente
-- [ ] Webhooks de pedidos (Tiendanube → Vallis, descuento de stock) — diseño ya conversado (`diseno-tiendanube-sync-catalogo-pedidos.md`), no arrancado. Necesita ampliar el `CHECK` de `movimientos_stock.motivo` (sumar `'venta_online'`) y resolver la idempotencia de reintentos del webhook (hasta 16, según su documentación).
+- [x] Webhooks de pedidos — ver la sección de abajo ("Pedidos Tiendanube → Vallis").
+
+---
+
+## 🟣 Pedidos Tiendanube → Vallis (descuento de stock) — código deployado, falta probar
+
+- [x] **Migración** (`tiendanube_pedidos_stock` + `cancelacion_requiere_pedido_procesado`): `movimientos_stock.usuario_id` nullable, motivos `venta_online`/`cancelacion_online`, tabla de idempotencia `tiendanube_pedidos_procesados`, RPC atómica `procesar_pedido_tiendanube` (solo `service_role`; misma regla que las ventas físicas: solo productos con seguimiento de stock, piso en 0, sucursal `tiendanube_local_id`, respeta catálogo compartido). Una cancelación solo repone si el pedido ya se había descontado.
+- [x] **Edge Function `tiendanube-webhook-pedido`** (`verify_jwt = false`): verifica la firma `x-linkedstore-hmac-sha256` (acepta hex o base64 — la doc no aclara cuál), pide el pedido, suma líneas por variante y llama a la RPC. Responde 500 ante errores para que Tiendanube reintente.
+- [x] **Registro automático** de los webhooks `order/created` y `order/cancelled` en `tiendanube-oauth-callback` (chequea con `GET /webhooks` antes de crear).
+- [ ] **Registrar los webhooks en la tienda demo ya conectada** (el registro automático solo corre al conectar) y probar en vivo: comprar en la tienda demo → stock baja en Vallis (kardex "Venta online"); cancelar el pedido → repone. Confirmar en el primer webhook real que la firma valida (hex vs base64).
+- Límites conocidos: las ventas online **no** crean filas en `ventas` (no aparecen en reportes ni caja, solo mueven stock); no hay kits ni estados de envío; el push de stock de Vallis → Tiendanube usa `replace`, así que un pedido cancelado antes de que exista el webhook no repone.
 
 ---
 

@@ -54,6 +54,12 @@ entrypoint = "./functions/webhook-mp/index.ts"
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/webhook-mp/*.html" ]
 
+[functions.tiendanube-webhook-pedido]
+enabled = true
+verify_jwt = false
+import_map = "./functions/tiendanube-webhook-pedido/deno.json"
+entrypoint = "./functions/tiendanube-webhook-pedido/index.ts"
+
 [functions.tiendanube-oauth-callback]
 enabled = true
 verify_jwt = false

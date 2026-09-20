@@ -12,6 +12,40 @@ const VALLIS_URL = 'https://app.vallis.com.ar';
 // con el code de Tiendanube en sí, que expira en 30 segundos.
 const VENTANA_STATE_MS = 10 * 60 * 1000;
 
+const WEBHOOK_PEDIDOS_URL = `${SUPABASE_URL}/functions/v1/tiendanube-webhook-pedido`;
+
+// Registra order/created y order/cancelled contra la tienda. La doc no dice
+// qué pasa si se registra dos veces el mismo evento+url, así que se consulta
+// antes con GET /webhooks para no duplicar.
+const registrarWebhooksPedidos = async (storeId: string, accessToken: string) => {
+    const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+        'User-Agent': 'Vallis ERP (soporte@vallis.com.ar)',
+    };
+    for (const event of ['order/created', 'order/cancelled']) {
+        try {
+            const resLista = await fetch(
+                `https://api.tiendanube.com/v1/${storeId}/webhooks?event=${encodeURIComponent(event)}`,
+                { headers },
+            );
+            const existentes = resLista.ok ? await resLista.json() : [];
+            const yaRegistrado = Array.isArray(existentes)
+                && existentes.some((w: { event: string; url: string }) => w.event === event && w.url === WEBHOOK_PEDIDOS_URL);
+            if (yaRegistrado) continue;
+
+            const resAlta = await fetch(`https://api.tiendanube.com/v1/${storeId}/webhooks`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ event, url: WEBHOOK_PEDIDOS_URL }),
+            });
+            if (!resAlta.ok) console.error(`Error registrando webhook ${event}:`, resAlta.status, await resAlta.text());
+        } catch (err) {
+            console.error(`Error registrando webhook ${event}:`, err);
+        }
+    }
+};
+
 Deno.serve(async (req) => {
     const url = new URL(req.url);
     const code = url.searchParams.get('code');
@@ -69,6 +103,10 @@ Deno.serve(async (req) => {
             access_token: dataToken.access_token,
             conectado_en: new Date().toISOString(),
         });
+
+        // Best-effort: si falla, la conexión igual quedó hecha (el webhook se
+        // puede registrar después) — no se rompe el redirect de éxito.
+        await registrarWebhooksPedidos(storeId, dataToken.access_token);
 
         return redirigir('conectado');
     } catch (err) {
