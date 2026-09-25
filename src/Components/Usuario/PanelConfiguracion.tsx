@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Banknote, CreditCard, ArrowLeftRight, Wallet, Plus, X, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { MODULOS, type ModuloId } from '../../config/modulos';
 import ModalCambiarPassword from './ModalCambiarPassword';
 
 interface Props {
@@ -27,8 +28,12 @@ const IDIOMAS = [
     { id: 'pt', label: 'Português' },
 ];
 
+const MODULOS_OPCIONALES = (Object.values(MODULOS) as (typeof MODULOS)[ModuloId][]).filter(m => !m.esNucleo);
+
 const PanelConfiguracion = ({ onCerrar }: Props) => {
-    const { local, actualizarLocal } = useAuth();
+    const { local, perfil, actualizarLocal } = useAuth();
+    const [cambiandoModulo, setCambiandoModulo] = useState<ModuloId | null>(null);
+    const [errorModulo, setErrorModulo] = useState('');
 
     const metodosActuales = local?.metodos_pago ?? ['efectivo'];
     const idsBase = METODOS_BASE.map(m => m.id);
@@ -65,6 +70,22 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
 
     const eliminarCustom = (id: string) => {
         setMetodos(prev => prev.filter(m => m !== id));
+    };
+
+    // Los módulos se guardan al toque (no junto con "Guardar configuración")
+    // — es un on/off, no tiene sentido dejarlo a medio confirmar.
+    const toggleModulo = async (id: ModuloId) => {
+        const activos = local?.modulos ?? [];
+        const nuevos = activos.includes(id) ? activos.filter(m => m !== id) : [...activos, id];
+        setCambiandoModulo(id);
+        setErrorModulo('');
+        try {
+            await actualizarLocal({ modulos: nuevos });
+        } catch (err: any) {
+            setErrorModulo(err.message ?? 'No se pudo actualizar el módulo');
+        } finally {
+            setCambiandoModulo(null);
+        }
     };
 
     const handleGuardar = async () => {
@@ -193,6 +214,43 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
             >
                 {guardado ? <><Check size={16} /> Guardado</> : guardando ? 'Guardando...' : 'Guardar configuración'}
             </button>
+
+            {/* Módulos — dueño-only, afecta a todo el negocio */}
+            {perfil?.rol === 'dueño' && (
+                <div className="pt-4 border-t border-stone-100">
+                    <label className="text-xs font-medium text-stone-500 uppercase">Módulos</label>
+                    <p className="text-xs text-stone-400 mb-3">Secciones opcionales que podés activar o apagar cuando quieras.</p>
+                    <div className="space-y-2">
+                        {MODULOS_OPCIONALES.map(m => {
+                            const Icono = m.icono;
+                            const activo = (local?.modulos ?? []).includes(m.id);
+                            const cambiando = cambiandoModulo === m.id;
+                            return (
+                                <button
+                                    key={m.id}
+                                    onClick={() => toggleModulo(m.id)}
+                                    disabled={cambiando}
+                                    className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all disabled:opacity-60 ${
+                                        activo ? 'border-violet-500 bg-violet-50' : 'border-stone-200 hover:bg-stone-50'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-2 text-left">
+                                        <Icono size={18} className={activo ? 'text-violet-600' : 'text-stone-400'} />
+                                        <div>
+                                            <p className={`text-sm ${activo ? 'text-violet-700 font-medium' : 'text-stone-600'}`}>{m.nombre}</p>
+                                            <p className="text-xs text-stone-400">{m.descripcion}</p>
+                                        </div>
+                                    </div>
+                                    <div className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${activo ? 'bg-violet-600' : 'border border-stone-300'}`}>
+                                        {activo && <Check size={13} className="text-white" />}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {errorModulo && <p className="text-xs text-red-500 mt-2">{errorModulo}</p>}
+                </div>
+            )}
 
             {/* Seguridad */}
             <div className="pt-4 border-t border-stone-100">

@@ -10,6 +10,8 @@ const LABELS_MOTIVO: Record<MotivoMovimientoStock, string> = {
     devolucion: 'Devolución',
     venta_online: 'Venta online',
     cancelacion_online: 'Cancelación online',
+    produccion: 'Producción',
+    transferencia: 'Transferencia',
 };
 
 const fmt = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 3 });

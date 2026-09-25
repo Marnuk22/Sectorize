@@ -14,7 +14,7 @@ export type TipoMembresia = 'por_tiempo' | 'por_asistencias' | 'clase_suelta';
 export type EstadoSuscripcion = 'activa' | 'vencida' | 'cancelada';
 export type TipoMovimientoCaja = 'apertura' | 'venta_efectivo' | 'retiro' | 'deposito';
 export type MotivoRetiro = 'proveedor' | 'banco' | 'gasto' | 'otro';
-export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion' | 'venta_online' | 'cancelacion_online';
+export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion' | 'venta_online' | 'cancelacion_online' | 'produccion' | 'transferencia';
 
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
@@ -130,6 +130,33 @@ export interface Arqueo {
     estado:                EstadoArqueo;
     fecha_apertura:        string;
     fecha_cierre:          string | null;
+}
+
+export interface Ingrediente {
+    id:             string;
+    local_id:       string;
+    nombre:         string;
+    unidad_medida:  string;
+    stock_actual:   number;
+    stock_minimo:   number;
+    costo_unitario: number | null;
+    activo:         boolean;
+    creado_at:      string;
+    updated_at:     string;
+}
+
+export interface Deposito {
+    id:         string;
+    negocio_id: string;
+    nombre:     string;
+    creado_at:  string;
+}
+
+export interface RecetaItem {
+    id:             string;
+    producto_id:    string;
+    ingrediente_id: string;
+    cantidad:       number;
 }
 
 export interface MovimientoStock {

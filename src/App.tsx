@@ -10,6 +10,8 @@ import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { SalonProvider, MenuProvider, VentasProvider, ImpresorasProvider, ConexionProvider, useMenu, useVentas } from './context';
 import { MostradorProvider } from './context/MostradorContext';
 import { AfiliadosProvider } from './context/AfiliadosContext';
+import { IngredientesProvider } from './context/IngredientesContext';
+import { DepositosProvider } from './context/DepositosContext';
 import { useModulos } from './hooks/useModulos';
 import { useReconciliacionOffline } from './hooks/useReconciliacionOffline';
 import ToastSincronizacion from './Components/ToastSincronizacion.tsx';
@@ -94,11 +96,15 @@ function AppContent() {
                     <SalonProvider>
                         <MostradorProvider>
                             <AfiliadosProvider>
-                                <ImpresorasProvider>
-                                    <AccesoSuscripcion>
-                                        <LayoutPrincipal />
-                                    </AccesoSuscripcion>
-                                </ImpresorasProvider>
+                                <IngredientesProvider>
+                                    <DepositosProvider>
+                                        <ImpresorasProvider>
+                                            <AccesoSuscripcion>
+                                                <LayoutPrincipal />
+                                            </AccesoSuscripcion>
+                                        </ImpresorasProvider>
+                                    </DepositosProvider>
+                                </IngredientesProvider>
                             </AfiliadosProvider>
                         </MostradorProvider>
                     </SalonProvider>

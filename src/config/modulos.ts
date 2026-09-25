@@ -1,6 +1,6 @@
-import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, BarChart3, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, BarChart3, ChefHat, Warehouse, type LucideIcon } from 'lucide-react';
 
-export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos' | 'informe';
+export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos' | 'informe' | 'produccion' | 'deposito';
 
 export interface ModuloConfig {
     id:          ModuloId;
@@ -59,6 +59,23 @@ export const MODULOS: Record<ModuloId, ModuloConfig> = {
         nombre: 'Afiliados',
         descripcion: 'Membresías y asistencias',
         icono: Users,
+        esNucleo: false,
+    },
+    // Apagados por defecto para todos los tipos de negocio (no aparecen en
+    // NEGOCIOS más abajo) — el dueño los activa aparte, más adelante podrían
+    // depender del plan pago (mismo criterio que seguimiento_stock).
+    produccion: {
+        id: 'produccion',
+        nombre: 'Producción',
+        descripcion: 'Ingredientes, recetas y producción por lote',
+        icono: ChefHat,
+        esNucleo: false,
+    },
+    deposito: {
+        id: 'deposito',
+        nombre: 'Depósito',
+        descripcion: 'Ubicación extra de stock, con transferencias',
+        icono: Warehouse,
         esNucleo: false,
     },
 };

@@ -132,7 +132,7 @@ Primer paso de la integración con Tiendanube: conectar la tienda de un comercio
 - [x] **Edge Function `tiendanube-webhook-pedido`** (`verify_jwt = false`): verifica la firma `x-linkedstore-hmac-sha256` (acepta hex o base64 — la doc no aclara cuál), pide el pedido, suma líneas por variante y llama a la RPC. Responde 500 ante errores para que Tiendanube reintente.
 - [x] **Registro automático** de los webhooks `order/created` y `order/cancelled` en `tiendanube-oauth-callback` (chequea con `GET /webhooks` antes de crear).
 - [x] **Probado en vivo (2026-09-20):** el alta inicial falló con `403 Missing a required scope` (la app solo tenía permiso de productos). Se amplió el permiso de pedidos en Partners, se reconectó la tienda (botón "Reconectar" en Mi plan) y el callback registró solo los dos webhooks. Un pedido real de la tienda demo descontó stock (movimiento `venta_online`, pedido marcado como procesado, firma validada).
-- [ ] Probar en vivo la **cancelación** de un pedido (el stock debe volver a subir, movimiento `cancelacion_online`).
+- [x] **Cancelación probada en vivo (2026-09-20):** al cancelar el pedido desde Tiendanube, el stock en Vallis vuelve a subir correctamente.
 - Límites conocidos: las ventas online **no** crean filas en `ventas` (no aparecen en reportes ni caja, solo mueven stock); no hay kits ni estados de envío; el push de stock de Vallis → Tiendanube usa `replace`, así que un pedido cancelado antes de que exista el webhook no repone.
 
 ---
@@ -142,8 +142,8 @@ Primer paso de la integración con Tiendanube: conectar la tienda de un comercio
 Todo lo relacionado a la integración que sigue abierto, de más a menos importante.
 
 ### Falta para dar la integración por probada
-- [ ] Probar en vivo la cancelación de un pedido (ver arriba).
-- [ ] Probar en vivo con **catálogo compartido** (negocio multisucursal): el push de stock y el webhook tienen rama para `producto_sucursal`, pero solo se probó el camino de producto directo.
+- [x] Cancelación de un pedido probada en vivo (ver arriba).
+- [ ] **Probar en vivo con catálogo compartido (negocio multisucursal) — en pausa.** Al intentarlo se encontraron y corrigieron 2 bugs preexistentes, sin relación con Tiendanube (ver "🟤 Producción/ingredientes + Depósito" — Etapa 2, migración `corrige_stock_minimo_y_venta_compartido`): (1) `descontar_stock()` no tocaba `producto_sucursal`, una venta física en un negocio compartido no descontaba el stock real; (2) `agregar_sucursal()` hardcodeaba `stock_minimo=0` en la sucursal nueva en vez de copiarlo, así que nacía siempre sin seguimiento de stock. Se pausó esta prueba para encarar el proyecto de Producción/Depósito primero — retomar cuando ese esté avanzado.
 - [ ] **Deploy del frontend a producción** (botón "Reconectar", etiquetas del kardex "Venta online"/"Cancelación online"). Las funciones y migraciones ya están en producción.
 
 ### Funcionalidad que falta
@@ -163,7 +163,7 @@ Todo lo relacionado a la integración que sigue abierto, de más a menos importa
 - [ ] Productos a granel excluidos de la sync (Tiendanube vende por unidad). Kits y estados de envío quedan fuera de alcance.
 
 ### Seguridad
-- [ ] El `client_secret` de la app de Tiendanube y el `access_token` de la tienda demo quedaron pegados en el historial de conversaciones de desarrollo. Considerar rotarlos antes de conectar una tienda real (rotar el secret en Partners + `supabase secrets set TIENDANUBE_CLIENT_SECRET=...`; el token se renueva reconectando).
+- [ ] **Pendiente a propósito, decidido en (2026-09-20).** El `client_secret` de la app de Tiendanube y el `access_token` de la tienda demo quedaron pegados en el historial de conversaciones de desarrollo. El dashboard de Partners no tiene un botón para regenerar el `client_secret` (no está documentado); el único camino encontrado es contactar a soporte (`socios@tiendanube.com`), sin confirmación de que lo hagan a pedido ni en cuánto tiempo. Como todavía es la tienda demo (sin cliente real), se decidió no bloquear el resto del trabajo por esto — rotar recién antes de conectar la primera tienda real, escribiendo a soporte con margen de tiempo.
 
 ---
 
@@ -374,10 +374,102 @@ que probó y quedó bien la anterior.
 
 ---
 
+## 🟤 Producción/ingredientes + Depósito (proyecto grande, por etapas)
+
+Surgió de dos ideas del backlog ("Productos vs. ingredientes" e "Inventario extra/depósito
+externo") que se unificaron en un solo diseño al retomarlas (2026-09-20/21). Dos módulos nuevos,
+**opt-in** (`produccion`, `deposito` en `local.modulos`, apagados por defecto — más adelante
+podrían depender del plan pago, igual que `seguimiento_stock`).
+
+### Decisiones ya cerradas (no reabrir sin motivo)
+- **Consumo de ingredientes: producción por lote**, no al momento de la venta. El dueño arma una
+  tanda (ej. "20 panes"), ahí se descuentan los ingredientes según receta × cantidad, y el
+  producto terminado queda con su propio stock independiente para vender.
+- **Ingredientes NO tiene catálogo compartido multisucursal** (a diferencia de `productos`) —
+  vive siempre directo en una sucursal (`local_id not null`). Se agrega compartido después si
+  hace falta un cliente real con esa necesidad.
+- **Depósito aplica por igual a productos e ingredientes**, con transferencias en ambos
+  sentidos. Es una ubicación a nivel **negocio** (no de una sucursal puntual), usable por
+  cualquier sucursal con el módulo `deposito` activo.
+- El incremento de stock del producto terminado al producir **reusa `registrar_movimiento_stock`
+  tal cual** (no hay lógica nueva de actualización de stock) — así hereda gratis el push
+  automático a Tiendanube, que vive en un trigger sobre la columna `stock_actual`, no en el
+  código de ninguna función puntual.
+
+### Etapa 1 — Diseño del modelo de datos (solo diseñar) ✅
+- [x] Modelo acordado en el chat antes de escribir migración: `ingredientes`,
+  `movimientos_ingredientes`, `receta_items`, `producciones`, `depositos`, `producto_deposito`,
+  `ingrediente_deposito`.
+
+### Etapa 2 — Migración del esquema ✅
+- [x] Las 7 tablas + RLS (mismo criterio que el resto: `sucursales_gestionables()`/
+  `sucursales_del_usuario()` para lo de sucursal; dueño+encargado del negocio para `depositos`
+  vía `perfiles.negocio_id`, alta/baja de depósitos dueño-only).
+- [x] `registrar_movimiento_ingrediente` (mismo patrón atómico que `registrar_movimiento_stock`).
+- [x] `registrar_produccion`: chequea que alcancen TODOS los ingredientes antes de descontar
+  ninguno, reusa `registrar_movimiento_ingrediente`/`registrar_movimiento_stock`.
+  `SECURITY INVOKER` (no `DEFINER` — no hace falta bypassear RLS, las políticas de las tablas
+  nuevas ya validan con el usuario real de punta a punta).
+- [x] `transferir_stock` (producto o ingrediente, sucursal ↔ depósito), mismo criterio atómico.
+- [x] `movimientos_stock.motivo` amplía con `'produccion'`/`'transferencia'`.
+- [x] Config del frontend: `ModuloId` gana `produccion`/`deposito` en `src/config/modulos.ts`
+  (apagados en los 3 `NEGOCIOS` por defecto).
+- **Nota de robustez, documentada en el código:** el chequeo de "alcanzan los ingredientes" y el
+  descuento real son dos pasadas separadas — con dos producciones concurrentes del mismo
+  producto, en el peor caso podría quedar algún ingrediente en 0 en vez de fallar limpio. Caso
+  raro en un negocio chico, aceptado por ahora.
+
+### Etapa 3 — Pantalla de Ingredientes + toggle de módulos ✅ (código listo, falta probar en vivo)
+- [x] **Toggle de módulos** en `PanelConfiguracion` (dueño-only, sección "Módulos" nueva): on/off
+  inmediato (no junto al botón de guardar general) para los módulos no-núcleo (`salon`,
+  `mostrador`, `suscripciones`, `produccion`, `deposito`) — de paso esto habilita también
+  prender/apagar Salón/Mostrador/Afiliados después del alta, algo que antes solo se definía una
+  vez al registrarse.
+- [x] **`IngredientesContext`** (nuevo, montado siempre en `App.tsx` como los demás — el gating
+  es solo visual): mismo patrón que `MenuContext` pero sin la rama de catálogo compartido
+  (ingredientes es siempre directo por sucursal, según lo acordado en la Etapa 1). Sin mirror
+  offline todavía; las escrituras se bloquean sin conexión, igual que productos.
+- [x] **Pestaña "Ingredientes" dentro de Inventario** (`ContenedorInventario.tsx`), visible solo
+  si el módulo `produccion` está activo — decisión tomada con el usuario: no sección propia del
+  NavBar, sino una pestaña más, mismo criterio que "Historial de stock"/"Ingreso de mercadería".
+  `ContenedorIngredientes.tsx` (nuevo, self-contained) + `ModalIngrediente` (alta/edición) +
+  `ModalStockIngrediente` (ajuste atómico vía `registrar_movimiento_ingrediente`).
+- [ ] **Falta probar en vivo:** activar el módulo `produccion` desde Configuración, cargar un
+  ingrediente, ajustar su stock, editar/desactivar/eliminar.
+
+### Pendiente
+- [x] **Etapa 4** — Recetas ✅ (código listo, falta probar en vivo): `useReceta` (hook, mismo
+  patrón que `useKardexProducto`) + `SeccionReceta` dentro de `ModalProducto` (solo al editar un
+  producto existente, con el módulo `produccion` activo). Límite heredado de la Etapa 1: la
+  receta usa ingredientes de la sucursal activa nomás — en un negocio con 2+ sucursales, cada una
+  necesita su propia receta con sus propios ingredientes.
+- [x] **Etapa 5** — Producción por lote ✅ (código listo, falta probar en vivo): `ModalProduccion`
+  (acción "Producir" en el menú `⋯` de cada producto, visible con el módulo activo) — muestra el
+  consumo de cada ingrediente según cantidad × receta vs. stock disponible, bloquea el botón si
+  no alcanza, y llama a `registrar_produccion` (RPC de la Etapa 2). Refresca productos e
+  ingredientes después. Si el producto no tiene receta, el modal lo avisa en vez de fallar.
+- [x] **Etapa 6** — Depósito ✅ (código listo, falta probar en vivo): `DepositosContext` (alta/baja
+  dueño-only) + `useStockDeposito` (hook on-demand, mismo patrón que `useReceta`) + pestaña
+  "Depósito" dentro de Inventario (visible con el módulo activo) — crea el primer depósito si no
+  hay ninguno, selector si hay varios, lista de stock de productos e ingredientes, y
+  `ModalTransferencia` (producto o ingrediente, en cualquier dirección, vía `transferir_stock`).
+  **Bug encontrado y corregido antes de construir la UI:** `transferir_stock` no validaba stock
+  suficiente en el origen — una transferencia más grande de lo disponible sumaba igual el total
+  del otro lado y solo vaciaba el origen a 0 (creaba stock de la nada). Migración
+  `corrige_validacion_transferir_stock`.
+- [x] **`ModalIngresoDeposito`** (botón "Agregar al depósito"): carga de stock directa en el
+  depósito para mercadería que llegó ahí sin pasar por ninguna sucursal (a diferencia de
+  Transferir, no descuenta nada en ningún local) — RPC atómica nueva `ingresar_stock_deposito`.
+- [ ] Probar en vivo cada etapa antes de pasar a la siguiente (mismo criterio que el resto del
+  proyecto). Con esto, las 6 etapas de "Producción/ingredientes + Depósito" tienen código
+  completo — falta la prueba en vivo de las Etapas 3-6 (la 1 y 2 son diseño/migración, ya
+  aplicadas).
+
+---
+
 ## ⚫ Proyectos futuros (grandes, sin apuro)
 
-- [ ] **Productos vs. ingredientes (fabricación propia)** — para locales que producen lo que venden (panadería, pastelería, etc.), no solo revenden. Hoy `productos` es una sola entidad; esto necesitaría separar "ingredientes" (materia prima, con su propio stock, no se vende directo) de "productos" (lo que sí se vende), más una receta/BOM que vincule cada producto con los ingredientes que consume y en qué cantidad. Pregunta abierta a resolver antes de diseñar: ¿el descuento de ingredientes pasa en el momento de la VENTA del producto (consumo directo, receta como multiplicador), o en un paso previo de "producción por lote" (se arma una tanda de N panes, se descuentan los ingredientes ahí, y el pan queda con su propio stock independiente para vender)? Lo segundo es más realista para una panadería de verdad pero es bastante más trabajo — conviene validarlo con un cliente real antes de encarar. Puede apoyarse en `movimientos_stock` (el kardex ya construido) sumando un motivo nuevo tipo `'produccion'`.
-- [ ] **Inventario extra / depósito externo** — un segundo lugar de stock además de la sucursal de venta (ej. un galpón/depósito), con transferencias hacia/desde la sucursal. Conceptualmente parecido a `producto_sucursal` (que ya separa stock por sucursal) pero generalizado a una "ubicación" que puede ser una sucursal o un depósito. Podría reusar `movimientos_stock` con un motivo `'transferencia'` para registrar el traspaso. Definir si el depósito es exclusivo de un negocio o se puede compartir entre sucursales del mismo negocio.
+- [ ] Ver sección propia más abajo: **"🟤 Producción/ingredientes + Depósito"** (dejó de ser solo una idea del backlog, tiene modelo de datos ya aplicado).
 - [ ] Carrito en el catálogo: mutar la vidriera actual a tienda con pedidos. Requiere tabla de pedidos, notificación al comercio, estados de pedido, manejo de stock.
 - [ ] Cobro 2 — Marketplace: que los gimnasios cobren las cuotas a sus socios vía MercadoPago (OAuth por cada gimnasio, split de pagos, responsabilidad sobre plata de terceros).
 - [ ] Rubro reventa/celulares: inventario serializado (IMEI). Por ahora se carga cada equipo como producto individual con stock 1. Esperar feedback del amigo.

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera, Store } from 'lucide-react';
+import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera, Store, ChefHat } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
+import { useModulos } from '../../hooks/useModulos';
 import { supabase } from '../../lib/supabase';
 import { imprimirEtiqueta } from '../../logic/impresion';
 import type { Producto } from '../../types';
@@ -14,6 +15,9 @@ import ModalCargaAudio from '../Inventario/ModalCargaAudio';
 import ModalIngresoMercaderia from '../Inventario/ModalIngresoMercaderia';
 import ModalKardexProducto from '../Inventario/ModalKardexProducto';
 import ModalEscanerCamara from '../Inventario/ModalEscanerCamara';
+import ModalProduccion from '../Inventario/ModalProduccion';
+import ContenedorIngredientes from '../Inventario/ContenedorIngredientes';
+import ContenedorDeposito from '../Inventario/ContenedorDeposito';
 import { TrendingUp } from 'lucide-react';
 import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
 
@@ -21,6 +25,8 @@ const ContenedorInventario = () => {
     const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto, generarCodigoBarras, recargarProductos  } = useMenu();
     const { impresorasDeEtiquetas } = useImpresoras();
     const { negocio } = useAuth();
+    const { tiene } = useModulos();
+    const [vista, setVista] = useState<'productos' | 'ingredientes' | 'deposito'>('productos');
     const [sincronizandoTN, setSincronizandoTN] = useState<string | null>(null);
     const [errorTN, setErrorTN] = useState('');
     const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null);
@@ -31,6 +37,7 @@ const ContenedorInventario = () => {
     const [modalCargaAudio, setModalCargaAudio] = useState(false);
     const [modalIngreso, setModalIngreso] = useState(false);
     const [modalKardex, setModalKardex] = useState<Producto | null>(null);
+    const [modalProduccion, setModalProduccion] = useState<Producto | null>(null);
     const [modalEscaner, setModalEscaner] = useState(false);
     const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [agregandoCategoria, setAgregandoCategoria] = useState(false);
@@ -150,6 +157,35 @@ const ContenedorInventario = () => {
 
     return (
         <div className="h-full flex flex-col bg-white overflow-hidden">
+            {/* Pestañas Productos/Ingredientes/Depósito — según los módulos activos */}
+            {(tiene('produccion') || tiene('deposito')) && (
+                <div className="flex gap-1 bg-stone-100 p-1 m-3 mb-0 rounded-xl shrink-0 w-fit">
+                    <button
+                        onClick={() => setVista('productos')}
+                        className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${vista === 'productos' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500'}`}
+                    >
+                        Productos
+                    </button>
+                    {tiene('produccion') && (
+                        <button
+                            onClick={() => setVista('ingredientes')}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${vista === 'ingredientes' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500'}`}
+                        >
+                            Ingredientes
+                        </button>
+                    )}
+                    {tiene('deposito') && (
+                        <button
+                            onClick={() => setVista('deposito')}
+                            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${vista === 'deposito' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-500'}`}
+                        >
+                            Depósito
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {vista === 'ingredientes' ? <ContenedorIngredientes /> : vista === 'deposito' ? <ContenedorDeposito /> : <>
             {/* Topbar */}
             <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-3 px-4 py-3 bg-stone-50 border-b border-stone-200 shrink-0">
                 <h2 className="text-lg font-bold text-stone-800 sm:flex-1">Inventario</h2>
@@ -334,6 +370,8 @@ const ContenedorInventario = () => {
                                                 onToggleFavorito={() => toggleFavorito(prod.id, !prod.favorito)}
                                                 onTogglePublicado={() => togglePublicado(prod.id, !prod.publicado)}
                                                 onVerKardex={() => setModalKardex(prod)}
+                                                mostrarProduccion={tiene('produccion')}
+                                                onProducir={() => setModalProduccion(prod)}
                                                 onGenerarCodigo={() => generarCodigoBarras(prod.id)}
                                                 onImprimirEtiqueta={() => handleImprimirEtiqueta(prod)}
                                                 mostrarTiendanube={!!negocio?.tiendanube_store_id && prod.tipo_venta === 'unidad'}
@@ -350,7 +388,7 @@ const ContenedorInventario = () => {
             </div>
 
             {/* Modales */}
-            {modalProducto !== undefined && (
+            {modalProducto !== undefined && (//
                 <ModalProducto
                     producto={modalProducto}
                     datosIniciales={duplicando ?? undefined}
@@ -381,6 +419,10 @@ const ContenedorInventario = () => {
 
             {modalKardex && (
                 <ModalKardexProducto producto={modalKardex} onCerrar={() => setModalKardex(null)} />
+            )}
+
+            {modalProduccion && (
+                <ModalProduccion producto={modalProduccion} onCerrar={() => setModalProduccion(null)} />
             )}
 
             <ModalEscanerCamara
@@ -441,6 +483,7 @@ const ContenedorInventario = () => {
                     </div>
                 </div>
             )}
+            </>}
         </div>
     );
 };
@@ -453,6 +496,8 @@ interface MenuAccionesProps {
     onToggleFavorito: () => void;
     onTogglePublicado: () => void;
     onVerKardex: () => void;
+    mostrarProduccion: boolean;
+    onProducir: () => void;
     onGenerarCodigo: () => void;
     onImprimirEtiqueta: () => void;
     mostrarTiendanube: boolean;
@@ -460,7 +505,7 @@ interface MenuAccionesProps {
     onSincronizarTiendanube: () => void;
 }
 
-const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, onGenerarCodigo, onImprimirEtiqueta, mostrarTiendanube, sincronizandoTiendanube, onSincronizarTiendanube }: MenuAccionesProps) => {
+const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, mostrarProduccion, onProducir, onGenerarCodigo, onImprimirEtiqueta, mostrarTiendanube, sincronizandoTiendanube, onSincronizarTiendanube }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
 
     const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
@@ -502,6 +547,12 @@ const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavo
                         <button className={item} onClick={() => { onVerKardex(); setAbierto(false); }}>
                             <History size={12} className="text-stone-400" /> Historial de stock
                         </button>
+
+                        {mostrarProduccion && (
+                            <button className={item} onClick={() => { onProducir(); setAbierto(false); }}>
+                                <ChefHat size={12} className="text-stone-400" /> Producir
+                            </button>
+                        )}
 
                         {!prod.codigo_barras && (
                             <button className={item} onClick={() => { onGenerarCodigo(); setAbierto(false); }}>

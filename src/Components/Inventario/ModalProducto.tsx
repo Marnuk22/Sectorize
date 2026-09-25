@@ -5,10 +5,12 @@ import { usePlan } from '../../hooks/usePlan';
 import type { Producto, Categoria } from '../../types';
 import { UNIDADES, type UnidadMedida } from '../../config/unidades';
 import { useAuth } from '../../context/AuthContext';
+import { useModulos } from '../../hooks/useModulos';
 import { supabase } from '../../lib/supabase';
 import { comprimirImagen, validarImagen } from '../../logic/imagen';
+import SeccionReceta from './SeccionReceta';
 
-
+//ModalProducto es un modal que permite crear o editar un producto. Se usa en Inventario y en el menú de ventas (para agregar productos a la carta).
 interface Props {
     producto?: Producto | null;
     datosIniciales?: Partial<typeof CAMPOS_INICIALES>;
@@ -42,6 +44,7 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
     const { agregarProducto, editarProducto, categorias, agregarCategoria } = useMenu();
     const { puede } = usePlan();
     const puedeStock = puede('seguimiento_stock');
+    const { tiene } = useModulos();
 
     const [form, setForm] = useState(CAMPOS_INICIALES);
     const [seguimientoStock, setSeguimientoStock] = useState(false);
@@ -509,6 +512,12 @@ const ModalProducto = ({ producto, datosIniciales, onCerrar }: Props) => {
                         </button>
                     </div>
                 </form>
+
+                {producto && tiene('produccion') && (
+                    <div className="px-5 pb-5">
+                        <SeccionReceta productoId={producto.id} />
+                    </div>
+                )}
             </div>
         </div>
     );
