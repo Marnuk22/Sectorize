@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="es-AR">
+<html lang="es-AR" class="no-js">
 <head>
+<script>document.documentElement.className = 'js';</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vallis — Sistema para cobrar en verdulerías, dietéticas y kioscos</title>
@@ -121,8 +122,51 @@
     .boton-grande { padding: 15px 32px; font-size: 17px; border-radius: 13px; }
 
     /* ---------- Hero ---------- */
-    .hero { padding: 88px 0 64px; position: relative; }
-    .hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 56px; align-items: center; }
+    .hero { padding: 72px 0 56px; position: relative; }
+    .hero-panel { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 56px; align-items: center; }
+    .hero-panel + .hero-panel { margin-top: 56px; }
+
+    /* Selector de rubro (tabs). Sin JS no se muestra y se ven los tres
+       paneles uno abajo del otro; con JS (clase .js en <html>) solo el activo. */
+    .tabs {
+        display: none; gap: 6px; padding: 5px; margin-bottom: 44px;
+        background: var(--papel-hondo); border: 1px solid var(--borde);
+        border-radius: 14px; width: fit-content; max-width: 100%;
+    }
+    .js .tabs { display: inline-flex; }
+    .tab {
+        font-family: 'Inter', sans-serif; font-weight: 600; font-size: 15px;
+        color: var(--tinta-suave); background: transparent;
+        border: 1px solid transparent; border-radius: 10px;
+        padding: 9px 20px; cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+    }
+    .tab:hover { color: var(--tinta); }
+    .tab[aria-selected="true"] {
+        background: var(--crema-tarjeta); color: var(--violeta);
+        border-color: var(--borde); box-shadow: 0 1px 0 rgba(0,0,0,0.04);
+    }
+    .js .hero-panel:not(.activo) { display: none; }
+    .js .hero-panel + .hero-panel { margin-top: 0; }
+    .panel-etiqueta { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tinta-suave); margin-bottom: 12px; }
+    .js .panel-etiqueta { display: none; }
+    .visual-placeholder {
+        min-height: 300px; border: 1.5px dashed var(--borde); border-radius: 16px;
+        background: var(--crema-tarjeta); display: flex; align-items: center; justify-content: center;
+        text-align: center; padding: 24px; color: var(--tinta-suave); font-size: 14px;
+    }
+
+    /* Trust: señales de "hecho acá" */
+    .trust {
+        list-style: none; display: flex; flex-wrap: wrap; gap: 10px 26px;
+        margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--borde);
+        font-size: 14.5px; color: var(--tinta-suave);
+    }
+    .trust li { display: inline-flex; align-items: center; gap: 8px; }
+    .trust li::before {
+        content: ''; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+        background: var(--verde); box-shadow: 0 0 0 3px rgba(63,125,79,0.16);
+    }
 
     .eyebrow {
         display: inline-flex; align-items: center; gap: 7px;
@@ -131,9 +175,9 @@
         padding: 6px 13px; border-radius: 100px;
         margin-bottom: 22px;
     }
-    .hero h1 { font-size: clamp(2.6rem, 5.2vw, 4rem); letter-spacing: -0.02em; margin-bottom: 20px; }
+    .hero h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); letter-spacing: -0.02em; margin-bottom: 30px; max-width: 18ch; }
     .hero h1 em { font-style: normal; color: var(--verde); }
-    .hero-sub { font-size: 19px; color: var(--tinta-suave); max-width: 30ch; margin-bottom: 34px; }
+    .hero-sub { font-size: 19px; color: var(--tinta-suave); max-width: 34ch; margin-bottom: 34px; }
     .hero-acciones { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
     .sin-tarjeta { font-size: 14px; color: var(--tinta-suave); }
 
@@ -197,6 +241,27 @@
     .tarjeta-benef h3 { font-size: 21px; margin-bottom: 9px; letter-spacing: -0.01em; }
     .tarjeta-benef p { color: var(--tinta-suave); font-size: 15.5px; }
 
+    /* Antes / Después */
+    .antes-despues { display: grid; gap: 18px; }
+    .ad-fila { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; }
+    .ad-fila .tarjeta-benef { padding: 24px 26px; }
+    .ad-fila .tarjeta-benef:hover { transform: none; box-shadow: none; }
+    .ad-fila .tarjeta-benef p { font-size: 17px; color: var(--tinta); }
+    .ad-fila .ad-antes { background: var(--papel-hondo); border-style: dashed; }
+    .ad-fila .ad-antes p { color: var(--tinta-suave); }
+    .ad-fila .ad-despues { border-color: var(--verde); }
+    .ad-etiqueta {
+        display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+        text-transform: uppercase; padding: 4px 11px; border-radius: 100px; margin-bottom: 12px;
+    }
+    .ad-antes .ad-etiqueta { background: rgba(106,99,90,0.14); color: var(--tinta-suave); }
+    .ad-despues .ad-etiqueta { background: rgba(63,125,79,0.12); color: var(--verde-hondo); }
+    .ad-flecha {
+        align-self: center; width: 34px; height: 34px; border-radius: 50%;
+        background: var(--violeta); color: #fff; font-size: 17px;
+        display: flex; align-items: center; justify-content: center;
+    }
+
     /* Para quién */
     .para-quien { background: var(--papel-hondo); border-top: 1px solid var(--borde); border-bottom: 1px solid var(--borde); }
     .rubros { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
@@ -241,8 +306,44 @@
     .demo-total .val { font-family: 'Fraunces', serif; font-weight: 700; font-size: 30px; color: var(--verde); font-variant-numeric: tabular-nums; }
     .demo-nota { text-align: center; color: var(--tinta-suave); font-size: 14px; margin-top: 24px; }
 
+    /* Carga de inventario por audio */
+    .audio { padding-top: 24px; }
+    .audio-card {
+        display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+        background: var(--crema-tarjeta); border: 1px solid var(--borde);
+        border-radius: 22px; padding: 44px;
+        box-shadow: 0 30px 60px -36px rgba(43,40,35,0.3);
+    }
+    .pildora {
+        display: inline-flex; align-items: center; gap: 7px;
+        font-size: 13px; font-weight: 600; color: var(--violeta-hondo);
+        background: rgba(127,34,254,0.1); padding: 6px 13px; border-radius: 100px;
+        margin-bottom: 18px;
+    }
+    .audio-texto .titulo-seccion { margin-bottom: 16px; }
+    .audio-texto p { color: var(--tinta-suave); font-size: 17px; margin-bottom: 12px; }
+    .video-marco {
+        background: var(--papel); border: 1px solid var(--borde); border-radius: 16px;
+        overflow: hidden; aspect-ratio: 4 / 3;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .video-marco video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-placeholder { text-align: center; color: var(--tinta-suave); font-size: 14px; padding: 24px; }
+    .video-placeholder .play {
+        width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 14px;
+        background: var(--violeta); color: #fff;
+        display: flex; align-items: center; justify-content: center; font-size: 22px;
+    }
+
     /* Prueba social */
     .social { text-align: center; }
+    .social h2 { margin-top: 44px; }
+    .testimonios { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; margin-top: 32px; text-align: left; }
+    .testimonio { background: var(--crema-tarjeta); border: 1px solid var(--borde); border-radius: 18px; padding: 30px 28px; }
+    .comilla { font-family: 'Fraunces', serif; font-size: 46px; line-height: 0.8; color: var(--violeta); margin-bottom: 12px; }
+    .testimonio blockquote { font-size: 17px; color: var(--tinta); margin-bottom: 20px; }
+    .testimonio figcaption { display: flex; flex-direction: column; gap: 2px; font-size: 14px; color: var(--tinta-suave); }
+    .testimonio figcaption strong { color: var(--tinta); font-size: 15px; }
     .social-linea { display: inline-flex; align-items: center; gap: 12px; font-size: 18px; color: var(--tinta); background: var(--crema-tarjeta); border: 1px solid var(--borde); padding: 16px 28px; border-radius: 100px; }
     .social-punto { width: 9px; height: 9px; border-radius: 50%; background: var(--verde); box-shadow: 0 0 0 4px rgba(63,125,79,0.16); }
 
@@ -264,6 +365,38 @@
     .precio-caja h2 { font-size: 2rem; margin: 10px 0 12px; }
     .precio-caja p { color: var(--tinta-suave); font-size: 17px; margin-bottom: 30px; }
 
+    /* Cómo empezar */
+    .pasos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+    .paso-num {
+        width: 40px; height: 40px; border-radius: 50%; margin-bottom: 16px;
+        background: var(--violeta); color: #fff;
+        font-family: 'Fraunces', serif; font-weight: 700; font-size: 20px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .paso-tiempo {
+        display: inline-block; margin-top: 16px;
+        font-size: 13px; font-weight: 600; color: var(--verde-hondo);
+        background: rgba(63,125,79,0.1); padding: 5px 12px; border-radius: 100px;
+    }
+    .pasos-cta { text-align: center; margin-top: 40px; }
+
+    /* Preguntas frecuentes */
+    .faq { max-width: 760px; margin: 0 auto; display: grid; gap: 12px; }
+    .faq-item { background: var(--crema-tarjeta); border: 1px solid var(--borde); border-radius: 15px; transition: border-color 0.15s ease; }
+    .faq-item[open] { border-color: rgba(127,34,254,0.45); }
+    .faq-item summary {
+        list-style: none; cursor: pointer; padding: 18px 22px;
+        display: flex; align-items: center; justify-content: space-between; gap: 16px;
+        font-weight: 600; font-size: 17px;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after {
+        content: '+'; flex-shrink: 0; font-size: 26px; line-height: 1; color: var(--violeta);
+        transition: transform 0.2s ease;
+    }
+    .faq-item[open] summary::after { transform: rotate(45deg); }
+    .faq-item p { padding: 0 22px 20px; color: var(--tinta-suave); font-size: 16px; max-width: 62ch; }
+
     /* Cierre */
     .cierre { text-align: center; padding: 90px 0 100px; }
     .cierre h2 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -0.02em; margin-bottom: 16px; }
@@ -273,18 +406,28 @@
 
     /* ---------- Responsive ---------- */
     @media (max-width: 860px) {
-        .hero-grid { grid-template-columns: 1fr; gap: 44px; }
-        .ticket { max-width: 360px; margin: 0 auto; }
+        .hero-panel { grid-template-columns: 1fr; gap: 44px; }
+        .ticket, .visual-placeholder { max-width: 360px; margin: 0 auto; width: 100%; }
         .beneficios { grid-template-columns: 1fr; }
         .rubros { grid-template-columns: 1fr; }
-        .hero { padding: 56px 0 40px; }
+        .audio-card { grid-template-columns: 1fr; gap: 32px; padding: 30px 24px; }
+        .testimonios { grid-template-columns: 1fr; }
+        .hero { padding: 48px 0 40px; }
         section { padding: 56px 0; }
+        .audio { padding-top: 8px; }
+        .ad-fila { grid-template-columns: 1fr; gap: 10px; }
+        .ad-flecha { justify-self: center; transform: rotate(90deg); }
+        .pasos { grid-template-columns: 1fr; }
     }
     @media (max-width: 520px) {
         .barra { height: 60px; }
         .boton { padding: 10px 18px; font-size: 14px; }
-        .hero h1 { font-size: 2.4rem; }
+        .hero h1 { font-size: 2.2rem; }
+        .js .tabs { display: flex; width: 100%; }
+        .tab { flex: 1; padding: 9px 6px; font-size: 14px; }
     }
+
+    a:focus-visible, button:focus-visible { outline: 2px solid var(--violeta); outline-offset: 3px; }
 
     @media (prefers-reduced-motion: reduce) {
         * { transition: none !important; scroll-behavior: auto; }
@@ -301,22 +444,49 @@
 <header>
     <div class="envoltura barra">
         <div class="logo"><span class="logo-marca" aria-hidden="true">V</span> Vallis</div>
-        <a href="#empezar" class="boton">Empezar gratis</a>
+        <a href="#empezar" class="boton" data-cta>Empezar gratis</a>
     </div>
 </header>
 
 <!-- Hero -->
 <section class="hero" aria-labelledby="hero-titulo">
-    <div class="envoltura hero-grid">
-        <div>
-            <span class="eyebrow">● Hecho en Argentina, para comercios de acá</span>
-            <h1 id="hero-titulo">Cobrá en segundos y <em>enterate</em> cómo te fue en el día.</h1>
-            <p class="hero-sub">Sin papeles, sin cuentas a mano, sin dolores de cabeza.</p>
-            <div class="hero-acciones">
-                <a href="#empezar" class="boton boton-grande">Empezar gratis</a>
-                <span class="sin-tarjeta">No hace falta instalar nada</span>
-            </div>
+    <div class="envoltura">
+        <span class="eyebrow">● Hecho en Argentina, para comercios de acá</span>
+        <h1 id="hero-titulo">El POS para tu negocio, <em>sea cual sea.</em></h1>
+
+        <!-- Selector de rubro. Solo se muestra con JS; sin JS se ven los tres paneles apilados. -->
+        <div class="tabs" role="tablist" aria-label="Elegí tu tipo de negocio">
+            <button class="tab" role="tab" id="tab-restaurante" aria-controls="panel-restaurante" aria-selected="false" tabindex="-1">Restaurante</button>
+            <button class="tab" role="tab" id="tab-tienda" aria-controls="panel-tienda" aria-selected="true">Tienda</button>
+            <button class="tab" role="tab" id="tab-gimnasio" aria-controls="panel-gimnasio" aria-selected="false" tabindex="-1">Gimnasio</button>
         </div>
+
+        <!-- Panel: Restaurante -->
+        <div class="hero-panel" role="tabpanel" id="panel-restaurante" aria-labelledby="tab-restaurante">
+            <div>
+                <h2 class="panel-etiqueta">Restaurante, bar y café</h2>
+                <!-- TODO(Manuel): copy final del subtítulo para restaurantes (este es un borrador) -->
+                <p class="hero-sub">Mesas, sectores y pedidos en un solo lugar. Cobrás y cerrás la caja sin dolores de cabeza.</p>
+                <div class="hero-acciones">
+                    <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+                    <span class="sin-tarjeta">14 días gratis, sin tarjeta</span>
+                </div>
+            </div>
+            <!-- TODO(Manuel): reemplazar por una captura real de Salón (mesas y sectores) -->
+            <div class="visual-placeholder" role="img" aria-label="Espacio reservado para una captura de la pantalla de mesas y sectores.">TODO · Captura de Salón (mesas y sectores)</div>
+        </div>
+
+        <!-- Panel: Tienda (activo por defecto) -->
+        <div class="hero-panel activo" role="tabpanel" id="panel-tienda" aria-labelledby="tab-tienda">
+            <div>
+                <h2 class="panel-etiqueta">Tienda, kiosco y comercio</h2>
+                <!-- TODO(Manuel): revisar/ajustar el subtítulo de Tienda -->
+                <p class="hero-sub">Cobrá en segundos y enterate cómo te fue en el día. Sin papeles, sin cuentas a mano.</p>
+                <div class="hero-acciones">
+                    <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+                    <span class="sin-tarjeta">14 días gratis, sin tarjeta</span>
+                </div>
+            </div>
         <div class="ticket" role="img" aria-label="Ejemplo de un ticket de venta en Vallis: tomate 0,750 kg, manzana 1,2 kg y pan por unidad, con un total de 4.750 pesos.">
             <div class="peso-chip" aria-hidden="true">0,750 kg</div>
             <div class="ticket-interno" aria-hidden="true">
@@ -345,6 +515,53 @@
                 <div class="ticket-pie">GRACIAS POR SU COMPRA · VALLIS</div>
             </div>
         </div>
+        </div>
+
+        <!-- Panel: Gimnasio -->
+        <div class="hero-panel" role="tabpanel" id="panel-gimnasio" aria-labelledby="tab-gimnasio">
+            <div>
+                <h2 class="panel-etiqueta">Gimnasio y academia</h2>
+                <!-- TODO(Manuel): copy final del subtítulo para gimnasios (este es un borrador) -->
+                <p class="hero-sub">Socios, membresías y asistencias al día. Cobrás la cuota y sabés quién está al día.</p>
+                <div class="hero-acciones">
+                    <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+                    <span class="sin-tarjeta">14 días gratis, sin tarjeta</span>
+                </div>
+            </div>
+            <!-- TODO(Manuel): reemplazar por una captura real de Afiliados (membresías y asistencias) -->
+            <div class="visual-placeholder" role="img" aria-label="Espacio reservado para una captura de la pantalla de socios y membresías.">TODO · Captura de Afiliados (socios y membresías)</div>
+        </div>
+
+        <!-- Señales de confianza -->
+        <ul class="trust" aria-label="Por qué confiar en Vallis">
+            <li>Soporte en español, por WhatsApp</li>
+            <li>Precio en pesos argentinos</li>
+            <li>Sin instalar nada: funciona desde el celular</li>
+        </ul>
+    </div>
+</section>
+
+<!-- Carga de inventario por audio -->
+<section class="audio" aria-labelledby="audio-titulo">
+    <div class="envoltura">
+        <div class="audio-card">
+            <div class="audio-texto">
+                <span class="pildora">🎙️ Cargá sin tipear</span>
+                <h2 class="titulo-seccion" id="audio-titulo">Decí lo que tenés. Vallis lo anota.</h2>
+                <!-- TODO(Manuel): revisar el copy de este bloque -->
+                <p>Hablás tu mercadería en voz alta, como se la dictarías a un empleado, y el sistema arma la lista de productos con sus precios y cantidades.</p>
+                <p>Revisás, confirmás y listo: sin pasar horas frente a una planilla el día que llega el pedido del proveedor.</p>
+            </div>
+            <div class="video-marco">
+                <!-- TODO(Manuel): subí el video/GIF corto (mp4, ~10-20 s) como /audio-inventario.mp4 (+ /audio-inventario.jpg de póster)
+                     y reemplazá el placeholder de abajo por:
+                     <video src="/audio-inventario.mp4" poster="/audio-inventario.jpg" autoplay muted loop playsinline></video> -->
+                <div class="video-placeholder">
+                    <div class="play" aria-hidden="true">▶</div>
+                    TODO · Video corto de la carga por audio
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -368,6 +585,49 @@
                 <div class="benef-ico" style="background: rgba(63,125,79,0.12);" aria-hidden="true">📦</div>
                 <h3>Sabés qué se te está por acabar</h3>
                 <p>Cargás tus productos una vez y el sistema te avisa cuando algo está bajo. Comprás lo justo, no de más.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Antes / Después -->
+<section aria-labelledby="antesdespues-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="antesdespues-titulo">Del cuaderno al celular</h2>
+        <p class="bajada-seccion">Lo mismo de todos los días, pero sin la calculadora ni las cuentas a mano.</p>
+        <div class="antes-despues">
+            <div class="ad-fila">
+                <div class="tarjeta-benef ad-antes">
+                    <span class="ad-etiqueta">Hoy</span>
+                    <p>Sacás la cuenta con la calculadora y rezás para no equivocarte.</p>
+                </div>
+                <div class="ad-flecha" aria-hidden="true">→</div>
+                <div class="tarjeta-benef ad-despues">
+                    <span class="ad-etiqueta">Con Vallis</span>
+                    <p>Pesás y el precio sale solo.</p>
+                </div>
+            </div>
+            <div class="ad-fila">
+                <div class="tarjeta-benef ad-antes">
+                    <span class="ad-etiqueta">Hoy</span>
+                    <p>No sabés si la caja cuadra hasta contar todo a mano.</p>
+                </div>
+                <div class="ad-flecha" aria-hidden="true">→</div>
+                <div class="tarjeta-benef ad-despues">
+                    <span class="ad-etiqueta">Con Vallis</span>
+                    <p>Cerrás y sabés al instante si faltó o sobró plata.</p>
+                </div>
+            </div>
+            <div class="ad-fila">
+                <div class="tarjeta-benef ad-antes">
+                    <span class="ad-etiqueta">Hoy</span>
+                    <p>Anotás en un cuaderno y se te pierden ventas de vista.</p>
+                </div>
+                <div class="ad-flecha" aria-hidden="true">→</div>
+                <div class="tarjeta-benef ad-despues">
+                    <span class="ad-etiqueta">Con Vallis</span>
+                    <p>Todo queda cargado y a mano en el celular.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -425,6 +685,38 @@
     </div>
 </section>
 
+<!-- Cómo empezar -->
+<section aria-labelledby="pasos-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="pasos-titulo">Empezar es más fácil de lo que pensás</h2>
+        <p class="bajada-seccion">Tres pasos y ya estás cobrando, sin instalar nada.</p>
+        <!-- TODO(Manuel): validar los tiempos estimados de cada paso con un alta real -->
+        <div class="pasos">
+            <div class="tarjeta-benef">
+                <div class="paso-num" aria-hidden="true">1</div>
+                <h3>Creá tu cuenta</h3>
+                <p>Con tu mail y sin tarjeta.</p>
+                <span class="paso-tiempo">⏱ Menos de 1 minuto</span>
+            </div>
+            <div class="tarjeta-benef">
+                <div class="paso-num" aria-hidden="true">2</div>
+                <h3>Cargá tus productos</h3>
+                <p>A mano, importando un Excel o dictándolos por audio.</p>
+                <span class="paso-tiempo">⏱ Unos 10 minutos</span>
+            </div>
+            <div class="tarjeta-benef">
+                <div class="paso-num" aria-hidden="true">3</div>
+                <h3>Empezá a cobrar</h3>
+                <p>Desde el celular, ya mismo.</p>
+                <span class="paso-tiempo">⏱ Al toque</span>
+            </div>
+        </div>
+        <div class="pasos-cta">
+            <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+        </div>
+    </div>
+</section>
+
 <!-- Demo venta a granel -->
 <section aria-labelledby="demo-titulo">
     <div class="envoltura">
@@ -467,6 +759,20 @@
             <span class="social-punto"></span>
             Ya lo están probando comercios en Tandil.
         </div>
+        <h2 class="titulo-seccion">Lo que cuentan los comercios</h2>
+        <!-- TODO(Manuel): cargar 1-2 testimonios reales (frase, nombre, rubro y ciudad). Con solo uno, borrá la segunda tarjeta y pasá .testimonios a 1 columna. -->
+        <div class="testimonios">
+            <figure class="testimonio">
+                <div class="comilla" aria-hidden="true">“</div>
+                <blockquote>[TODO: frase corta del cliente, 1 o 2 renglones]</blockquote>
+                <figcaption><strong>[TODO: Nombre]</strong><span>[TODO: Rubro · Ciudad]</span></figcaption>
+            </figure>
+            <figure class="testimonio">
+                <div class="comilla" aria-hidden="true">“</div>
+                <blockquote>[TODO: frase corta del cliente, 1 o 2 renglones]</blockquote>
+                <figcaption><strong>[TODO: Nombre]</strong><span>[TODO: Rubro · Ciudad]</span></figcaption>
+            </figure>
+        </div>
     </div>
 </section>
 
@@ -477,7 +783,52 @@
             <div class="precio-sello">14 días gratis</div>
             <h2>$30.000 <span style="font-size: 1rem; font-weight: 500; color: var(--tinta-suave);">/ mes</span></h2>
             <p>Probalo gratis dos semanas, sin tarjeta. Después, seguís con una suscripción mensual que podés cancelar cuando quieras.</p>
-            <a href="#empezar" class="boton boton-grande">Empezar gratis</a>
+            <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+        </div>
+    </div>
+</section>
+
+<!-- Preguntas frecuentes -->
+<section aria-labelledby="faq-titulo">
+    <div class="envoltura">
+        <h2 class="titulo-seccion" id="faq-titulo" style="text-align:center;">Preguntas frecuentes</h2>
+        <p class="bajada-seccion" style="margin: 0 auto 36px; text-align:center;">Lo que suelen preguntarnos antes de arrancar.</p>
+        <div class="faq">
+            <!-- TODO(Manuel): confirmar esta respuesta con una prueba real de corte de wifi antes de publicar
+                 (el modo offline permite cobrar; abrir/cerrar caja y editar inventario requieren conexión). -->
+            <details class="faq-item">
+                <summary>¿Funciona sin internet?</summary>
+                <p>Para cobrar, sí: si se corta la conexión seguís vendiendo, las ventas quedan guardadas en tu dispositivo y se sincronizan solas cuando vuelve. Lo que sí necesita internet es abrir y cerrar la caja y cargar o editar productos.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Puedo cancelar cuando quiera?</summary>
+                <p>Sí. Es una suscripción mensual y la cancelás vos mismo desde la app, cuando quieras. Se corta la renovación y seguís usando Vallis hasta el final del período que ya pagaste. Y arrancás con 14 días gratis, sin tarjeta.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Necesito comprar algún equipo especial?</summary>
+                <p>No. Alcanza con un celular, una tablet o una computadora con internet. Si querés, podés sumar un lector de códigos de barras o una impresora de tickets, pero son opcionales. Para vender por peso ponés el peso con el teclado: no hace falta una balanza conectada.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Sirve si soy solo yo atendiendo?</summary>
+                <p>Sí, está pensado también para eso: lo usás vos solo desde el celular. Y si más adelante sumás gente, podés darle a cada uno su propio acceso.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Funciona en Android y en iPhone?</summary>
+                <p>Sí. Vallis se usa desde el navegador (Chrome, Safari, el que tengas), así que anda en Android, iPhone, tablet o computadora, sin instalar ninguna app.</p>
+            </details>
+            <!-- TODO(Manuel): las 3 preguntas siguientes son genéricas, ajustalas a tu gusto -->
+            <details class="faq-item">
+                <summary>¿Puedo pasar mis productos desde un Excel?</summary>
+                <p>Sí. Podés importar tu lista desde un Excel, cargar los productos a mano o dictarlos por audio, lo que te quede más cómodo.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Puedo tener empleados o más de un local?</summary>
+                <p>Sí. Podés darle acceso a tus empleados, cada uno con su rol, y manejar más de una sucursal desde la misma cuenta.</p>
+            </details>
+            <details class="faq-item">
+                <summary>¿Tengo soporte si me trabo con algo?</summary>
+                <p>Sí. Nos escribís por WhatsApp o por mail y te damos una mano, en español.</p>
+            </details>
         </div>
     </div>
 </section>
@@ -487,7 +838,9 @@
     <div class="envoltura">
         <h2>Probalo hoy en tu negocio</h2>
         <p>Creás tu cuenta en un minuto y empezás a cobrar. Sin instalar nada.</p>
-        <a href="https://app.vallis.com.ar" class="boton boton-grande">Empezar gratis</a>
+        <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
+        <!-- Respaldo sin JavaScript (si cambiás el destino del CTA en el script de abajo, cambialo acá también) -->
+        <noscript><a href="https://app.vallis.com.ar" class="boton boton-grande">Empezar gratis</a></noscript>
     </div>
 </section>
 
@@ -502,6 +855,47 @@
         <div class="footer-marca">Vallis · Hecho en Argentina 🇦🇷</div>
     </div>
 </footer>
+
+<script>
+/* ---------------------------------------------------------------
+   CTA ÚNICO — para cambiar a dónde llevan TODOS los botones de la
+   página (o el texto), tocá solo esta constante. Los botones son
+   los que tienen el atributo data-cta.
+   --------------------------------------------------------------- */
+const CTA = {
+    url: 'https://app.vallis.com.ar',
+    texto: 'Empezar gratis'
+};
+document.querySelectorAll('[data-cta]').forEach(function (a) {
+    a.href = CTA.url;
+    a.textContent = CTA.texto;
+});
+
+/* Selector de rubro del hero (tabs accesibles: click y teclado). */
+(function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+    function activar(tab, enfocar) {
+        tabs.forEach(function (t) {
+            var activo = t === tab;
+            t.setAttribute('aria-selected', activo ? 'true' : 'false');
+            t.tabIndex = activo ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).classList.toggle('activo', activo);
+        });
+        if (enfocar) tab.focus();
+    }
+    tabs.forEach(function (tab, i) {
+        tab.addEventListener('click', function () { activar(tab); });
+        tab.addEventListener('keydown', function (e) {
+            var destino = null;
+            if (e.key === 'ArrowRight') destino = tabs[(i + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft') destino = tabs[(i - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') destino = tabs[0];
+            else if (e.key === 'End') destino = tabs[tabs.length - 1];
+            if (destino) { e.preventDefault(); activar(destino, true); }
+        });
+    });
+})();
+</script>
 
 </body>
 </html>
