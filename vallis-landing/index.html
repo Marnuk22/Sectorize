@@ -76,6 +76,10 @@
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* Que [hidden] siempre gane sobre los display de las clases de abajo
+       (lo usa el interruptor MOSTRAR_BORRADOR del script del final). */
+    [hidden] { display: none !important; }
+
     html { scroll-behavior: smooth; }
 
     body {
@@ -175,7 +179,7 @@
         padding: 6px 13px; border-radius: 100px;
         margin-bottom: 22px;
     }
-    .hero h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); letter-spacing: -0.02em; margin-bottom: 30px; max-width: 18ch; }
+    .hero h1 { font-size: clamp(2.4rem, 5vw, 3.6rem); letter-spacing: -0.02em; margin-bottom: 30px; max-width: 20ch; }
     .hero h1 em { font-style: normal; color: var(--verde); }
     .hero-sub { font-size: 19px; color: var(--tinta-suave); max-width: 34ch; margin-bottom: 34px; }
     .hero-acciones { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
@@ -328,6 +332,9 @@
         display: flex; align-items: center; justify-content: center;
     }
     .video-marco video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* Sin video todavía: la tarjeta queda a una columna, solo con el texto. */
+    .audio-card:has(.video-marco[hidden]) { grid-template-columns: 1fr; }
+    .audio-card:has(.video-marco[hidden]) .audio-texto { max-width: 62ch; }
     .video-placeholder { text-align: center; color: var(--tinta-suave); font-size: 14px; padding: 24px; }
     .video-placeholder .play {
         width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 14px;
@@ -452,17 +459,21 @@
 <section class="hero" aria-labelledby="hero-titulo">
     <div class="envoltura">
         <span class="eyebrow">● Hecho en Argentina, para comercios de acá</span>
-        <h1 id="hero-titulo">El POS para tu negocio, <em>sea cual sea.</em></h1>
+        <h1 id="hero-titulo">
+            <span data-publicado>Cobrá en segundos y <em>enterate</em> cómo te fue en el día.</span>
+            <span data-borrador hidden>El POS para tu negocio, <em>sea cual sea.</em></span>
+        </h1>
 
-        <!-- Selector de rubro. Solo se muestra con JS; sin JS se ven los tres paneles apilados. -->
-        <div class="tabs" role="tablist" aria-label="Elegí tu tipo de negocio">
+        <!-- Selector de rubro (borrador: oculto hasta que Restaurante y Gimnasio tengan captura y copy final).
+             Solo se muestra con JS; sin JS se ven los tres paneles apilados. -->
+        <div class="tabs" role="tablist" aria-label="Elegí tu tipo de negocio" data-borrador hidden>
             <button class="tab" role="tab" id="tab-restaurante" aria-controls="panel-restaurante" aria-selected="false" tabindex="-1">Restaurante</button>
             <button class="tab" role="tab" id="tab-tienda" aria-controls="panel-tienda" aria-selected="true">Tienda</button>
             <button class="tab" role="tab" id="tab-gimnasio" aria-controls="panel-gimnasio" aria-selected="false" tabindex="-1">Gimnasio</button>
         </div>
 
         <!-- Panel: Restaurante -->
-        <div class="hero-panel" role="tabpanel" id="panel-restaurante" aria-labelledby="tab-restaurante">
+        <div class="hero-panel" role="tabpanel" id="panel-restaurante" aria-labelledby="tab-restaurante" data-borrador hidden>
             <div>
                 <h2 class="panel-etiqueta">Restaurante, bar y café</h2>
                 <!-- TODO(Manuel): copy final del subtítulo para restaurantes (este es un borrador) -->
@@ -481,7 +492,10 @@
             <div>
                 <h2 class="panel-etiqueta">Tienda, kiosco y comercio</h2>
                 <!-- TODO(Manuel): revisar/ajustar el subtítulo de Tienda -->
-                <p class="hero-sub">Cobrá en segundos y enterate cómo te fue en el día. Sin papeles, sin cuentas a mano.</p>
+                <p class="hero-sub">
+                    <span data-publicado>Sin papeles, sin cuentas a mano, sin dolores de cabeza.</span>
+                    <span data-borrador hidden>Cobrá en segundos y enterate cómo te fue en el día. Sin papeles, sin cuentas a mano.</span>
+                </p>
                 <div class="hero-acciones">
                     <a href="#empezar" class="boton boton-grande" data-cta>Empezar gratis</a>
                     <span class="sin-tarjeta">14 días gratis, sin tarjeta</span>
@@ -518,7 +532,7 @@
         </div>
 
         <!-- Panel: Gimnasio -->
-        <div class="hero-panel" role="tabpanel" id="panel-gimnasio" aria-labelledby="tab-gimnasio">
+        <div class="hero-panel" role="tabpanel" id="panel-gimnasio" aria-labelledby="tab-gimnasio" data-borrador hidden>
             <div>
                 <h2 class="panel-etiqueta">Gimnasio y academia</h2>
                 <!-- TODO(Manuel): copy final del subtítulo para gimnasios (este es un borrador) -->
@@ -552,7 +566,7 @@
                 <p>Hablás tu mercadería en voz alta, como se la dictarías a un empleado, y el sistema arma la lista de productos con sus precios y cantidades.</p>
                 <p>Revisás, confirmás y listo: sin pasar horas frente a una planilla el día que llega el pedido del proveedor.</p>
             </div>
-            <div class="video-marco">
+            <div class="video-marco" data-borrador hidden>
                 <!-- TODO(Manuel): subí el video/GIF corto (mp4, ~10-20 s) como /audio-inventario.mp4 (+ /audio-inventario.jpg de póster)
                      y reemplazá el placeholder de abajo por:
                      <video src="/audio-inventario.mp4" poster="/audio-inventario.jpg" autoplay muted loop playsinline></video> -->
@@ -759,9 +773,9 @@
             <span class="social-punto"></span>
             Ya lo están probando comercios en Tandil.
         </div>
-        <h2 class="titulo-seccion">Lo que cuentan los comercios</h2>
+        <h2 class="titulo-seccion" data-borrador hidden>Lo que cuentan los comercios</h2>
         <!-- TODO(Manuel): cargar 1-2 testimonios reales (frase, nombre, rubro y ciudad). Con solo uno, borrá la segunda tarjeta y pasá .testimonios a 1 columna. -->
-        <div class="testimonios">
+        <div class="testimonios" data-borrador hidden>
             <figure class="testimonio">
                 <div class="comilla" aria-hidden="true">“</div>
                 <blockquote>[TODO: frase corta del cliente, 1 o 2 renglones]</blockquote>
@@ -866,6 +880,22 @@ const CTA = {
     url: 'https://app.vallis.com.ar',
     texto: 'Empezar gratis'
 };
+
+/* ---------------------------------------------------------------
+   INTERRUPTOR DE BORRADOR — mientras esté en false se ve la versión
+   segura para publicar: sin las tabs de Restaurante/Gimnasio (faltan
+   capturas y copy final), sin los testimonios de ejemplo y sin el
+   espacio del video de audio. Cuando tengas ese contenido cargado,
+   pasalo a true (o sacá los atributos data-borrador/hidden de cada
+   bloque) y aparece todo.
+   Los bloques ocultos tienen data-borrador; sus reemplazos temporales
+   tienen data-publicado.
+   --------------------------------------------------------------- */
+const MOSTRAR_BORRADOR = false;
+if (MOSTRAR_BORRADOR) {
+    document.querySelectorAll('[data-borrador]').forEach(function (el) { el.hidden = false; });
+    document.querySelectorAll('[data-publicado]').forEach(function (el) { el.hidden = true; });
+}
 document.querySelectorAll('[data-cta]').forEach(function (a) {
     a.href = CTA.url;
     a.textContent = CTA.texto;
