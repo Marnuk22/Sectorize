@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Confirmar invitación — Vallis</title>
+<!-- Página interna: la abre el botón "Ya lo invité" del mail de aviso de
+     add-ons. No se indexa. -->
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#7f22fe">
+<link rel="icon" href="https://vallis.com.ar/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --papel: #f7f4ec;
+        --tinta: #2b2823;
+        --tinta-suave: #6a635a;
+        --violeta: #7f22fe;
+        --violeta-hondo: #6a08e7;
+        --crema-tarjeta: #fffdf8;
+        --borde: #e3ddce;
+        --verde: #15803d;
+        --rojo: #b91c1c;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: 'Inter', sans-serif;
+        background: var(--papel);
+        color: var(--tinta);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px 16px;
+    }
+    .tarjeta {
+        width: 100%; max-width: 420px;
+        background: var(--crema-tarjeta);
+        border: 1px solid var(--borde);
+        border-radius: 20px;
+        padding: 32px 28px;
+        text-align: center;
+    }
+    .logo { display: inline-flex; align-items: center; gap: 9px; font-family: 'Fraunces', serif; font-weight: 700; font-size: 21px; margin-bottom: 24px; }
+    .logo-marca { width: 30px; height: 30px; border-radius: 8px; background: var(--violeta); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 24px; line-height: 1.2; margin-bottom: 10px; }
+    p { color: var(--tinta-suave); font-size: 15px; }
+    button {
+        margin-top: 24px; width: 100%;
+        background: var(--violeta); color: #fff;
+        border: 0; border-radius: 12px;
+        padding: 13px 18px;
+        font: 600 15px 'Inter', sans-serif;
+        cursor: pointer;
+    }
+    button:hover { background: var(--violeta-hondo); }
+    button:disabled { opacity: .6; cursor: default; }
+    .ok { color: var(--verde); }
+    .error { color: var(--rojo); }
+    [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main class="tarjeta">
+    <div class="logo"><span class="logo-marca">V</span>Vallis</div>
+
+    <section id="pedir">
+        <h1>¿Ya invitaste al cliente a Factumono?</h1>
+        <p>Al confirmar, se le habilita el botón de facturar en Vallis en todas sus sucursales.</p>
+        <button id="confirmar">Sí, ya lo invité</button>
+    </section>
+
+    <section id="listo" hidden>
+        <h1 class="ok">Listo</h1>
+        <p id="listo-texto">El cliente ya puede facturar desde Vallis.</p>
+    </section>
+
+    <section id="fallo" hidden>
+        <h1 class="error">No se pudo confirmar</h1>
+        <p id="fallo-texto"></p>
+    </section>
+</main>
+
+<script>
+    // Supabase no sirve HTML desde Edge Functions, por eso esta página vive
+    // acá y llama a confirmar-invitacion-addon con POST (un GET lo podría
+    // disparar el antivirus del correo al revisar el link).
+    const FUNCION = 'https://wlrwfkhjucomitgoryqu.supabase.co/functions/v1/confirmar-invitacion-addon';
+    const token = new URLSearchParams(location.search).get('token');
+
+    const mostrar = (id) => {
+        for (const s of ['pedir', 'listo', 'fallo']) document.getElementById(s).hidden = s !== id;
+    };
+    const fallar = (texto) => {
+        document.getElementById('fallo-texto').textContent = texto;
+        mostrar('fallo');
+    };
+
+    if (!token) fallar('Al link le falta el código. Abrilo de nuevo desde el mail.');
+
+    const boton = document.getElementById('confirmar');
+    boton.addEventListener('click', async () => {
+        boton.disabled = true;
+        boton.textContent = 'Confirmando...';
+        try {
+            const res = await fetch(FUNCION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) return fallar(data.error || 'Probá de nuevo en un rato.');
+            document.getElementById('listo-texto').textContent = data.negocio
+                ? `${data.negocio} ya puede facturar desde Vallis.`
+                : 'El cliente ya puede facturar desde Vallis.';
+            mostrar('listo');
+        } catch {
+            boton.disabled = false;
+            boton.textContent = 'Sí, ya lo invité';
+            fallar('No hay conexión. Probá de nuevo.');
+        }
+    });
+</script>
+</body>
+</html>
