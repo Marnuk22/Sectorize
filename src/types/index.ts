@@ -33,6 +33,7 @@ export interface Local {
     whatsapp: string | null;
     catalogo_activo: boolean;
     negocio_id: string;
+    cuit: string | null;
 }
 
 export interface Negocio {
@@ -52,6 +53,23 @@ export interface Negocio {
     ultimo_pago_reembolsado: boolean;
     tiendanube_store_id: string | null;
     tiendanube_local_id: string | null;
+}
+
+// Add-on pago del negocio, cobrado dentro de la misma suscripción de MP.
+// 'pendiente_invitacion': ya se cobra, falta la invitación manual a Factumono.
+export type EstadoAddon = 'pendiente_invitacion' | 'activo';
+
+export interface NegocioAddon {
+    negocio_id:   string;
+    addon:        'facturacion';
+    estado:       EstadoAddon;
+    activado_en:  string;
+    invitado_en:  string | null;
+}
+
+export interface Precio {
+    clave: string; // 'base' | 'addon_<addon>'
+    monto: number;
 }
 
 export interface Perfil {

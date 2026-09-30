@@ -4,7 +4,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const MP_ACCESS_TOKEN = Deno.env.get('MP_ACCESS_TOKEN')!;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const PLAN_ID = 'da358770571245aebdf3a4641b2fdb3d';
 
 const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -51,6 +50,17 @@ Deno.serve(async (req) => {
             // sin body, se usa el email de login
         }
 
+        // Monto = base + add-ons activos (o pendientes de invitación: se cobran
+        // desde que se activan). Precios en la tabla `precios`.
+        const { data: precios } = await supabase.from('precios').select('clave, monto');
+        const { data: addons } = await supabase.from('negocio_addons').select('addon').eq('negocio_id', perfil.negocio_id);
+        const precio = (clave: string) => Number(precios?.find(p => p.clave === clave)?.monto ?? NaN);
+        const monto = precio('base') + (addons ?? []).reduce((acc, a) => acc + precio(`addon_${a.addon}`), 0);
+        if (!Number.isFinite(monto)) {
+            console.error('Faltan precios en la tabla precios');
+            return new Response(JSON.stringify({ error: 'Error interno' }), { status: 500, headers: cors });
+        }
+
         // Crear la suscripción SIN plan asociado, en estado pendiente (para redirigir)
         const res = await fetch('https://api.mercadopago.com/preapproval', {
             method: 'POST',
@@ -63,7 +73,7 @@ Deno.serve(async (req) => {
                 auto_recurring: {
                     frequency: 1,
                     frequency_type: 'months',
-                    transaction_amount: 30000,
+                    transaction_amount: monto,
                     currency_id: 'ARS',
                     start_date: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
                 },

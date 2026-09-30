@@ -1,13 +1,18 @@
 import { useState } from 'react';
-import { Store, Check } from 'lucide-react';
+import { Store, Check, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useModulos } from '../../hooks/useModulos';
+import { cuitValido, soloDigitos } from '../../logic/factumono';
 
 interface Props {
     onCerrar: () => void;
 }
 
 const PanelDatosLocal = ({ onCerrar }: Props) => {
-    const { local, actualizarLocal } = useAuth();
+    const { local, perfil, actualizarLocal } = useAuth();
+    const { tiene } = useModulos();
+    const mostrarCuit = tiene('facturacion') && perfil?.rol === 'dueño';
+    const [cuit, setCuit] = useState(local?.cuit ?? '');
     const [nombre, setNombre] = useState(local?.nombre ?? '');
     const [guardando, setGuardando] = useState(false);
     const [error, setError] = useState('');
@@ -18,10 +23,17 @@ const PanelDatosLocal = ({ onCerrar }: Props) => {
             setError('El nombre debe tener al menos 2 caracteres');
             return;
         }
+        if (mostrarCuit && cuit.trim() && !cuitValido(cuit)) {
+            setError('El CUIT no es válido (11 dígitos, revisá el último número).');
+            return;
+        }
         setGuardando(true);
         setError('');
         try {
-            await actualizarLocal({ nombre: nombre.trim() });
+            await actualizarLocal({
+                nombre: nombre.trim(),
+                ...(mostrarCuit ? { cuit: cuit.trim() ? soloDigitos(cuit) : null } : {}),
+            });
             setGuardado(true);
             setTimeout(() => { setGuardado(false); onCerrar(); }, 800);
         } catch (err: any) {
@@ -46,6 +58,23 @@ const PanelDatosLocal = ({ onCerrar }: Props) => {
                 </div>
                 <p className="text-xs text-stone-400">Este nombre aparece en el menú principal.</p>
             </div>
+
+            {mostrarCuit && (
+                <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-stone-500">CUIT del emisor</label>
+                    <div className="flex items-center gap-2 border rounded-xl px-3 py-2 focus-within:ring-2 focus-within:ring-violet-500">
+                        <FileText size={18} className="text-stone-400" />
+                        <input
+                            className="flex-1 text-sm outline-none"
+                            inputMode="numeric"
+                            value={cuit}
+                            onChange={e => setCuit(e.target.value)}
+                            placeholder="20-12345678-9"
+                        />
+                    </div>
+                    <p className="text-xs text-stone-400">Con este CUIT se abre Factumono al facturar. Tiene que ser uno de los de tu cuenta de Factumono.</p>
+                </div>
+            )}
 
             {/* Tipo de negocio — solo lectura por ahora */}
             <div className="flex flex-col gap-1">

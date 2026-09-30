@@ -65,3 +65,15 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/tiendanube-oauth-callback/deno.json"
 entrypoint = "./functions/tiendanube-oauth-callback/index.ts"
+
+[functions.confirmar-invitacion-addon]
+enabled = true
+verify_jwt = false
+import_map = "./functions/confirmar-invitacion-addon/deno.json"
+entrypoint = "./functions/confirmar-invitacion-addon/index.ts"
+
+[functions.gestionar-addon]
+enabled = true
+verify_jwt = false
+import_map = "./functions/gestionar-addon/deno.json"
+entrypoint = "./functions/gestionar-addon/index.ts"

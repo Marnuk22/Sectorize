@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Banknote, CreditCard, ArrowLeftRight, Wallet, Plus, X, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { MODULOS, type ModuloId } from '../../config/modulos';
 import ModalCambiarPassword from './ModalCambiarPassword';
 
@@ -10,8 +11,15 @@ interface Props {
 
 const METODOS_BASE = [
     { id: 'efectivo',      label: 'Efectivo',      icono: Banknote },
-    { id: 'tarjeta',       label: 'Tarjeta',       icono: CreditCard },
+    { id: 'debito',        label: 'Débito',        icono: CreditCard },
+    { id: 'credito',       label: 'Crédito',       icono: CreditCard },
     { id: 'transferencia', label: 'Transferencia', icono: ArrowLeftRight },
+];
+
+// 'tarjeta' es de antes de separar débito/crédito: solo se muestra a los
+// locales que ya lo tenían habilitado, para que puedan apagarlo.
+const METODOS_LEGADO = [
+    { id: 'tarjeta', label: 'Tarjeta (sin distinguir)', icono: CreditCard },
 ];
 
 const MONEDAS = [
@@ -28,7 +36,7 @@ const IDIOMAS = [
     { id: 'pt', label: 'Português' },
 ];
 
-const MODULOS_OPCIONALES = (Object.values(MODULOS) as (typeof MODULOS)[ModuloId][]).filter(m => !m.esNucleo);
+const MODULOS_OPCIONALES = (Object.values(MODULOS) as (typeof MODULOS)[ModuloId][]).filter(m => !m.esNucleo && !m.oculto);
 
 const PanelConfiguracion = ({ onCerrar }: Props) => {
     const { local, perfil, actualizarLocal } = useAuth();
@@ -36,7 +44,9 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
     const [errorModulo, setErrorModulo] = useState('');
 
     const metodosActuales = local?.metodos_pago ?? ['efectivo'];
-    const idsBase = METODOS_BASE.map(m => m.id);
+    // Con metodosActuales (no el estado) para que al destildarlo no desaparezca antes de guardar
+    const metodosVisibles = [...METODOS_BASE, ...METODOS_LEGADO.filter(m => metodosActuales.includes(m.id))];
+    const idsBase = [...METODOS_BASE, ...METODOS_LEGADO].map(m => m.id);
 
     const [metodos, setMetodos] = useState<string[]>(metodosActuales);
     // Los custom son los que están en metodos_pago pero no son base
@@ -75,11 +85,21 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
     // Los módulos se guardan al toque (no junto con "Guardar configuración")
     // — es un on/off, no tiene sentido dejarlo a medio confirmar.
     const toggleModulo = async (id: ModuloId) => {
-        const activos = local?.modulos ?? [];
-        const nuevos = activos.includes(id) ? activos.filter(m => m !== id) : [...activos, id];
+        if (!local) return;
         setCambiandoModulo(id);
         setErrorModulo('');
         try {
+            // Se lee la lista actual de la base, no la cacheada: si una Edge
+            // Function prendió un módulo (ej. 'facturacion' del add-on) desde
+            // que se cargó la app, reescribir la lista vieja lo borraría.
+            const { data: actual, error: errLectura } = await supabase
+                .from('locales')
+                .select('modulos')
+                .eq('id', local.id)
+                .single();
+            if (errLectura) throw errLectura;
+            const activos: string[] = actual?.modulos ?? [];
+            const nuevos = activos.includes(id) ? activos.filter(m => m !== id) : [...activos, id];
             await actualizarLocal({ modulos: nuevos });
         } catch (err: any) {
             setErrorModulo(err.message ?? 'No se pudo actualizar el módulo');
@@ -113,7 +133,7 @@ const PanelConfiguracion = ({ onCerrar }: Props) => {
                 <label className="text-xs font-medium text-stone-500 uppercase">Métodos de pago</label>
                 <p className="text-xs text-stone-400 mb-3">Los que aparecen al cobrar una venta.</p>
                 <div className="space-y-2">
-                    {METODOS_BASE.map(m => {
+                    {metodosVisibles.map(m => {
                         const Icono = m.icono;
                         const activo = metodos.includes(m.id);
                         return (

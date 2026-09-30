@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer, Pencil, Download } from 'lucide-react';
+import { History, Filter, ChevronDown, ChevronUp, RefreshCw, Lock, Sparkles, Printer, Pencil, Download, FileText } from 'lucide-react';
 import { useImpresoras } from '../../context/ImpresorasContext';
 import { useAuth } from '../../context/AuthContext';
+import { useModulos } from '../../hooks/useModulos';
+import { armarUrlFactumono, CONDICIONES_IVA, type Receptor, type TipoDocumento, type CondicionIva } from '../../logic/factumono';
 import { imprimirArqueo } from '../../logic/impresion';
 import { exportarHistorialAExcel } from '../../logic/exportarVentas';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
@@ -377,6 +379,8 @@ interface DetalleVentaPanelProps {
     editarVenta: (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: number }) => Promise<number>;
 }
 
+const RECEPTOR_VACIO: Receptor = { tipoDocumento: 'DNI', numero: '', condicionIva: 'ConsumidorFinal', nombre: '', domicilio: '' };
+
 const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitados, editarVenta }: DetalleVentaPanelProps) => {
     const [detalle, setDetalle] = useState<DetalleVenta[] | null>(null);
     const [editando, setEditando] = useState(false);
@@ -384,7 +388,28 @@ const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitad
     const [descuentoEdit, setDescuentoEdit] = useState(String(venta.descuento));
     const [guardando, setGuardando] = useState(false);
     const [errorEdit, setErrorEdit] = useState('');
+    const [erroresFactura, setErroresFactura] = useState<string[]>([]);
+    // Sin identificar = Consumidor Final anónimo (el caso de todos los días)
+    const [identificarCliente, setIdentificarCliente] = useState(false);
+    const [receptor, setReceptor] = useState<Receptor>(RECEPTOR_VACIO);
+    const { perfil, local } = useAuth();
+    const { tiene } = useModulos();
+    // Facturación (Factumono): en prueba, módulo oculto y solo para dueño.
+    const puedeFacturar = tiene('facturacion') && perfil?.rol === 'dueño' && venta.estado !== 'cancelada';
     const Icono = iconoMetodo(venta.metodo_pago);
+
+    // El link se arma al tocar (no antes): ARCA valida la ventana de 10 días
+    // cuando se abre, y el SDK avisa que no hay que cachearlos.
+    const handleFacturar = () => {
+        if (!detalle) return;
+        const resultado = armarUrlFactumono(venta, detalle, local?.cuit ?? null, identificarCliente ? receptor : null);
+        if (resultado.ok) {
+            setErroresFactura([]);
+            window.open(resultado.url, '_blank', 'noopener');
+        } else {
+            setErroresFactura(resultado.errores);
+        }
+    };
 
     // El panel se remonta con key={venta.id} (ver donde se usa), así que acá
     // no hace falta resetear `detalle` a mano al cambiar de venta.
@@ -503,6 +528,86 @@ const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitad
                 <Boton variante="secundario" icono={<Pencil size={14} />} className="w-full" onClick={() => setEditando(true)}>
                     Editar venta
                 </Boton>
+            )}
+
+            {puedeFacturar && (
+                <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-1 p-1 bg-stone-100 rounded-xl text-xs font-medium">
+                        {[
+                            { valor: false, label: 'Consumidor final' },
+                            { valor: true, label: 'Identificar cliente' },
+                        ].map(o => (
+                            <button
+                                key={o.label}
+                                onClick={() => { setIdentificarCliente(o.valor); setErroresFactura([]); }}
+                                className={`py-1.5 rounded-lg transition-colors ${identificarCliente === o.valor ? 'bg-white text-violet-700 shadow-sm' : 'text-stone-500'}`}
+                            >
+                                {o.label}
+                            </button>
+                        ))}
+                    </div>
+                    {identificarCliente && (
+                        <div className="space-y-2">
+                            <div className="grid grid-cols-3 gap-2">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs font-medium text-stone-500">Documento</label>
+                                    <select
+                                        className="border border-stone-200 rounded-xl px-2 py-2 text-sm bg-white"
+                                        value={receptor.tipoDocumento}
+                                        onChange={e => setReceptor(r => ({ ...r, tipoDocumento: e.target.value as TipoDocumento }))}
+                                    >
+                                        <option value="DNI">DNI</option>
+                                        <option value="CUIT">CUIT</option>
+                                        <option value="CUIL">CUIL</option>
+                                    </select>
+                                </div>
+                                <div className="col-span-2">
+                                    <Campo
+                                        etiqueta="Número"
+                                        inputMode="numeric"
+                                        value={receptor.numero}
+                                        onChange={e => setReceptor(r => ({ ...r, numero: e.target.value }))}
+                                        placeholder={receptor.tipoDocumento === 'DNI' ? '30123456' : '20-30123456-7'}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label className="text-xs font-medium text-stone-500">Condición frente al IVA</label>
+                                <select
+                                    className="border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white"
+                                    value={receptor.condicionIva}
+                                    onChange={e => setReceptor(r => ({ ...r, condicionIva: e.target.value as CondicionIva }))}
+                                >
+                                    {CONDICIONES_IVA.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                                </select>
+                            </div>
+                            <Campo
+                                etiqueta="Nombre o razón social (opcional)"
+                                value={receptor.nombre}
+                                onChange={e => setReceptor(r => ({ ...r, nombre: e.target.value }))}
+                            />
+                            <Campo
+                                etiqueta="Domicilio (opcional)"
+                                value={receptor.domicilio}
+                                onChange={e => setReceptor(r => ({ ...r, domicilio: e.target.value }))}
+                            />
+                        </div>
+                    )}
+                    <Boton
+                        variante="secundario"
+                        icono={<FileText size={14} />}
+                        className="w-full"
+                        onClick={handleFacturar}
+                        disabled={!detalle || detalle.length === 0}
+                    >
+                        Facturar en Factumono
+                    </Boton>
+                    {erroresFactura.length > 0 && (
+                        <div className="p-2.5 bg-red-50 rounded-xl text-red-600 text-xs space-y-1">
+                            {erroresFactura.map((e, i) => <p key={i}>{e}</p>)}
+                        </div>
+                    )}
+                </div>
             )}
 
             <div className="flex items-center justify-between border-t border-stone-200 pt-3">

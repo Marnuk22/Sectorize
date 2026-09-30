@@ -374,7 +374,7 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
             arqueoActivo,
             ArqueosHistorial,
             movimientosCaja,
-            MetodosPago: ['efectivo', 'tarjeta', 'transferencia', 'otro'],
+            MetodosPago: ['efectivo', 'debito', 'credito', 'transferencia', 'otro'],
             cargando,
             registrarVenta,
             recargarMovimientosCaja,

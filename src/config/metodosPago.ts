@@ -3,6 +3,10 @@ import { Banknote, CreditCard, ArrowLeftRight, Wallet, type LucideIcon } from 'l
 // Métodos base con su presentación predefinida
 const METODOS_BASE: Record<string, { label: string; icono: LucideIcon; color: string }> = {
     efectivo:      { label: 'Efectivo',      icono: Banknote,       color: 'bg-green-50 text-green-700' },
+    debito:        { label: 'Débito',        icono: CreditCard,     color: 'bg-blue-50 text-blue-700' },
+    credito:       { label: 'Crédito',       icono: CreditCard,     color: 'bg-indigo-50 text-indigo-700' },
+    // Legado: antes de separar débito/crédito. Queda para las ventas viejas
+    // y para los locales que todavía lo tienen habilitado.
     tarjeta:       { label: 'Tarjeta',       icono: CreditCard,     color: 'bg-blue-50 text-blue-700' },
     transferencia: { label: 'Transferencia', icono: ArrowLeftRight, color: 'bg-purple-50 text-purple-700' },
 };

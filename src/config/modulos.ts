@@ -1,6 +1,6 @@
-import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, BarChart3, ChefHat, Warehouse, type LucideIcon } from 'lucide-react';
+import { LayoutGrid, Package, DollarSign, Calculator, ShoppingCart, Users, BarChart3, ChefHat, Warehouse, FileText, type LucideIcon } from 'lucide-react';
 
-export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos' | 'informe' | 'produccion' | 'deposito';
+export type ModuloId = 'salon' | 'mostrador' | 'suscripciones' | 'inventario' | 'ventas' | 'arqueos' | 'informe' | 'produccion' | 'deposito' | 'facturacion';
 
 export interface ModuloConfig {
     id:          ModuloId;
@@ -8,6 +8,7 @@ export interface ModuloConfig {
     descripcion: string;
     icono:       LucideIcon;
     esNucleo:    boolean; // true = lo tienen todos los locales
+    oculto?:     boolean; // true = sin toggle en Configuración, solo se activa a mano (SQL)
 }
 
 // Definición de todos los módulos disponibles
@@ -77,6 +78,16 @@ export const MODULOS: Record<ModuloId, ModuloConfig> = {
         descripcion: 'Ubicación extra de stock, con transferencias',
         icono: Warehouse,
         esNucleo: false,
+    },
+    // Facturación con Factumono (link a su formulario de Factura C). En prueba:
+    // sin toggle en Configuración, se activa por SQL solo para quien testea.
+    facturacion: {
+        id: 'facturacion',
+        nombre: 'Facturación',
+        descripcion: 'Facturar ventas con Factumono',
+        icono: FileText,
+        esNucleo: false,
+        oculto: true,
     },
 };
 

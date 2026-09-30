@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle, RotateCcw, Store } from 'lucide-react';
+import { Check, Sparkles, Clock, AlertCircle, Loader2, XCircle, RotateCcw, Store, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { estadoAcceso } from '../../logic/suscripcion';
 import { Tarjeta, Campo, Boton } from '../ui/ComponentesBase';
+import type { NegocioAddon, Precio } from '../../types';
 
-const PRECIO = 30000;
+// Los precios reales viven en la tabla `precios`; estos son solo el
+// fallback mientras carga.
+const PRECIO_BASE = 30000;
+const PRECIO_FACTURACION = 10000;
 // App "Vallis ERP" en Tiendanube Partners — id público, no es un secreto.
 const TIENDANUBE_APP_ID = '42195';
 // Derecho de revocación (Resolución 424/2020 y modif.): 10 días desde el
@@ -43,6 +47,38 @@ const PanelMiPlan = () => {
     const [conectandoTiendanube, setConectandoTiendanube] = useState(false);
     const [errorTiendanube, setErrorTiendanube] = useState('');
     const [avisoTiendanube, setAvisoTiendanube] = useState('');
+    const [precios, setPrecios] = useState<Precio[]>([]);
+    const [addons, setAddons] = useState<NegocioAddon[]>([]);
+    const [confirmarAddon, setConfirmarAddon] = useState(false);
+    const [cambiandoAddon, setCambiandoAddon] = useState(false);
+    const [errorAddon, setErrorAddon] = useState('');
+
+    const precio = (clave: string, fallback: number) => precios.find(p => p.clave === clave)?.monto ?? fallback;
+    const precioBase = precio('base', PRECIO_BASE);
+    const precioFacturacion = precio('addon_facturacion', PRECIO_FACTURACION);
+    const addonFacturacion = addons.find(a => a.addon === 'facturacion') ?? null;
+    const totalMensual = precioBase + (addonFacturacion ? precioFacturacion : 0);
+
+    const cargarAddons = async (negocioId: string) => {
+        const { data } = await supabase.from('negocio_addons').select('*').eq('negocio_id', negocioId);
+        return (data ?? []) as NegocioAddon[];
+    };
+
+    useEffect(() => {
+        const negocioId = negocio?.id;
+        if (!negocioId) return;
+        let activo = true;
+        (async () => {
+            const [{ data: dataPrecios }, dataAddons] = await Promise.all([
+                supabase.from('precios').select('clave, monto'),
+                cargarAddons(negocioId),
+            ]);
+            if (!activo) return;
+            setPrecios((dataPrecios ?? []).map(p => ({ clave: p.clave, monto: Number(p.monto) })));
+            setAddons(dataAddons);
+        })();
+        return () => { activo = false; };
+    }, [negocio?.id]);
 
     const estado = negocio?.suscripcion_estado ?? 'prueba';
     const diasPrueba = diasRestantes(negocio?.prueba_vence ?? null);
@@ -97,6 +133,40 @@ const PanelMiPlan = () => {
         } catch (err: any) {
             setErrorTiendanube(err.message ?? 'No se pudo iniciar la conexión con Tiendanube');
             setConectandoTiendanube(false);
+        }
+    };
+
+    const handleAddonFacturacion = async (activar: boolean) => {
+        if (!negocio?.id) return;
+        setCambiandoAddon(true);
+        setErrorAddon('');
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No hay sesión activa');
+
+            const res = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gestionar-addon`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${session.access_token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ addon: 'facturacion', activar }),
+                }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'No se pudo cambiar el add-on');
+
+            setAddons(await cargarAddons(negocio.id));
+            // Al desactivar se saca el módulo de los locales: refrescar para
+            // que el botón de facturar desaparezca ya.
+            await refrescar();
+            setConfirmarAddon(false);
+        } catch (err) {
+            setErrorAddon(err instanceof Error ? err.message : 'Ocurrió un error');
+        } finally {
+            setCambiandoAddon(false);
         }
     };
 
@@ -251,8 +321,8 @@ const PanelMiPlan = () => {
                         <p className="text-xs text-stone-400">Todas las funciones, sin límites</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-2xl font-black text-stone-800">${PRECIO.toLocaleString()}</p>
-                        <p className="text-xs text-stone-400">/mes</p>
+                        <p className="text-2xl font-black text-stone-800">${totalMensual.toLocaleString()}</p>
+                        <p className="text-xs text-stone-400">/mes{addonFacturacion ? ' con facturación' : ''}</p>
                     </div>
                 </div>
 
@@ -389,6 +459,95 @@ const PanelMiPlan = () => {
                 <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-xl text-amber-700 text-sm">
                     <AlertCircle size={15} className="shrink-0" /> {avisoReembolso}
                 </div>
+            )}
+
+            {perfil?.rol === 'dueño' && (
+                <Tarjeta padding="lg">
+                    <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <FileText size={18} className={addonFacturacion ? 'text-violet-600' : 'text-stone-400'} />
+                            <h3 className="font-bold text-stone-800">Facturación electrónica</h3>
+                        </div>
+                        <p className="text-sm font-bold text-stone-700 shrink-0">+${precioFacturacion.toLocaleString()}/mes</p>
+                    </div>
+                    <p className="text-sm text-stone-600 mb-3">
+                        Emití Factura C a tus clientes desde cada venta, con Factumono. Para monotributistas.
+                    </p>
+
+                    {addonFacturacion?.estado === 'pendiente_invitacion' && (
+                        <div className="p-3 mb-3 bg-amber-50 rounded-xl text-amber-800 text-sm space-y-1">
+                            <p className="font-medium flex items-center gap-1.5"><Clock size={14} /> Esperando tu invitación a Factumono</p>
+                            <p className="text-xs">
+                                Te vamos a mandar una invitación a <strong>{user?.email}</strong>. Aceptala, cargá tu CUIT y
+                                clave fiscal en Factumono, y el botón "Facturar" va a aparecer en Ventas → Historial.
+                            </p>
+                        </div>
+                    )}
+                    {addonFacturacion?.estado === 'activo' && (
+                        <div className="p-3 mb-3 bg-green-50 rounded-xl text-green-800 text-sm space-y-1">
+                            <p className="font-medium flex items-center gap-1.5"><Check size={14} /> Activa</p>
+                            <p className="text-xs">Cargá tu CUIT en "Datos del local" y facturá desde Ventas → Historial.</p>
+                        </div>
+                    )}
+
+                    {errorAddon && (
+                        <div className="flex items-center gap-2 p-2.5 mb-3 bg-red-50 rounded-xl text-red-600 text-xs">
+                            <AlertCircle size={14} className="shrink-0" /> {errorAddon}
+                        </div>
+                    )}
+
+                    {!confirmarAddon ? (
+                        addonFacturacion ? (
+                            <button
+                                onClick={() => setConfirmarAddon(true)}
+                                className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 transition-colors"
+                            >
+                                <XCircle size={15} />
+                                Desactivar facturación
+                            </button>
+                        ) : (
+                            <Boton
+                                variante="secundario"
+                                onClick={() => setConfirmarAddon(true)}
+                                disabled={estado === 'vencida' || estado === 'cancelada'}
+                                className="w-full"
+                            >
+                                Activar facturación
+                            </Boton>
+                        )
+                    ) : (
+                        <div className="space-y-3">
+                            <p className="text-sm text-stone-600">
+                                {addonFacturacion
+                                    ? `Perdés la facturación al instante y tu suscripción vuelve a $${precioBase.toLocaleString()}/mes.`
+                                    : negocio?.suscripcion_id && estado !== 'prueba'
+                                        ? `Tu suscripción pasa a $${(precioBase + precioFacturacion).toLocaleString()}/mes desde el próximo cobro. Te llega por mail la invitación a Factumono.`
+                                        : `Se suma a tu suscripción: vas a pagar $${(precioBase + precioFacturacion).toLocaleString()}/mes. Te llega por mail la invitación a Factumono.`}
+                            </p>
+                            <div className="flex gap-2">
+                                <Boton
+                                    variante="secundario"
+                                    onClick={() => { setConfirmarAddon(false); setErrorAddon(''); }}
+                                    disabled={cambiandoAddon}
+                                    className="flex-1"
+                                >
+                                    Volver
+                                </Boton>
+                                <Boton
+                                    variante={addonFacturacion ? 'peligro' : 'primario'}
+                                    onClick={() => handleAddonFacturacion(!addonFacturacion)}
+                                    disabled={cambiandoAddon}
+                                    className="flex-1"
+                                >
+                                    {cambiandoAddon ? 'Procesando...' : addonFacturacion ? 'Sí, desactivar' : 'Sí, activar'}
+                                </Boton>
+                            </div>
+                        </div>
+                    )}
+                    {!addonFacturacion && (estado === 'vencida' || estado === 'cancelada') && (
+                        <p className="text-xs text-stone-400 mt-2">Reactivá tu suscripción para sumar la facturación.</p>
+                    )}
+                </Tarjeta>
             )}
 
             {perfil?.rol === 'dueño' && (
