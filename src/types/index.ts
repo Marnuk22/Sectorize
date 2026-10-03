@@ -65,6 +65,10 @@ export interface NegocioAddon {
     estado:       EstadoAddon;
     activado_en:  string;
     invitado_en:  string | null;
+    // Constancia del consentimiento informado al activar (ver gestionar-addon)
+    consentimiento_en:      string | null;
+    consentimiento_version: string | null;
+    consentimiento_por:     string | null;
 }
 
 export interface Precio {

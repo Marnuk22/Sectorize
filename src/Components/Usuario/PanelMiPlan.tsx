@@ -10,6 +10,17 @@ import type { NegocioAddon, Precio } from '../../types';
 // fallback mientras carga.
 const PRECIO_BASE = 30000;
 const PRECIO_FACTURACION = 10000;
+
+// Consentimiento informado (Ley 25.326) para el add-on de facturación: el
+// cliente queda invitado a la cuenta de Factumono de Vallis, que puede ver su
+// CUIT y sus comprobantes. gestionar-addon exige esta misma versión y la
+// guarda; si cambia el texto, cambiar la versión acá y allá.
+const CONSENTIMIENTO_FACTURACION_VERSION = 'facturacion-v1-2026-09-30';
+const CONSENTIMIENTO_FACTURACION_TEXTO =
+    'Entiendo que para facturar quedo invitado a la cuenta de Factumono de Vallis, y que Vallis, como titular de esa ' +
+    'cuenta, puede ver mi CUIT, los comprobantes que emito y los datos de mis clientes que figuren en ellos. Vallis los ' +
+    'usa solo para darme soporte cuando se lo pida y nunca emite comprobantes en mi nombre. Mi clave fiscal la guarda ' +
+    'Factumono (Factumonkey LLC, Estados Unidos), no Vallis. Puedo desactivar el servicio cuando quiera.';
 // App "Vallis ERP" en Tiendanube Partners — id público, no es un secreto.
 const TIENDANUBE_APP_ID = '42195';
 // Derecho de revocación (Resolución 424/2020 y modif.): 10 días desde el
@@ -52,6 +63,7 @@ const PanelMiPlan = () => {
     const [confirmarAddon, setConfirmarAddon] = useState(false);
     const [cambiandoAddon, setCambiandoAddon] = useState(false);
     const [errorAddon, setErrorAddon] = useState('');
+    const [aceptaCondiciones, setAceptaCondiciones] = useState(false);
 
     const precio = (clave: string, fallback: number) => precios.find(p => p.clave === clave)?.monto ?? fallback;
     const precioBase = precio('base', PRECIO_BASE);
@@ -152,7 +164,11 @@ const PanelMiPlan = () => {
                         'Authorization': `Bearer ${session.access_token}`,
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ addon: 'facturacion', activar }),
+                    body: JSON.stringify({
+                        addon: 'facturacion',
+                        activar,
+                        ...(activar && aceptaCondiciones ? { consentimiento: CONSENTIMIENTO_FACTURACION_VERSION } : {}),
+                    }),
                 }
             );
             const data = await res.json();
@@ -163,6 +179,7 @@ const PanelMiPlan = () => {
             // que el botón de facturar desaparezca ya.
             await refrescar();
             setConfirmarAddon(false);
+            setAceptaCondiciones(false);
         } catch (err) {
             setErrorAddon(err instanceof Error ? err.message : 'Ocurrió un error');
         } finally {
@@ -524,10 +541,21 @@ const PanelMiPlan = () => {
                                         ? `Tu suscripción pasa a $${(precioBase + precioFacturacion).toLocaleString()}/mes desde el próximo cobro. Te llega por mail la invitación a Factumono.`
                                         : `Se suma a tu suscripción: vas a pagar $${(precioBase + precioFacturacion).toLocaleString()}/mes. Te llega por mail la invitación a Factumono.`}
                             </p>
+                            {!addonFacturacion && (
+                                <label className="flex items-start gap-2.5 p-3 bg-stone-50 rounded-xl cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={aceptaCondiciones}
+                                        onChange={e => setAceptaCondiciones(e.target.checked)}
+                                        className="mt-0.5 accent-violet-600 shrink-0"
+                                    />
+                                    <span className="text-xs text-stone-600 leading-relaxed">{CONSENTIMIENTO_FACTURACION_TEXTO}</span>
+                                </label>
+                            )}
                             <div className="flex gap-2">
                                 <Boton
                                     variante="secundario"
-                                    onClick={() => { setConfirmarAddon(false); setErrorAddon(''); }}
+                                    onClick={() => { setConfirmarAddon(false); setErrorAddon(''); setAceptaCondiciones(false); }}
                                     disabled={cambiandoAddon}
                                     className="flex-1"
                                 >
@@ -536,7 +564,7 @@ const PanelMiPlan = () => {
                                 <Boton
                                     variante={addonFacturacion ? 'peligro' : 'primario'}
                                     onClick={() => handleAddonFacturacion(!addonFacturacion)}
-                                    disabled={cambiandoAddon}
+                                    disabled={cambiandoAddon || (!addonFacturacion && !aceptaCondiciones)}
                                     className="flex-1"
                                 >
                                     {cambiandoAddon ? 'Procesando...' : addonFacturacion ? 'Sí, desactivar' : 'Sí, activar'}

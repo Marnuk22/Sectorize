@@ -14,6 +14,9 @@ const AVISO_ADDON_EMAILS = (Deno.env.get('AVISO_ADDON_EMAILS') ?? '').split(',')
 
 const URL_CONFIRMAR_INVITACION = 'https://vallis.com.ar/invitacion/';
 const ADDONS_VALIDOS = ['facturacion'];
+// Versión del texto de consentimiento que muestra PanelMiPlan. Si cambia el
+// texto, cambiar las dos (acá y CONSENTIMIENTO_FACTURACION_VERSION en el panel).
+const CONSENTIMIENTO_VERSION = 'facturacion-v1-2026-09-30';
 
 const cors = {
     'Access-Control-Allow-Origin': '*',
@@ -58,9 +61,14 @@ Deno.serve(async (req) => {
         }
         const negocioId = perfil.negocio_id;
 
-        const { addon, activar } = await req.json().catch(() => ({}));
+        const { addon, activar, consentimiento } = await req.json().catch(() => ({}));
         if (!ADDONS_VALIDOS.includes(addon) || typeof activar !== 'boolean') {
             return json({ error: 'Pedido inválido' }, 400);
+        }
+        // Sin consentimiento de la versión vigente no se activa (se valida acá,
+        // no solo con la casilla del frontend).
+        if (activar && consentimiento !== CONSENTIMIENTO_VERSION) {
+            return json({ error: 'Tenés que aceptar las condiciones del servicio de facturación.' }, 400);
         }
 
         const { data: negocio } = await supabase
@@ -123,7 +131,14 @@ Deno.serve(async (req) => {
         if (activar) {
             const { error: errAlta } = await supabase
                 .from('negocio_addons')
-                .insert({ negocio_id: negocioId, addon, estado: 'pendiente_invitacion' });
+                .insert({
+                    negocio_id: negocioId,
+                    addon,
+                    estado: 'pendiente_invitacion',
+                    consentimiento_en: new Date().toISOString(),
+                    consentimiento_version: CONSENTIMIENTO_VERSION,
+                    consentimiento_por: user.id,
+                });
             if (errAlta) {
                 console.error('Error guardando add-on:', errAlta);
                 await revertirMP();
