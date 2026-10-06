@@ -186,6 +186,10 @@ Segunda etapa de la integración: subir nombre/precio/stock/visibilidad de los p
 
 ## 🟡 Cabos sueltos (cortos, mejoran el pulido)
 
+- [x] **Bug en producción (2026-10-06): Historial con todas las ventas "Sin productos" en Karamelon.** Causa: el detalle se pedía con `.in('venta_id', [todos los ids])`; pasadas ~680 ventas la URL supera ~25 KB y el gateway devuelve 400, y el error se descartaba. No era RLS ni faltaban datos (verificado). Fix en `useHistorialVentas`: detalle embebido en la consulta de ventas, paginación de a 1000 (max-rows de PostgREST) y error visible en Historial e Informe. **Falta: deploy del frontend y confirmar con Karamelon.**
+- [ ] `registrarVenta` inserta la venta y su detalle en dos pasos sin transacción: hay 11 ventas huérfanas sin detalle (8 CafeEjemplo, 3 LocalPrueba; ninguna en Karamelon). Fix de fondo: RPC transaccional `registrar_venta` (migración) que inserte ambas cosas juntas.
+- [ ] Revisar otras consultas con el mismo patrón (`.in()` con listas que crecen con los datos, o sin paginar pasadas las 1000 filas): por ejemplo arqueos del historial, kardex, informes.
+
 - [ ] Mail de contacto en el catálogo público: campo en `locales` + agregarlo a `catalogo_publico()` + botón en la página. (WhatsApp ya funciona.)
 - [x] Footer de la landing (`vallis-landing/index.html`) con contacto: mail manuel@vallis.com.ar + botón WhatsApp con el número real.
 - [x] `preview.jpg` (1200×630), favicon y apple-touch-icon de la landing (y de la app) — logo redibujado a mano, Open Graph/Twitter Card completo.

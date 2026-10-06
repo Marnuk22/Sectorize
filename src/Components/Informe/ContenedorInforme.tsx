@@ -63,7 +63,7 @@ interface FilaRanking {
 
 const ContenedorInforme = () => {
     const { sucursales } = useAuth();
-    const { ventas, cargando, setFiltros, cargarDetalleVenta, sucursalFiltro, setSucursalFiltro } =
+    const { ventas, cargando, errorCarga, setFiltros, cargarDetalleVenta, sucursalFiltro, setSucursalFiltro } =
         useHistorialVentas({ consolidarPorDefecto: true });
 
     const [periodo, setPeriodo] = useState<Periodo>('mes_actual');
@@ -293,6 +293,8 @@ const ContenedorInforme = () => {
                     <div className="flex items-center justify-center py-16" aria-busy="true">
                         <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
                     </div>
+                ) : errorCarga ? (
+                    <p className="text-sm text-red-600 text-center py-16">{errorCarga}</p>
                 ) : ventas.length === 0 ? (
                     <EstadoVacio
                         icono={<BarChart3 size={32} className="text-stone-300" />}

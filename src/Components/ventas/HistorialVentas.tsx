@@ -17,7 +17,7 @@ import PanelLateral from '../Usuario/PanelLateral';
 const fmtEditado = (fecha: Date) => fecha.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' });
 
 const HistorialVentas = () => {
-    const { ventas, arqueos, cargando, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar, cargarDetalleVenta, editarVenta } = useHistorialVentas();
+    const { ventas, arqueos, cargando, errorCarga, filtros, setFiltros, totalFiltrado, porMetodoFiltrado, recargar, cargarDetalleVenta, editarVenta } = useHistorialVentas();
     const { puede } = usePlan();
     const historialCompleto = puede('historial_completo');
     const { impresorasDeTickets } = useImpresoras();
@@ -52,6 +52,15 @@ const HistorialVentas = () => {
     if (cargando) return (
         <div className="flex items-center justify-center h-40">
             <div className="w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full animate-spin" />
+        </div>
+    );
+
+    if (errorCarga) return (
+        <div className="flex flex-col items-center justify-center gap-3 h-40 text-center">
+            <p className="text-sm text-red-600">{errorCarga}</p>
+            <Boton variante="secundario" icono={<RefreshCw size={14} />} onClick={recargar}>
+                Reintentar
+            </Boton>
         </div>
     );
 

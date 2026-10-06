@@ -46,6 +46,32 @@ export interface DetalleVenta {
 
 const fmtCantidad = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 3 });
 
+// PostgREST corta cada respuesta en 1000 filas (max-rows de Supabase): las
+// ventas se piden por páginas de ese tamaño hasta traerlas todas.
+const TAMAÑO_PAGINA = 1000;
+
+// El detalle va embebido en la misma consulta de ventas. Antes se pedía
+// aparte con .in('venta_id', [todos los ids]) y, pasadas ~680 ventas, la URL
+// superaba el límite del gateway (400 Bad Request) y como el error no se
+// miraba, todas las ventas aparecían "Sin productos" (Karamelon, 2026-10-06).
+const SELECT_VENTAS = `
+    id, local_id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
+    arqueos (fecha_apertura, fecha_cierre, estado),
+    detalle_ventas (cantidad, precio_unitario, subtotal, productos (nombre, tipo_venta, unidad_medida))
+`;
+
+// `any`: sin tipos generados de Supabase, el join embebido "productos" se
+// infiere mal (array en vez de objeto único) y forzar el tipo correcto sería
+// más frágil que castear.
+const aDetalle = (d: any): DetalleVenta => ({
+    nombre: d.productos?.nombre ?? 'Producto eliminado',
+    cantidad: d.cantidad,
+    precio: d.precio_unitario,
+    subtotal: d.subtotal,
+    tipo_venta: d.productos?.tipo_venta ?? 'unidad',
+    unidad_medida: d.productos?.unidad_medida ?? 'unidad',
+});
+
 // Texto corto para la fila de la lista, ej. "Cerveza x2, Papas x1 +2"
 const resumenDeItems = (items: DetalleVenta[]): string => {
     if (items.length === 0) return 'Sin productos';
@@ -65,6 +91,7 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
     const [ventas, setVentas] = useState<VentaHistorial[]>([]);
     const [arqueos, setArqueos] = useState<ArqueoResumen[]>([]);
     const [cargando, setCargando] = useState(true);
+    const [errorCarga, setErrorCarga] = useState('');
     const [filtros, setFiltros] = useState<Filtros>({
         metodo: 'todos',
         arqueo_id: 'todos',
@@ -85,52 +112,42 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
 
     const cargarDatos = async () => {
         setCargando(true);
+        setErrorCarga('');
 
         const idsSucursales = sucursalFiltro === 'todas' && sucursales.length > 1
             ? sucursales.map(s => s.id)
             : null;
 
-        let queryVentas = supabase
-            .from('ventas')
-            .select(`
-                id, local_id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
-                arqueos (fecha_apertura, fecha_cierre, estado)
-            `)
-            .order('fecha', { ascending: false });
-        queryVentas = idsSucursales ? queryVentas.in('local_id', idsSucursales) : queryVentas.eq('local_id', localId);
+        const data: any[] = [];
+        for (let desde = 0; ; desde += TAMAÑO_PAGINA) {
+            let queryVentas = supabase
+                .from('ventas')
+                .select(SELECT_VENTAS)
+                // id como desempate: el orden tiene que ser estable entre páginas
+                .order('fecha', { ascending: false })
+                .order('id', { ascending: false })
+                .range(desde, desde + TAMAÑO_PAGINA - 1);
+            queryVentas = idsSucursales ? queryVentas.in('local_id', idsSucursales) : queryVentas.eq('local_id', localId);
 
-        const { data, error } = await queryVentas;
-
-        if (error) { console.error(error); setCargando(false); return; }
-
-        const ventaIds = (data ?? []).map((v: any) => v.id);
-
-        // Ítems de todas las ventas en una sola query (no N+1), para el preview
-        // de cada fila y para precalentar el cache de cargarDetalleVenta.
-        const { data: detallesRaw } = ventaIds.length > 0
-            ? await supabase
-                .from('detalle_ventas')
-                .select('venta_id, cantidad, precio_unitario, subtotal, productos(nombre, tipo_venta, unidad_medida)')
-                .in('venta_id', ventaIds)
-            : { data: [] as any[] };
-
-        const itemsPorVenta: Record<string, DetalleVenta[]> = {};
-        for (const id of ventaIds) itemsPorVenta[id] = [];
-        // `any`: igual que cargarDetalleVenta más abajo — sin tipos generados de
-        // Supabase, el join embebido "productos" se infiere mal (array en vez de
-        // objeto único) y forzar el tipo correcto sería más frágil que castear.
-        for (const d of (detallesRaw ?? []) as any[]) {
-            itemsPorVenta[d.venta_id].push({
-                nombre: d.productos?.nombre ?? 'Producto eliminado',
-                cantidad: d.cantidad,
-                precio: d.precio_unitario,
-                subtotal: d.subtotal,
-                tipo_venta: d.productos?.tipo_venta ?? 'unidad',
-                unidad_medida: d.productos?.unidad_medida ?? 'unidad',
-            });
+            const { data: pagina, error } = await queryVentas;
+            if (error) {
+                // No mostrar un historial a medias como si estuviera completo.
+                console.error(error);
+                setErrorCarga('No se pudo cargar el historial de ventas. Probá recargar.');
+                setVentas([]);
+                setCargando(false);
+                return;
+            }
+            data.push(...(pagina ?? []));
+            if (!pagina || pagina.length < TAMAÑO_PAGINA) break;
         }
 
-        const ventasFormateadas: VentaHistorial[] = (data ?? []).map((v: any) => ({
+        // Ítems de cada venta, para el preview de cada fila y para precalentar
+        // el cache de cargarDetalleVenta.
+        const itemsPorVenta: Record<string, DetalleVenta[]> = {};
+        for (const v of data) itemsPorVenta[v.id] = (v.detalle_ventas ?? []).map(aDetalle);
+
+        const ventasFormateadas: VentaHistorial[] = data.map((v: any) => ({
             id: v.id,
             local_id: v.local_id,
             fecha: new Date(v.fecha),
@@ -211,14 +228,7 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
 
         if (error) { console.error(error); return []; }
 
-        const items: DetalleVenta[] = (data ?? []).map((d: any) => ({
-            nombre: d.productos?.nombre ?? 'Producto eliminado',
-            cantidad: d.cantidad,
-            precio: d.precio_unitario,
-            subtotal: d.subtotal,
-            tipo_venta: d.productos?.tipo_venta ?? 'unidad',
-            unidad_medida: d.productos?.unidad_medida ?? 'unidad',
-        }));
+        const items: DetalleVenta[] = (data ?? []).map(aDetalle);
 
         // Guardar en caché
         setDetalles(prev => ({ ...prev, [ventaId]: items }));
@@ -260,6 +270,7 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         ventas: ventasFiltradas,
         arqueos,
         cargando,
+        errorCarga,
         filtros,
         setFiltros,
         sucursalFiltro,
