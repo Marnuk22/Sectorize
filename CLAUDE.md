@@ -76,6 +76,8 @@ When adding a field that exists in the DB, add it to the DB entity interface; on
 - **Stock alerts:** `trigger_avisar_stock_bajo` (AFTER UPDATE OF stock_actual) fires only on the *crossing* (`old.stock_actual > old.stock_minimo AND new.stock_actual <= new.stock_minimo`) and calls the `alerta-stock` Edge Function via `net.http_post`. A daily cron (`resumen-stock-diario`, 23:00 UTC = 20:00 ART) calls `resumen-stock`.
 - Extensions enabled: `pg_cron`, `pg_net`.
 - General principle: integrity rules go close to the data (DB); presentation and external-service orchestration go higher up (frontend / Edge Functions).
+- **El descuento no se calcula «por ahí»:** `src/logic/venta.ts` (`calcularVenta`/`calcularDescuento`) es el único lugar donde se calculan subtotal, descuento y total (redondeo del `%` y clamp a `[0, subtotal]` incluidos). `registrarVenta`/`cerrarMesa`/`cobrar` reciben el descuento tal como lo tipeó el usuario (`DescuentoVenta = {tipo: 'monto'|'porcentaje', valor}`), **nunca un total ya calculado**, y derivan el resto adentro. Invariante en los 3 caminos de escritura (online, cola offline, reconciliación): `ventas.total = Σ detalle_ventas.subtotal − ventas.descuento`, donde `descuento` es el monto aplicado y `descuento_tipo`/`descuento_valor` guardan el insumo tipeado.
+- **Ventas: RPC transaccional, no inserts sueltos.** La venta encolada entra por `registrar_venta_offline(...)`: venta + detalle en una transacción, idempotente por `id`.
 
 ### Granel (sold-by-weight) architecture
 
