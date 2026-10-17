@@ -25,36 +25,37 @@ export const reconciliarVentas = async (): Promise<ResultadoReconciliacion> => {
 
     for (const venta of ordenada) {
         try {
-            // id y fecha explícitos: el mismo id generado offline (así un
-            // reintento futuro nunca puede duplicar la venta — si el insert
-            // de detalle_ventas de abajo llegara a fallar, el próximo intento
-            // choca con unique constraint en vez de crear una venta gemela)
-            // y la fecha real de cuando ocurrió, no la de sincronización.
-            const { error: errorVenta } = await supabase
-                .from('ventas')
-                .insert({
-                    id: venta.id,
-                    local_id: venta.localId,
-                    usuario_id: venta.usuarioId,
-                    arqueo_id: venta.arqueoId,
-                    sector_id: null,
-                    total: venta.total,
-                    metodo_pago: venta.metodoPago,
-                    estado: 'cerrada',
-                    fecha: venta.fecha,
-                });
-            if (errorVenta) throw errorVenta;
-
-            const { error: errorDetalle } = await supabase
-                .from('detalle_ventas')
-                .insert(venta.items.map(item => ({
-                    venta_id: venta.id,
+            // Una sola RPC, atómica e idempotente (ver la migración
+            // registrar_venta_offline): la venta y su detalle entran juntos o
+            // no entra nada, y reintentar con el mismo id nunca duplica ni
+            // deja la venta a medias. Antes eran dos inserts sueltos: si
+            // fallaba el de detalle_ventas, el reintento chocaba con la PK de
+            // ventas y el trigger descontar_stock no corría nunca (venta y
+            // arqueo quedaban mal para siempre).
+            //
+            // El descuento viaja ya calculado (venta.total / venta.descuento,
+            // de calcularVenta al momento de la venta): acá NO se recalcula,
+            // así una venta encolada se sube por exactamente lo que se cobró
+            // aunque después cambien el redondeo o el clamp.
+            const { error } = await supabase.rpc('registrar_venta_offline', {
+                p_id: venta.id,
+                p_local_id: venta.localId,
+                p_usuario_id: venta.usuarioId,
+                p_arqueo_id: venta.arqueoId,
+                p_total: venta.total,
+                p_descuento: venta.descuento?.monto ?? 0,
+                p_descuento_tipo: venta.descuento?.tipo ?? 'monto',
+                p_descuento_valor: venta.descuento?.valor ?? 0,
+                p_metodo_pago: venta.metodoPago,
+                p_fecha: venta.fecha,
+                p_items: venta.items.map(item => ({
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     producto_id: (item as any).esProductoInventario === false ? null : item.id,
                     cantidad: item.cantidad,
                     precio_unitario: item.precio,
-                })));
-            if (errorDetalle) throw errorDetalle;
+                })),
+            });
+            if (error) throw error;
 
             await quitarVentaDeCola(venta.id);
             ok++;
