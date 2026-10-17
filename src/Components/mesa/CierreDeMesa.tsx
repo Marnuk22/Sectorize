@@ -2,12 +2,11 @@ import { useSalon, useVentas } from "../../context";
 import { useState } from "react";
 import { ChevronDown, Check, X, AlertTriangle, Printer } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import type { MetodoPago } from "../../types";
+import type { MetodoPago, TipoDescuento } from "../../types";
 import { labelMetodo } from "../../config/metodosPago";
+import { calcularDescuento } from "../../logic/venta";
 import { imprimirTicket } from "../../logic/impresion";
 import { useImpresoras } from '../../context/ImpresorasContext';
-
-type TipoDescuento = 'monto' | 'porcentaje';
 
 const CierreDeMesa = () => {
     const { mesaSeleccionada, cerrarMesa } = useSalon();
@@ -26,13 +25,11 @@ const CierreDeMesa = () => {
 
     if (!mesaSeleccionada) return null;
 
-    // Cálculos del cobro
+    // Cálculos del cobro: mismo calcularDescuento que usa registrarVenta al
+    // guardar, así el ticket, el botón y la base muestran lo mismo.
     const subtotal = mesaSeleccionada.pedidos.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
     const valorNum = parseFloat(valorDescuento) || 0;
-    const descuento = tipoDescuento === 'porcentaje'
-        ? Math.round(subtotal * (valorNum / 100))
-        : valorNum;
-    const descuentoAplicado = Math.min(descuento, subtotal);
+    const { monto: descuentoAplicado } = calcularDescuento(subtotal, { tipo: tipoDescuento, valor: valorNum });
     const total = subtotal - descuentoAplicado;
 
     const cerrar = () => {
@@ -60,7 +57,7 @@ const CierreDeMesa = () => {
     // Imprime y cobra (cierra la mesa)
     const handleCobrar = () => {
         imprimirTicket(opcionesTicket());
-        cerrarMesa(mesaSeleccionada.id, metodoElegido);
+        cerrarMesa(mesaSeleccionada.id, metodoElegido, { tipo: tipoDescuento, valor: valorNum });
         cerrar();
     };
 

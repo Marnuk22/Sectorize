@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
-import type { MetodoPago, EstadoVenta } from '../types';
+import { calcularVenta } from '../logic/venta';
+import type { DescuentoVenta, EstadoVenta, MetodoPago, TipoDescuento } from '../types';
 
 export interface VentaHistorial {
     id: string;
@@ -15,6 +16,8 @@ export interface VentaHistorial {
     fecha_cierre_arqueo: Date | null;
     resumenItems: string;
     descuento: number;
+    descuentoTipo: TipoDescuento;
+    descuentoValor: number;
     editadoEn: Date | null;
 }
 
@@ -26,6 +29,16 @@ export interface ArqueoResumen {
     total_ventas: number;
     cantidad_ventas: number;
     por_metodo: Record<string, number>;
+}
+
+// Datos propios de la fila de `arqueos`, sin el resumen: los totales se
+// derivan de las ventas vivas (ver useMemo más abajo) para que editar una
+// venta se refleje en su arqueo sin recargar la página.
+interface ArqueoBase {
+    id: string;
+    fecha_apertura: Date;
+    fecha_cierre: Date | null;
+    estado: 'abierto' | 'cerrado';
 }
 
 interface Filtros {
@@ -55,7 +68,7 @@ const TAMAÑO_PAGINA = 1000;
 // superaba el límite del gateway (400 Bad Request) y como el error no se
 // miraba, todas las ventas aparecían "Sin productos" (Karamelon, 2026-10-06).
 const SELECT_VENTAS = `
-    id, local_id, fecha, total, metodo_pago, estado, arqueo_id, descuento, editado_en,
+    id, local_id, fecha, total, metodo_pago, estado, arqueo_id, descuento, descuento_tipo, descuento_valor, editado_en,
     arqueos (fecha_apertura, fecha_cierre, estado),
     detalle_ventas (cantidad, precio_unitario, subtotal, productos (nombre, tipo_venta, unidad_medida))
 `;
@@ -89,7 +102,7 @@ interface OpcionesHistorial {
 export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
     const { localId, sucursales } = useAuth();
     const [ventas, setVentas] = useState<VentaHistorial[]>([]);
-    const [arqueos, setArqueos] = useState<ArqueoResumen[]>([]);
+    const [arqueosBase, setArqueosBase] = useState<ArqueoBase[]>([]);
     const [cargando, setCargando] = useState(true);
     const [errorCarga, setErrorCarga] = useState('');
     const [filtros, setFiltros] = useState<Filtros>({
@@ -159,6 +172,10 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
             fecha_cierre_arqueo: v.arqueos.fecha_cierre ? new Date(v.arqueos.fecha_cierre) : null,
             resumenItems: resumenDeItems(itemsPorVenta[v.id]),
             descuento: v.descuento,
+            // Fallback para las filas cargadas antes de que existieran las
+            // columnas (todas quedan como monto fijo).
+            descuentoTipo: (v.descuento_tipo ?? 'monto') as TipoDescuento,
+            descuentoValor: v.descuento_valor ?? 0,
             editadoEn: v.editado_en ? new Date(v.editado_en) : null,
         }));
 
@@ -171,24 +188,12 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         const { data: arqs } = await queryArqueos;
 
         if (arqs) {
-            const resumenes: ArqueoResumen[] = arqs.map(a => {
-                const ventasArqueo = ventasFormateadas.filter(v => v.arqueo_id === a.id);
-                const por_metodo = ventasArqueo.reduce((acc, v) => {
-                    acc[v.metodo_pago] = (acc[v.metodo_pago] ?? 0) + v.total;
-                    return acc;
-                }, {} as Record<string, number>);
-
-                return {
-                    id: a.id,
-                    fecha_apertura: new Date(a.fecha_apertura),
-                    fecha_cierre: a.fecha_cierre ? new Date(a.fecha_cierre) : null,
-                    estado: a.estado,
-                    total_ventas: ventasArqueo.reduce((acc, v) => acc + v.total, 0),
-                    cantidad_ventas: ventasArqueo.length,
-                    por_metodo,
-                };
-            });
-            setArqueos(resumenes);
+            setArqueosBase(arqs.map(a => ({
+                id: a.id,
+                fecha_apertura: new Date(a.fecha_apertura),
+                fecha_cierre: a.fecha_cierre ? new Date(a.fecha_cierre) : null,
+                estado: a.estado,
+            })));
         }
 
         setCargando(false);
@@ -209,6 +214,28 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         acc[v.metodo_pago] = (acc[v.metodo_pago] ?? 0) + v.total;
         return acc;
     }, {} as Record<MetodoPago, number>);
+
+    // Resumen por arqueo derivado de las ventas vivas (cuenta TODAS las ventas
+    // del arqueo, no las filtradas). Al editar una venta, editarVenta actualiza
+    // `ventas` y este useMemo recalcula solo: el arqueo se ve al día sin
+    // recargar. Antes era estado aparte y quedaba viejo hasta refrescar.
+    const arqueos: ArqueoResumen[] = useMemo(() => arqueosBase.map(a => {
+        const ventasArqueo = ventas.filter(v => v.arqueo_id === a.id);
+        const por_metodo = ventasArqueo.reduce((acc, v) => {
+            acc[v.metodo_pago] = (acc[v.metodo_pago] ?? 0) + v.total;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            id: a.id,
+            fecha_apertura: a.fecha_apertura,
+            fecha_cierre: a.fecha_cierre,
+            estado: a.estado,
+            total_ventas: ventasArqueo.reduce((acc, v) => acc + v.total, 0),
+            cantidad_ventas: ventasArqueo.length,
+            por_metodo,
+        };
+    }), [arqueosBase, ventas]);
 
 
     // Carga el detalle de una venta (bajo demanda, con caché en memoria)
@@ -235,19 +262,24 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         return items;
     };
 
-    // Edita método de pago y descuento de una venta ya registrada, recalculando
-    // el total a partir de sus ítems (cache de cargarDetalleVenta/cargarDatos).
-    const editarVenta = async (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: number }): Promise<number> => {
+    // Edita método de pago y descuento de una venta ya registrada. El total se
+    // recalcula con el mismo calcularVenta que usa el POS, nunca a mano acá:
+    // así el invariante total = Σ subtotales − descuento se mantiene. Solo se
+    // llama con ventas del arqueo abierto (ver puedeEditar en HistorialVentas).
+    const editarVenta = async (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: DescuentoVenta }): Promise<number> => {
         const items = detalles[ventaId] ?? [];
-        const sumaSubtotales = items.reduce((acc, i) => acc + i.subtotal, 0);
-        const nuevoTotal = Math.max(0, sumaSubtotales - cambios.descuento);
+        // Sin detalle no hay subtotal: recalcular daría total 0.
+        if (items.length === 0) throw new Error('Todavía no cargó el detalle de la venta. Probá de nuevo.');
+        const { descuentoMonto, total: nuevoTotal } = calcularVenta(items, cambios.descuento);
         const editadoEn = new Date();
 
         const { data, error } = await supabase
             .from('ventas')
             .update({
                 metodo_pago: cambios.metodo_pago,
-                descuento: cambios.descuento,
+                descuento: descuentoMonto,
+                descuento_tipo: cambios.descuento.tipo,
+                descuento_valor: cambios.descuento.valor,
                 total: nuevoTotal,
                 editado_en: editadoEn.toISOString(),
             })
@@ -259,7 +291,15 @@ export const useHistorialVentas = (opciones: OpcionesHistorial = {}) => {
         if (!data) throw new Error('No se pudo editar la venta (sin permiso)');
 
         setVentas(prev => prev.map(v => v.id === ventaId
-            ? { ...v, metodo_pago: cambios.metodo_pago, descuento: cambios.descuento, total: nuevoTotal, editadoEn }
+            ? {
+                ...v,
+                metodo_pago: cambios.metodo_pago,
+                descuento: descuentoMonto,
+                descuentoTipo: cambios.descuento.tipo,
+                descuentoValor: cambios.descuento.valor,
+                total: nuevoTotal,
+                editadoEn,
+            }
             : v
         ));
 

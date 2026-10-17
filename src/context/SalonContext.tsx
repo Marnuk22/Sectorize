@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, useState, useEffect, type ReactNode } from 'react';
-import type { SectorUI as Sector, MesaUI as Mesa, ItemPedidoUI as ItemPedido, MetodoPago, Producto } from '../types';
+import type { SectorUI as Sector, MesaUI as Mesa, ItemPedidoUI as ItemPedido, DescuentoVenta, MetodoPago, Producto } from '../types';
 import { MesaService } from '../logic/MesaServices';
+import { SIN_DESCUENTO } from '../logic/venta';
 import { useVentas } from './VentasContext';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
@@ -15,7 +16,7 @@ interface SalonContextType {
     seleccionarSector: (idSector: string | null) => void;
     seleccionarMesa: (idMesa: string | null) => void;
     agregarProductoAMesa: (producto: Producto) => void;
-    cerrarMesa: (idMesa: string, metodoPago: MetodoPago) => Promise<void>;
+    cerrarMesa: (idMesa: string, metodoPago: MetodoPago, descuento?: DescuentoVenta) => Promise<void>;
     actualizarPosicionMesa: (idMesa: string, x: number, y: number) => Promise<void>;
     onAumentarProducto: (productoId: string) => void;
     onAumentarAconfirmar: (productoId: string) => void;
@@ -183,12 +184,15 @@ export const SalonProvider = ({ children }: { children: ReactNode }) => {
         })));
     };
 
-    const cerrarMesa = async (idMesa: string, metodoPago: MetodoPago) => {
+    const cerrarMesa = async (idMesa: string, metodoPago: MetodoPago, descuento?: DescuentoVenta) => {
         const mesa = buscarMesa(idMesa);
         if (!mesa || mesa.pedidos.length === 0) return;
-        const total = mesa.pedidos.reduce((acc, p) => acc + (p.precio * p.cantidad), 0);
         try {
-            const { offline } = await registrarVenta(mesa.pedidos, total, mesa, metodoPago);
+            // El total lo deriva registrarVenta (src/logic/venta.ts) a partir
+            // de los pedidos y el descuento. Antes acá se recalculaba el total
+            // a precio lleno y el descuento del salón se perdía: se cobraba
+            // descontado (ticket y botón) pero se guardaba lleno.
+            const { offline } = await registrarVenta(mesa.pedidos, descuento ?? SIN_DESCUENTO, mesa, metodoPago);
             if (offline) {
                 aplicarVentaOffline(mesa.pedidos.map(p => ({ id: p.id, cantidad: p.cantidad })));
             } else {

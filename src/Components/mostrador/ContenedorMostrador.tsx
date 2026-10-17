@@ -5,7 +5,7 @@ import { useMostrador } from '../../context/MostradorContext';
 import { useVentas } from '../../context/VentasContext';
 import { useAuth } from '../../context/AuthContext';
 import { labelMetodo } from '../../config/metodosPago';
-import type { MetodoPago } from '../../types';
+import type { DescuentoVenta, MetodoPago, TipoDescuento } from '../../types';
 import TecladoCantidad from './TecladoCantidad';
 import type { Producto } from '../../types';
 import { useImpresoras } from '../../context/ImpresorasContext';
@@ -15,8 +15,7 @@ import { useEscaner } from '../../hooks/useEscaner';
 import { useFavoritos } from '../../hooks/useFavoritos';
 import { TarjetaProducto } from '../ui/ComponentesBase';
 import ModalEscanerCamara from '../Inventario/ModalEscanerCamara';
-
-type TipoDescuento = 'monto' | 'porcentaje';
+import { calcularVenta } from '../../logic/venta';
 
 const ContenedorMostrador = () => {
     const { productos, categorias, cargando } = useMenu();
@@ -91,13 +90,12 @@ const ContenedorMostrador = () => {
         return aFav - bFav;
     });
 
-    // Cálculos del cobro
+    // Cálculos del cobro. El descuento sale del mismo calcularVenta que usa
+    // registrarVenta al guardar, así lo que se ve en pantalla es exactamente
+    // lo que queda en la base.
     const valorNum = parseFloat(valorDescuento) || 0;
-    const descuento = tipoDescuento === 'porcentaje'
-        ? Math.round(total * (valorNum / 100))
-        : valorNum;
-    const descuentoAplicado = Math.min(descuento, total);
-    const totalFinal = total - descuentoAplicado;
+    const descuentoCobro: DescuentoVenta = { tipo: tipoDescuento, valor: valorNum };
+    const { descuentoMonto: descuentoAplicado, total: totalFinal } = calcularVenta(carrito, descuentoCobro);
 
     const esEfectivo = metodoElegido === 'efectivo';
     const pagaConNum = parseFloat(pagaCon) || 0;
@@ -119,7 +117,7 @@ const ContenedorMostrador = () => {
             const vueltoFinal = vuelto;
 
             // Cobrar primero (registra y vacía)
-            await cobrar(metodoElegido, totalFinal);
+            await cobrar(metodoElegido, descuentoCobro);
 
             // Imprimir después (no bloquea el cobro)
             try {

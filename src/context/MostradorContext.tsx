@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useVentas } from './VentasContext';
-import type { ItemPedidoUI, MetodoPago, Producto, MesaUI } from '../types';
+import type { DescuentoVenta, ItemPedidoUI, MetodoPago, Producto, MesaUI } from '../types';
+import { SIN_DESCUENTO } from '../logic/venta';
 import { useMenu } from './MenuContext';
 
 interface MostradorContextType {
@@ -11,7 +12,7 @@ interface MostradorContextType {
     aumentar: (productoId: string) => void;
     disminuir: (productoId: string) => void;
     vaciar: () => void;
-    cobrar: (metodoPago: MetodoPago, totalFinal?: number) => Promise<void>;
+    cobrar: (metodoPago: MetodoPago, descuento?: DescuentoVenta) => Promise<void>;
 }
 
 const MostradorContext = createContext<MostradorContextType | undefined>(undefined);
@@ -101,9 +102,8 @@ export const MostradorProvider = ({ children }: { children: ReactNode }) => {
 
     const vaciar = () => setCarrito([]);
 
-    const cobrar = async (metodoPago: MetodoPago, totalFinal?: number) => {
+    const cobrar = async (metodoPago: MetodoPago, descuento?: DescuentoVenta) => {
     if (carrito.length === 0) return;
-    const totalACobrar = totalFinal ?? total;
     const mesaVirtual: MesaUI = {
         id: 'mostrador',
         nombre: 'Mostrador',
@@ -111,7 +111,9 @@ export const MostradorProvider = ({ children }: { children: ReactNode }) => {
         aConfirmar: [],
         pedidos: carrito,
     };
-    const { offline } = await registrarVenta(carrito, totalACobrar, mesaVirtual, metodoPago);
+    // El total (y el monto del descuento) los deriva registrarVenta con
+    // calcularVenta: acá solo viaja lo que tipeó el usuario.
+    const { offline } = await registrarVenta(carrito, descuento ?? SIN_DESCUENTO, mesaVirtual, metodoPago);
     if (offline) {
         // Sin conexión: la venta quedó encolada (Etapa 3), no hay nada que
         // recargar del servidor — se descuenta el stock del catálogo local

@@ -8,7 +8,8 @@ import { imprimirArqueo } from '../../logic/impresion';
 import { exportarHistorialAExcel } from '../../logic/exportarVentas';
 import { useHistorialVentas } from '../../hooks/useHistorialVentas';
 import { usePlan } from '../../hooks/usePlan';
-import type { MetodoPago } from '../../types';
+import type { DescuentoVenta, MetodoPago, TipoDescuento } from '../../types';
+import { calcularDescuento } from '../../logic/venta';
 import { labelMetodo, iconoMetodo, colorMetodo } from '../../config/metodosPago';
 import type { VentaHistorial, DetalleVenta } from '../../hooks/useHistorialVentas';
 import { Campo, Boton } from '../ui/ComponentesBase';
@@ -29,7 +30,14 @@ const HistorialVentas = () => {
 
     const [mostrarFiltros, setMostrarFiltros] = useState(false);
     const [arqueoExpandido, setArqueoExpandido] = useState<string | null>(null);
-    const [ventaSeleccionada, setVentaSeleccionada] = useState<VentaHistorial | null>(null);
+    // Guardamos solo el id y leemos la venta de `ventas` en cada render: al
+    // guardar una edición, editarVenta actualiza la lista y el panel muestra
+    // los datos nuevos al toque (antes guardaba una copia y quedaba con el
+    // total viejo hasta cerrarlo o recargar la página).
+    const [ventaSeleccionadaId, setVentaSeleccionadaId] = useState<string | null>(null);
+    const ventaSeleccionada = ventaSeleccionadaId
+        ? ventas.find(v => v.id === ventaSeleccionadaId) ?? null
+        : null;
     const [exportando, setExportando] = useState(false);
 
     const handleReimprimirArqueo = (arqueo: typeof arqueos[number]) => {
@@ -270,7 +278,7 @@ const HistorialVentas = () => {
                                                         <FilaVentaTicket
                                                             key={venta.id}
                                                             venta={venta}
-                                                            onClick={() => setVentaSeleccionada(venta)}
+                                                            onClick={() => setVentaSeleccionadaId(venta.id)}
                                                         />
                                                     ))}
                                                 </div>
@@ -304,7 +312,7 @@ const HistorialVentas = () => {
                             <FilaVentaTicket
                                 key={venta.id}
                                 venta={venta}
-                                onClick={() => setVentaSeleccionada(venta)}
+                                onClick={() => setVentaSeleccionadaId(venta.id)}
                             />
                         ))}
                     </div>
@@ -332,7 +340,7 @@ const HistorialVentas = () => {
             <PanelLateral
                 titulo={ventaSeleccionada ? `Venta #${ventaSeleccionada.id.slice(-4).toUpperCase()}` : ''}
                 abierto={ventaSeleccionada !== null}
-                onCerrar={() => setVentaSeleccionada(null)}
+                onCerrar={() => setVentaSeleccionadaId(null)}
             >
                 {ventaSeleccionada && (
                     <DetalleVentaPanel
@@ -385,7 +393,7 @@ interface DetalleVentaPanelProps {
     cargarDetalle: (ventaId: string) => Promise<DetalleVenta[]>;
     puedeEditar: boolean;
     metodosHabilitados: MetodoPago[];
-    editarVenta: (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: number }) => Promise<number>;
+    editarVenta: (ventaId: string, cambios: { metodo_pago: MetodoPago; descuento: DescuentoVenta }) => Promise<number>;
 }
 
 const RECEPTOR_VACIO: Receptor = { tipoDocumento: 'DNI', numero: '', condicionIva: 'ConsumidorFinal', nombre: '', domicilio: '' };
@@ -394,7 +402,10 @@ const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitad
     const [detalle, setDetalle] = useState<DetalleVenta[] | null>(null);
     const [editando, setEditando] = useState(false);
     const [metodoEdit, setMetodoEdit] = useState<MetodoPago>(venta.metodo_pago);
-    const [descuentoEdit, setDescuentoEdit] = useState(String(venta.descuento));
+    // Se precarga con lo que se tipeó al vender (% o $). Para las ventas
+    // cargadas antes de que se guardara el valor tipeado, cae al monto.
+    const [descuentoTipoEdit, setDescuentoTipoEdit] = useState<TipoDescuento>(venta.descuentoTipo);
+    const [descuentoEdit, setDescuentoEdit] = useState(String(venta.descuentoValor || venta.descuento));
     const [guardando, setGuardando] = useState(false);
     const [errorEdit, setErrorEdit] = useState('');
     const [erroresFactura, setErroresFactura] = useState<string[]>([]);
@@ -434,16 +445,25 @@ const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitad
         ? detalle.reduce((acc, i) => acc + i.subtotal, 0)
         : venta.total + venta.descuento;
     const descuentoNum = parseFloat(descuentoEdit) || 0;
-    const totalPreview = Math.max(0, subtotalItems - descuentoNum);
+    // Mismo cálculo que va a persistir el hook (src/logic/venta.ts), así el
+    // "Nuevo total" que se ve acá es el que queda guardado.
+    const { monto: descuentoAplicado } = calcularDescuento(subtotalItems, {
+        tipo: descuentoTipoEdit,
+        valor: descuentoNum,
+    });
+    const totalPreview = subtotalItems - descuentoAplicado;
 
     const handleGuardar = async () => {
         setGuardando(true);
         setErrorEdit('');
         try {
-            await editarVenta(venta.id, { metodo_pago: metodoEdit, descuento: descuentoNum });
+            await editarVenta(venta.id, {
+                metodo_pago: metodoEdit,
+                descuento: { tipo: descuentoTipoEdit, valor: descuentoNum },
+            });
             setEditando(false);
-        } catch {
-            setErrorEdit('No se pudo guardar el cambio.');
+        } catch (err) {
+            setErrorEdit(err instanceof Error ? err.message : 'No se pudo guardar el cambio.');
         } finally {
             setGuardando(false);
         }
@@ -512,16 +532,42 @@ const DetalleVentaPanel = ({ venta, cargarDetalle, puedeEditar, metodosHabilitad
                             ))}
                         </select>
                     </div>
-                    <Campo
-                        etiqueta="Descuento ($)"
-                        type="number"
-                        min="0"
-                        value={descuentoEdit}
-                        onChange={e => setDescuentoEdit(e.target.value)}
-                    />
-                    <div className="flex items-center justify-between text-sm bg-stone-50 rounded-xl px-3 py-2">
-                        <span className="text-stone-500">Nuevo total</span>
-                        <span className="font-bold text-stone-800">${totalPreview.toLocaleString()}</span>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-medium text-stone-500">Descuento</label>
+                        <div className="flex gap-2">
+                            <select
+                                className="border border-stone-200 rounded-xl px-2 py-2 text-sm bg-white"
+                                value={descuentoTipoEdit}
+                                onChange={e => setDescuentoTipoEdit(e.target.value as TipoDescuento)}
+                            >
+                                <option value="monto">$</option>
+                                <option value="porcentaje">%</option>
+                            </select>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                className="flex-1 border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white"
+                                value={descuentoEdit}
+                                onChange={e => setDescuentoEdit(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-1 text-sm bg-stone-50 rounded-xl px-3 py-2">
+                        <div className="flex items-center justify-between">
+                            <span className="text-stone-500">Subtotal</span>
+                            <span className="text-stone-600">${subtotalItems.toLocaleString()}</span>
+                        </div>
+                        {descuentoAplicado > 0 && (
+                            <div className="flex items-center justify-between text-red-500">
+                                <span>Descuento</span>
+                                <span>-${descuentoAplicado.toLocaleString()}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                            <span className="text-stone-500">Nuevo total</span>
+                            <span className="font-bold text-stone-800">${totalPreview.toLocaleString()}</span>
+                        </div>
                     </div>
                     {errorEdit && <p className="text-xs text-red-500">{errorEdit}</p>}
                     <div className="flex gap-2">

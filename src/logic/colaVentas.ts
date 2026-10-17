@@ -6,7 +6,7 @@
 // cola, nunca se pisan entre sí. La reconciliación (Etapa 4, todavía sin
 // implementar) es quien procesa y vacía esta cola — quitarVentaDeCola ya
 // queda lista para eso.
-import type { ItemPedidoUI, MetodoPago } from '../types';
+import type { DescuentoAplicado, ItemPedidoUI, MetodoPago } from '../types';
 
 const DB_NAME = 'vallis_cola_ventas';
 const DB_VERSION = 1;
@@ -22,6 +22,12 @@ export interface VentaEncolada {
     arqueoId: string; // el arqueo que estaba activo al vender
     items: ItemPedidoUI[];
     total: number;
+    // Descuento ya calculado al momento de la venta, con el mismo
+    // calcularVenta que usa el insert online: al reconciliar NO se vuelve a
+    // calcular, para que una venta encolada se suba exactamente por lo que se
+    // cobró aunque cambien después el redondeo o el clamp.
+    // Opcional porque las colas guardadas antes de este cambio no lo tienen.
+    descuento?: DescuentoAplicado;
     metodoPago: MetodoPago;
     fecha: string; // ISO — cuándo ocurrió la venta, no cuándo se sincroniza
 }

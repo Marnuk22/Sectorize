@@ -3,7 +3,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { useConexion } from './ConexionContext';
 import { encolarVenta, type VentaEncolada } from '../logic/colaVentas';
-import type { ItemPedidoUI, MesaUI, MetodoPago, VentaUI, ArqueoUI, MovimientoCajaUI, MotivoRetiro } from '../types';
+import { calcularVenta } from '../logic/venta';
+import type { DescuentoVenta, ItemPedidoUI, MesaUI, MetodoPago, VentaUI, ArqueoUI, MovimientoCajaUI, MotivoRetiro } from '../types';
 
 // Resultado de registrarVenta: el caller (MostradorContext/SalonContext)
 // necesita saber si la venta se insertó de verdad o se encoló offline, para
@@ -22,7 +23,7 @@ interface VentasContextType {
     movimientosCaja: MovimientoCajaUI[];
     MetodosPago: MetodoPago[];
     cargando: boolean;
-    registrarVenta: (items: ItemPedidoUI[], total: number, mesa: MesaUI, metodoPago: MetodoPago) => Promise<ResultadoVenta>;
+    registrarVenta: (items: ItemPedidoUI[], descuento: DescuentoVenta, mesa: MesaUI, metodoPago: MetodoPago) => Promise<ResultadoVenta>;
     recargarMovimientosCaja: () => Promise<void>;
     retirarEfectivo: (monto: number, motivoCategoria: MotivoRetiro, nota?: string) => Promise<void>;
     ingresarEfectivo: (monto: number, nota?: string) => Promise<void>;
@@ -127,9 +128,15 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
         return () => { activo = false; };
     }, [localId]);
 
-    const registrarVenta = async (items: ItemPedidoUI[], total: number, mesa: MesaUI, metodoPago: MetodoPago): Promise<ResultadoVenta> => {
+    const registrarVenta = async (items: ItemPedidoUI[], descuento: DescuentoVenta, mesa: MesaUI, metodoPago: MetodoPago): Promise<ResultadoVenta> => {
         if (!localId || !user) throw new Error('Sin sesión activa');
         if (!arqueoActivo) throw new Error('No hay arqueo abierto');
+
+        // El total sale de acá y de ningún otro lado (src/logic/venta.ts): el
+        // caller pasa el descuento tal como lo tipeó el usuario y no calcula
+        // plata, así `ventas.descuento` y `ventas.total` no pueden divergir.
+        const { descuentoMonto, total } = calcularVenta(items, descuento);
+        const descuentoAplicado = { ...descuento, monto: descuentoMonto };
 
         if (!online) {
             // Sin conexión: se encola en vez de insertar. El id se genera
@@ -144,6 +151,7 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
                 arqueoId: arqueoActivo.id,
                 items,
                 total,
+                descuento: descuentoAplicado,
                 metodoPago,
                 fecha: fecha.toISOString(),
             };
@@ -175,6 +183,9 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
                 arqueo_id: arqueoActivo.id,
                 sector_id: null,
                 total,
+                descuento: descuentoMonto,
+                descuento_tipo: descuento.tipo,
+                descuento_valor: descuento.valor,
                 metodo_pago: metodoPago,
                 estado: 'cerrada',
             })

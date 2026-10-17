@@ -16,6 +16,21 @@ export type TipoMovimientoCaja = 'apertura' | 'venta_efectivo' | 'retiro' | 'dep
 export type MotivoRetiro = 'proveedor' | 'banco' | 'gasto' | 'otro';
 export type MotivoMovimientoStock = 'ingreso' | 'ajuste' | 'merma' | 'devolucion' | 'venta_online' | 'cancelacion_online' | 'produccion' | 'transferencia';
 
+// Descuento de una venta tal como lo carga el usuario: `tipo` es la forma
+// ($ o %) y `valor` lo tipeado (pesos o puntos porcentuales). El monto
+// efectivamente aplicado se calcula SIEMPRE en src/logic/venta.ts y es el que
+// se persiste en ventas.descuento.
+export type TipoDescuento = 'monto' | 'porcentaje';
+
+export interface DescuentoVenta {
+    tipo:  TipoDescuento;
+    valor: number;
+}
+
+export interface DescuentoAplicado extends DescuentoVenta {
+    monto: number;
+}
+
 // ============================================
 // ENTIDADES DB — snake_case, id: string (uuid)
 // ============================================
@@ -215,8 +230,10 @@ export interface Venta {
     metodo_pago: MetodoPago;
     estado:      EstadoVenta;
     fecha:       string;
-    descuento:   number;
-    editado_en:  string | null;
+    descuento:       number;
+    descuento_tipo:  TipoDescuento;
+    descuento_valor: number;
+    editado_en:      string | null;
 }
 
 export interface DetalleVenta {

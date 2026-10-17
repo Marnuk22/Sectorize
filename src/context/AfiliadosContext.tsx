@@ -4,6 +4,7 @@ import { useAuth } from './AuthContext';
 import type { Socio, Membresia, Suscripcion, SocioConEstado, MetodoPago } from '../types';
 import { useVentas } from './VentasContext';
 import { useConexion } from './ConexionContext';
+import { SIN_DESCUENTO } from '../logic/venta';
 
 interface AfiliadosContextType {
     socios: SocioConEstado[];
@@ -174,7 +175,9 @@ export const AfiliadosProvider = ({ children }: { children: ReactNode }) => {
             pedidos: [itemVenta],
         };
 
-        await registrarVenta([itemVenta], membresia.precio, mesaVirtual, metodoPago);
+        // Las membresías no llevan descuento (y el total lo deriva
+        // registrarVenta a partir del precio de la membresía).
+        await registrarVenta([itemVenta], SIN_DESCUENTO, mesaVirtual, metodoPago);
 
         // 2. Calcular fecha de inicio y vencimiento
         const hoy = new Date();
