@@ -175,40 +175,38 @@ export const VentasProvider = ({ children }: { children: ReactNode }) => {
             return { offline: true };
         }
 
-        const { data: venta, error: ventaError } = await supabase
-            .from('ventas')
-            .insert({
-                local_id: localId,
-                usuario_id: user.id,
-                arqueo_id: arqueoActivo.id,
-                sector_id: null,
-                total,
-                descuento: descuentoMonto,
-                descuento_tipo: descuento.tipo,
-                descuento_valor: descuento.valor,
-                metodo_pago: metodoPago,
-                estado: 'cerrada',
-            })
-            .select()
-            .single();
+        // Una sola RPC transaccional (ver la migración registrar_venta):
+        // venta + detalle entran juntos o no entra nada, y como el id lo
+        // genera el cliente, reintentar (o un timeout que en realidad sí
+        // insertó) nunca duplica ni deja la venta sin detalle. Antes eran dos
+        // inserts sueltos a PostgREST: de ahí salieron las ventas huérfanas.
+        const id = crypto.randomUUID();
+        const fecha = new Date();
 
-        if (ventaError) throw ventaError;
-
-        const { error: detalleError } = await supabase
-            .from('detalle_ventas')
-            .insert(items.map(item => ({
-                venta_id: venta.id,
+        const { error } = await supabase.rpc('registrar_venta', {
+            p_id: id,
+            p_local_id: localId,
+            p_usuario_id: user.id,
+            p_arqueo_id: arqueoActivo.id,
+            p_total: total,
+            p_descuento: descuentoMonto,
+            p_descuento_tipo: descuento.tipo,
+            p_descuento_valor: descuento.valor,
+            p_metodo_pago: metodoPago,
+            p_fecha: fecha.toISOString(),
+            p_items: items.map(item => ({
                 // Si el item no es un producto del inventario (ej: membresía), producto_id va null
                 producto_id: (item as any).esProductoInventario === false ? null : item.id,
                 cantidad: item.cantidad,
                 precio_unitario: item.precio,
-            })));
+            })),
+        });
 
-        if (detalleError) throw detalleError;
+        if (error) throw error;
 
         setHistorialVentas(prev => [{
-            id: venta.id,
-            fecha: new Date(venta.fecha),
+            id,
+            fecha,
             items,
             total,
             mesa,

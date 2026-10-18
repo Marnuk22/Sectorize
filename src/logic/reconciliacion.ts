@@ -26,7 +26,7 @@ export const reconciliarVentas = async (): Promise<ResultadoReconciliacion> => {
     for (const venta of ordenada) {
         try {
             // Una sola RPC, atómica e idempotente (ver la migración
-            // registrar_venta_offline): la venta y su detalle entran juntos o
+            // registrar_venta): la venta y su detalle entran juntos o
             // no entra nada, y reintentar con el mismo id nunca duplica ni
             // deja la venta a medias. Antes eran dos inserts sueltos: si
             // fallaba el de detalle_ventas, el reintento chocaba con la PK de
@@ -37,7 +37,7 @@ export const reconciliarVentas = async (): Promise<ResultadoReconciliacion> => {
             // de calcularVenta al momento de la venta): acá NO se recalcula,
             // así una venta encolada se sube por exactamente lo que se cobró
             // aunque después cambien el redondeo o el clamp.
-            const { error } = await supabase.rpc('registrar_venta_offline', {
+            const { error } = await supabase.rpc('registrar_venta', {
                 p_id: venta.id,
                 p_local_id: venta.localId,
                 p_usuario_id: venta.usuarioId,
