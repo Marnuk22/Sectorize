@@ -1,4 +1,4 @@
-import ContenedorMesa from './ContendedorMesas.tsx';
+import ContenedorMesa from './ContenedorMesas.tsx';
 import { useState } from 'react';
 import { useSalon } from '../context/index.ts';
 import FormularioNuevoSector from './FormularioNuevoSector.tsx';

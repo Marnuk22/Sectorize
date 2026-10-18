@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-**Vallis** — a multi-tenant POS/management app for small businesses ("locales"): restaurants/bars (tables & sectors), stores (quick counter sales), and gyms/academies (memberships & attendance). One codebase serves all business types; which features are visible is driven entirely by data on the `local` (its `plan` and `modulos`), not by separate builds. The npm package name (`gymgestor`) is a legacy leftover from an earlier pivot — ignore it.
+**Vallis** — a multi-tenant POS/management app for small businesses ("locales"): restaurants/bars (tables & sectors), stores (quick counter sales), and gyms/academies (memberships & attendance). One codebase serves all business types; which features are visible is driven entirely by data on the `local` (its `plan` and `modulos`), not by separate builds. (The npm package name used to be `gymgestor`, a leftover from an earlier pivot; it is now `vallis`.)
 
 The repo root is the main React app. `vallis-landing/` is a separate static marketing site (plain HTML, deployed on Vercel) — it has no `package.json` and is unrelated to the pnpm build. **Note: the folder is `vallis-landing/`, NOT `landing/`.** The public product catalog lives inside it at `vallis-landing/c/` and is served at `vallis.com.ar/c/{slug}` via a rewrite in `vallis-landing/vercel.json`.
 
@@ -111,7 +111,7 @@ Receipt/comanda printing goes through `src/logic/qz.ts` (QZ Tray websocket bridg
 
 - Windows, VS Code, repo at `C:\Users\oniam\Vallis\Sectorize`.
 - Student developer; prefers changes applied one at a time, reporting errors as they come.
-- Legacy leftovers to eventually fix: `index.html` app title still says "gymgestor"; `package.json` name is `gymgestor`.
+- Legacy leftovers already cleaned: `index.html` title and `package.json` name now say "Vallis"; the stale npm `package-lock.json` and empty dead files (`src/logic/*.servces.tsx`, `CajaVentas.tsx`, `useArqueo.ts`) were removed; `ContendedorMesas.tsx` was renamed to `ContenedorMesas.tsx`.
 
 ## Archivos de contexto del proyecto
 
