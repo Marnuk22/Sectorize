@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, MoreHorizontal, KeyRound, Ban, CheckCircle2, Pencil, Users } from 'lucide-react';
 import { useEmpleados, type EmpleadoUI } from '../../hooks/useEmpleados';
 import { useAuth } from '../../context/AuthContext';
-import { Tarjeta, Etiqueta, Boton, EstadoVacio, ModalBase, Campo } from '../ui/ComponentesBase';
+import { Tarjeta, Etiqueta, Boton, EstadoVacio, ModalBase, Campo, MenuFlotante } from '../ui/ComponentesBase';
 import ModalEmpleado from './ModalEmpleado';
 
 const PanelEmpleados = () => {
@@ -141,14 +141,14 @@ interface MenuAccionesProps {
 
 const MenuAccionesEmpleado = ({ empleado, onEditar, onRestablecerPassword, onDesactivar, onReactivar }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
+    const botonRef = useRef<HTMLButtonElement>(null);
     const item = 'w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors';
 
     return (
         <>
-            {abierto && <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />}
-
             <div className="relative shrink-0">
                 <button
+                    ref={botonRef}
                     onClick={() => setAbierto(a => !a)}
                     className={`py-1.5 px-2 border rounded-lg text-xs transition-colors ${
                         abierto ? 'border-violet-200 bg-violet-50 text-violet-600' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
@@ -157,34 +157,40 @@ const MenuAccionesEmpleado = ({ empleado, onEditar, onRestablecerPassword, onDes
                 >
                     <MoreHorizontal size={14} />
                 </button>
-
-                {abierto && (
-                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden py-1">
-                        <button className={item} onClick={() => { onEditar(); setAbierto(false); }}>
-                            <Pencil size={12} className="text-stone-400" /> Editar
-                        </button>
-
-                        <button className={item} onClick={() => { onRestablecerPassword(); setAbierto(false); }}>
-                            <KeyRound size={12} className="text-stone-400" /> Restablecer contraseña
-                        </button>
-
-                        <div className="h-px bg-stone-100 my-1" />
-
-                        {empleado.activo ? (
-                            <button
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left transition-colors"
-                                onClick={() => { onDesactivar(); setAbierto(false); }}
-                            >
-                                <Ban size={12} /> Desactivar
-                            </button>
-                        ) : (
-                            <button className={item} onClick={() => { onReactivar(); setAbierto(false); }}>
-                                <CheckCircle2 size={12} className="text-green-500" /> Reactivar
-                            </button>
-                        )}
-                    </div>
-                )}
             </div>
+
+            {/* El menú va en un portal al body: dentro de la grilla lo
+                recortaba el `overflow-y-auto` del contenedor. Ver
+                `MenuFlotante`. */}
+            <MenuFlotante
+                abierto={abierto}
+                anclaRef={botonRef}
+                onCerrar={() => setAbierto(false)}
+                ancho="w-48"
+            >
+                <button className={item} onClick={() => { onEditar(); setAbierto(false); }}>
+                    <Pencil size={12} className="text-stone-400" /> Editar
+                </button>
+
+                <button className={item} onClick={() => { onRestablecerPassword(); setAbierto(false); }}>
+                    <KeyRound size={12} className="text-stone-400" /> Restablecer contraseña
+                </button>
+
+                <div className="h-px bg-stone-100 my-1" />
+
+                {empleado.activo ? (
+                    <button
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left transition-colors"
+                        onClick={() => { onDesactivar(); setAbierto(false); }}
+                    >
+                        <Ban size={12} /> Desactivar
+                    </button>
+                ) : (
+                    <button className={item} onClick={() => { onReactivar(); setAbierto(false); }}>
+                        <CheckCircle2 size={12} className="text-green-500" /> Reactivar
+                    </button>
+                )}
+            </MenuFlotante>
         </>
     );
 };

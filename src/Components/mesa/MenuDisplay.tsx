@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Search, Plus, Star } from 'lucide-react';
 import { type Producto } from "../../types/index.ts";
 import { useMenu } from '../../context/MenuContext.tsx';
 import { useFavoritos } from '../../hooks/useFavoritos';
+import { MenuFlotante } from '../ui/ComponentesBase';
 
 interface MenuDisplayProps {
     onSeleccionar: (producto: Producto) => void;
@@ -12,6 +13,7 @@ const MenuDisplay = ({ onSeleccionar }: MenuDisplayProps) => {
     const { productos } = useMenu();
     const { favoritos } = useFavoritos(6);
     const [busqueda, setBusqueda] = useState("");
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const resultados = busqueda.trim() === ""
         ? []
@@ -47,6 +49,7 @@ const MenuDisplay = ({ onSeleccionar }: MenuDisplayProps) => {
                 <div className="relative flex items-center">
                     <Search className="absolute left-4 text-stone-400" size={18} />
                     <input
+                        ref={inputRef}
                         type="text"
                         className="w-full pl-12 pr-4 py-4 bg-stone-100 border-none rounded-2xl focus:ring-2 focus:ring-violet-500 outline-none font-medium transition-all"
                         placeholder="Buscar producto..."
@@ -55,31 +58,41 @@ const MenuDisplay = ({ onSeleccionar }: MenuDisplayProps) => {
                     />
                 </div>
 
-                {resultados.length > 0 && (
-                    <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-stone-100 z-[150] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="max-h-75 overflow-y-auto">
-                            {resultados.map((producto) => (
-                                <button
-                                    key={producto.id}
-                                    onClick={() => {
-                                        onSeleccionar(producto);
-                                        setBusqueda("");
-                                    }}
-                                    className="w-full flex justify-between items-center p-4 hover:bg-violet-50 border-b border-stone-50 last:border-none transition-colors group"
-                                >
-                                    <div className="text-left">
-                                        <p className="font-bold text-stone-800">{producto.nombre}</p>
-                                        <p className="text-xs text-stone-400 uppercase">{producto.categoria}</p>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="font-black text-violet-600">${producto.precio_venta.toLocaleString()}</span>
-                                        <Plus size={16} className="text-violet-600" />
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
+                {/* Los resultados van en un portal al body: el panel de la
+                    mesa tiene `overflow-hidden`/`overflow-y-auto`, que
+                    recortaba el desplegable. `ajustar` lo hace tomar el
+                    ancho del input, y `conFondo={false}` porque el fondo
+                    taparía el propio input (quedaría imposible seguir
+                    escribiendo). */}
+                <MenuFlotante
+                    abierto={resultados.length > 0}
+                    anclaRef={inputRef}
+                    onCerrar={() => setBusqueda('')}
+                    ajustar
+                    conFondo={false}
+                >
+                    <div className="max-h-75 overflow-y-auto">
+                        {resultados.map((producto) => (
+                            <button
+                                key={producto.id}
+                                onClick={() => {
+                                    onSeleccionar(producto);
+                                    setBusqueda("");
+                                }}
+                                className="w-full flex justify-between items-center p-4 hover:bg-violet-50 border-b border-stone-50 last:border-none transition-colors group"
+                            >
+                                <div className="text-left">
+                                    <p className="font-bold text-stone-800">{producto.nombre}</p>
+                                    <p className="text-xs text-stone-400 uppercase">{producto.categoria}</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="font-black text-violet-600">${producto.precio_venta.toLocaleString()}</span>
+                                    <Plus size={16} className="text-violet-600" />
+                                </div>
+                            </button>
+                        ))}
                     </div>
-                )}
+                </MenuFlotante>
             </div>
         </div>
     );

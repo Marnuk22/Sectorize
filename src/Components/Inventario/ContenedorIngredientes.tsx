@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, MoreHorizontal } from 'lucide-react';
 import { useIngredientes } from '../../context/IngredientesContext';
 import type { Ingrediente } from '../../types';
 import ModalIngrediente from './ModalIngrediente';
 import ModalStockIngrediente from './ModalStockIngrediente';
-import { Etiqueta, Tarjeta } from '../ui/ComponentesBase';
+import { Etiqueta, MenuFlotante, Tarjeta } from '../ui/ComponentesBase';
 
 const fmt = (n: number) => n.toLocaleString('es-AR', { maximumFractionDigits: 3 });
 
@@ -20,7 +20,6 @@ const ContenedorIngredientes = () => {
     const [confirmarBorrar, setConfirmarBorrar] = useState<Ingrediente | null>(null);
     const [borrando, setBorrando] = useState(false);
     const [errorBorrar, setErrorBorrar] = useState('');
-    const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
 
     const filtrados = ingredientes.filter(i =>
         i.nombre.toLowerCase().includes(busqueda.toLowerCase())
@@ -106,34 +105,11 @@ const ContenedorIngredientes = () => {
                                                 <Package size={11} /> Stock
                                             </button>
                                         )}
-                                        <div className="relative">
-                                            {menuAbierto === ing.id && (
-                                                <div className="fixed inset-0 z-40" onClick={() => setMenuAbierto(null)} />
-                                            )}
-                                            <button
-                                                onClick={() => setMenuAbierto(m => m === ing.id ? null : ing.id)}
-                                                className="py-1.5 px-2 border rounded-lg text-xs border-stone-200 text-stone-500 hover:bg-stone-50"
-                                            >
-                                                <MoreHorizontal size={11} />
-                                            </button>
-                                            {menuAbierto === ing.id && (
-                                                <div className="absolute right-0 bottom-full mb-1 w-40 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden py-1">
-                                                    <button
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left"
-                                                        onClick={() => { toggleActivo(ing.id, !ing.activo); setMenuAbierto(null); }}
-                                                    >
-                                                        {ing.activo ? <EyeOff size={12} className="text-stone-400" /> : <Eye size={12} className="text-stone-400" />}
-                                                        {ing.activo ? 'Desactivar' : 'Activar'}
-                                                    </button>
-                                                    <button
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left"
-                                                        onClick={() => { setConfirmarBorrar(ing); setErrorBorrar(''); setMenuAbierto(null); }}
-                                                    >
-                                                        <Trash2 size={12} /> Eliminar
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        <MenuAccionesIngrediente
+                                            ingrediente={ing}
+                                            onToggleActivo={() => toggleActivo(ing.id, !ing.activo)}
+                                            onBorrar={() => { setConfirmarBorrar(ing); setErrorBorrar(''); }}
+                                        />
                                     </div>
                                 </Tarjeta>
                             );
@@ -189,6 +165,56 @@ const ContenedorIngredientes = () => {
                 </div>
             )}
         </div>
+    );
+};
+
+// --- Menú de acciones de un ingrediente ---
+// Mismo patrón que el de productos: el menú va en un portal al body
+// (`MenuFlotante`) para que no lo recorte el `overflow-y-auto` de la
+// grilla ni se vaya de la pantalla.
+interface MenuAccionesIngredienteProps {
+    ingrediente: Ingrediente;
+    onToggleActivo: () => void;
+    onBorrar: () => void;
+}
+
+const MenuAccionesIngrediente = ({ ingrediente, onToggleActivo, onBorrar }: MenuAccionesIngredienteProps) => {
+    const [abierto, setAbierto] = useState(false);
+    const botonRef = useRef<HTMLButtonElement>(null);
+
+    return (
+        <>
+            <div className="relative">
+                <button
+                    ref={botonRef}
+                    onClick={() => setAbierto(a => !a)}
+                    className="py-1.5 px-2 border rounded-lg text-xs border-stone-200 text-stone-500 hover:bg-stone-50"
+                >
+                    <MoreHorizontal size={11} />
+                </button>
+            </div>
+
+            <MenuFlotante
+                abierto={abierto}
+                anclaRef={botonRef}
+                onCerrar={() => setAbierto(false)}
+                ancho="w-40"
+            >
+                <button
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left"
+                    onClick={() => { onToggleActivo(); setAbierto(false); }}
+                >
+                    {ingrediente.activo ? <EyeOff size={12} className="text-stone-400" /> : <Eye size={12} className="text-stone-400" />}
+                    {ingrediente.activo ? 'Desactivar' : 'Activar'}
+                </button>
+                <button
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left"
+                    onClick={() => { onBorrar(); setAbierto(false); }}
+                >
+                    <Trash2 size={12} /> Eliminar
+                </button>
+            </MenuFlotante>
+        </>
     );
 };
 

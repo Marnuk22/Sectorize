@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Plus, Search, Edit, Package, Eye, EyeOff, Trash2, Upload, Copy, Star, MoreHorizontal, Globe, Mic, PackagePlus, History, Barcode, Printer, Camera, Store, ChefHat } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useImpresoras } from '../../context/ImpresorasContext';
@@ -19,7 +19,7 @@ import ModalProduccion from '../Inventario/ModalProduccion';
 import ContenedorIngredientes from '../Inventario/ContenedorIngredientes';
 import ContenedorDeposito from '../Inventario/ContenedorDeposito';
 import { TrendingUp } from 'lucide-react';
-import { Etiqueta, TarjetaProducto } from '../ui/ComponentesBase';
+import { Etiqueta, MenuFlotante, TarjetaProducto } from '../ui/ComponentesBase';
 
 const ContenedorInventario = () => {
     const { productos, categorias, cargando, toggleActivo,toggleFavorito, togglePublicado, agregarCategoria, borrarCategoria, borrarProducto, generarCodigoBarras, recargarProductos  } = useMenu();
@@ -507,18 +507,15 @@ interface MenuAccionesProps {
 
 const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavorito, onTogglePublicado, onVerKardex, mostrarProduccion, onProducir, onGenerarCodigo, onImprimirEtiqueta, mostrarTiendanube, sincronizandoTiendanube, onSincronizarTiendanube }: MenuAccionesProps) => {
     const [abierto, setAbierto] = useState(false);
+    const botonRef = useRef<HTMLButtonElement>(null);
 
     const item = "w-full flex items-center gap-2 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 text-left transition-colors";
 
     return (
         <>
-            {/* Fondo para cerrar al tocar afuera */}
-            {abierto && (
-                <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-            )}
-
             <div className="relative">
                 <button
+                    ref={botonRef}
                     onClick={() => setAbierto(a => !a)}
                     className={`py-1.5 px-2 border rounded-lg text-xs transition-colors ${
                         abierto ? 'border-violet-200 bg-violet-50 text-violet-600' : 'border-stone-200 text-stone-500 hover:bg-stone-50'
@@ -527,73 +524,80 @@ const MenuAcciones = ({ prod, onDuplicar, onBorrar, onToggleActivo, onToggleFavo
                 >
                     <MoreHorizontal size={11} />
                 </button>
-
-                {abierto && (
-                    <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-stone-200 rounded-xl shadow-xl z-50 overflow-hidden py-1">
-                        <button className={item} onClick={() => { onDuplicar(); setAbierto(false); }}>
-                            <Copy size={12} className="text-stone-400" /> Duplicar
-                        </button>
-
-                        <button className={item} onClick={() => { onToggleFavorito(); setAbierto(false); }}>
-                            <Star size={12} className={prod.favorito ? 'text-amber-400 fill-amber-400' : 'text-stone-400'} />
-                            {prod.favorito ? 'Quitar de favoritos' : 'Marcar favorito'}
-                        </button>
-
-                        <button className={item} onClick={() => { onTogglePublicado(); setAbierto(false); }}>
-                            <Globe size={12} className={prod.publicado ? 'text-sky-500' : 'text-stone-400'} />
-                            {prod.publicado ? 'Quitar del catálogo' : 'Publicar en catálogo'}
-                        </button>
-
-                        <button className={item} onClick={() => { onVerKardex(); setAbierto(false); }}>
-                            <History size={12} className="text-stone-400" /> Historial de stock
-                        </button>
-
-                        {mostrarProduccion && (
-                            <button className={item} onClick={() => { onProducir(); setAbierto(false); }}>
-                                <ChefHat size={12} className="text-stone-400" /> Producir
-                            </button>
-                        )}
-
-                        {!prod.codigo_barras && (
-                            <button className={item} onClick={() => { onGenerarCodigo(); setAbierto(false); }}>
-                                <Barcode size={12} className="text-stone-400" /> Generar código de barras
-                            </button>
-                        )}
-                        {prod.codigo_barras && (
-                            <button className={item} onClick={() => { onImprimirEtiqueta(); setAbierto(false); }}>
-                                <Printer size={12} className="text-stone-400" /> Imprimir etiqueta
-                            </button>
-                        )}
-
-                        {mostrarTiendanube && (
-                            <button
-                                className={item}
-                                disabled={sincronizandoTiendanube}
-                                onClick={() => { onSincronizarTiendanube(); setAbierto(false); }}
-                            >
-                                <Store size={12} className={prod.tiendanube_producto_id ? 'text-sky-500' : 'text-stone-400'} />
-                                {sincronizandoTiendanube
-                                    ? 'Sincronizando...'
-                                    : prod.tiendanube_producto_id ? 'Actualizar en Tiendanube' : 'Publicar en Tiendanube'}
-                            </button>
-                        )}
-
-                        <div className="h-px bg-stone-100 my-1" />
-
-                        <button className={item} onClick={() => { onToggleActivo(); setAbierto(false); }}>
-                            {prod.activo ? <EyeOff size={12} className="text-stone-400" /> : <Eye size={12} className="text-stone-400" />}
-                            {prod.activo ? 'Desactivar' : 'Activar'}
-                        </button>
-
-                        <button
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left transition-colors"
-                            onClick={() => { onBorrar(); setAbierto(false); }}
-                        >
-                            <Trash2 size={12} /> Eliminar
-                        </button>
-                    </div>
-                )}
             </div>
+
+            {/* El menú va en un portal al body: dentro de la grilla lo
+                recortaba el `overflow-y-auto` del contenedor y siempre
+                abría para abajo, así que en las últimas filas se perdían
+                las opciones de abajo. Ver `MenuFlotante`. */}
+            <MenuFlotante
+                abierto={abierto}
+                anclaRef={botonRef}
+                onCerrar={() => setAbierto(false)}
+                ancho="w-44"
+            >
+                <button className={item} onClick={() => { onDuplicar(); setAbierto(false); }}>
+                    <Copy size={12} className="text-stone-400" /> Duplicar
+                </button>
+
+                <button className={item} onClick={() => { onToggleFavorito(); setAbierto(false); }}>
+                    <Star size={12} className={prod.favorito ? 'text-amber-400 fill-amber-400' : 'text-stone-400'} />
+                    {prod.favorito ? 'Quitar de favoritos' : 'Marcar favorito'}
+                </button>
+
+                <button className={item} onClick={() => { onTogglePublicado(); setAbierto(false); }}>
+                    <Globe size={12} className={prod.publicado ? 'text-sky-500' : 'text-stone-400'} />
+                    {prod.publicado ? 'Quitar del catálogo' : 'Publicar en catálogo'}
+                </button>
+
+                <button className={item} onClick={() => { onVerKardex(); setAbierto(false); }}>
+                    <History size={12} className="text-stone-400" /> Historial de stock
+                </button>
+
+                {mostrarProduccion && (
+                    <button className={item} onClick={() => { onProducir(); setAbierto(false); }}>
+                        <ChefHat size={12} className="text-stone-400" /> Producir
+                    </button>
+                )}
+
+                {!prod.codigo_barras && (
+                    <button className={item} onClick={() => { onGenerarCodigo(); setAbierto(false); }}>
+                        <Barcode size={12} className="text-stone-400" /> Generar código de barras
+                    </button>
+                )}
+                {prod.codigo_barras && (
+                    <button className={item} onClick={() => { onImprimirEtiqueta(); setAbierto(false); }}>
+                        <Printer size={12} className="text-stone-400" /> Imprimir etiqueta
+                    </button>
+                )}
+
+                {mostrarTiendanube && (
+                    <button
+                        className={item}
+                        disabled={sincronizandoTiendanube}
+                        onClick={() => { onSincronizarTiendanube(); setAbierto(false); }}
+                    >
+                        <Store size={12} className={prod.tiendanube_producto_id ? 'text-sky-500' : 'text-stone-400'} />
+                        {sincronizandoTiendanube
+                            ? 'Sincronizando...'
+                            : prod.tiendanube_producto_id ? 'Actualizar en Tiendanube' : 'Publicar en Tiendanube'}
+                    </button>
+                )}
+
+                <div className="h-px bg-stone-100 my-1" />
+
+                <button className={item} onClick={() => { onToggleActivo(); setAbierto(false); }}>
+                    {prod.activo ? <EyeOff size={12} className="text-stone-400" /> : <Eye size={12} className="text-stone-400" />}
+                    {prod.activo ? 'Desactivar' : 'Activar'}
+                </button>
+
+                <button
+                    className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 text-left transition-colors"
+                    onClick={() => { onBorrar(); setAbierto(false); }}
+                >
+                    <Trash2 size={12} /> Eliminar
+                </button>
+            </MenuFlotante>
         </>
     );
 };

@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { Package } from 'lucide-react';
 
 /**
@@ -375,3 +376,142 @@ export const TarjetaProducto = ({
         {acciones && <div className="flex gap-1 mt-3">{acciones}</div>}
     </Tarjeta>
 );
+
+/* ---------------------------------------------------------------------- */
+/* MenuFlotante: el desplegable "⋯" que nunca se sale de la pantalla.      */
+/* ---------------------------------------------------------------------- */
+/* Se renderiza en un portal al body con posición FIJA, calculada a partir
+   del botón que lo abre: si no hay lugar abajo abre hacia arriba, y en
+   horizontal se recorta contra el viewport.
+
+   Por qué un portal y no un `absolute` dentro de la tarjeta: el menú
+   estaba anclado con `absolute` dentro de la grilla, y esa grilla vive
+   dentro de un `overflow-y-auto` — el recorte del contenedor se llevaba
+   por delante las últimas opciones (el menú de producto tiene hasta 9
+   ítems, ~300px, y siempre abría para abajo). Con `fixed` en el body el
+   menú escapa del recorte y además se puede voltear según el espacio
+   que haya de verdad.
+
+   Uso:
+     const botonRef = useRef<HTMLButtonElement>(null);
+     <button ref={botonRef} onClick={() => setAbierto(a => !a)}>⋯</button>
+     <MenuFlotante abierto={abierto} anclaRef={botonRef} onCerrar={() => setAbierto(false)}>
+        ...items...
+     </MenuFlotante>                                                        */
+
+const MARGEN_MENU = 8;
+
+interface MenuFlotanteProps {
+    abierto: boolean;
+    anclaRef: RefObject<HTMLElement | null>;
+    onCerrar: () => void;
+    children: ReactNode;
+    ancho?: string;
+    /** El menú toma el ancho del ancla (para desplegables de un input). */
+    ajustar?: boolean;
+    /** Fondo para cerrar al click afuera. False cuando el ancla es un input:
+        el fondo se comería el click para seguir escribiendo. */
+    conFondo?: boolean;
+    className?: string;
+}
+
+export const MenuFlotante = ({ abierto, anclaRef, onCerrar, children, ancho = 'w-44', ajustar = false, conFondo = true, className = '' }: MenuFlotanteProps) => {
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+
+    // En ref para no re-disparar el efecto de posicionado cuando el padre
+    // pasa un callback inline nuevo en cada render (mismo patrón que
+    // useReconciliacionOffline).
+    const onCerrarRef = useRef(onCerrar);
+    useEffect(() => { onCerrarRef.current = onCerrar; }, [onCerrar]);
+
+    const calcular = useCallback(() => {
+        const ancla = anclaRef.current;
+        const menu = menuRef.current;
+        if (!ancla || !menu) return;
+
+        const r = ancla.getBoundingClientRect();
+
+        // El ancho se fija ANTES de medir el alto: si el menú copia el ancho
+        // del ancla, el alto depende del ancho (el texto de cada ítem puede
+        // partirse en dos líneas).
+        if (ajustar) menu.style.width = `${r.width}px`;
+
+        const alto = menu.offsetHeight;
+        const anchoMenu = ajustar ? r.width : menu.offsetWidth;
+        const vh = window.innerHeight;
+        const vw = window.innerWidth;
+
+        // Si el ancla se fue de la pantalla (scrollear la grilla), el menú
+        // no tiene a qué quedarse pegado: se cierra.
+        if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) {
+            onCerrarRef.current();
+            return;
+        }
+
+        // Vertical: abajo por defecto; si no entra, para arriba; si tampoco
+        // entra (viewport muy bajo), se ancla al borde y scrollea por dentro.
+        let top = r.bottom + 4;
+        if (top + alto > vh - MARGEN_MENU) {
+            const arriba = r.top - 4 - alto;
+            top = arriba >= MARGEN_MENU ? arriba : Math.max(MARGEN_MENU, vh - alto - MARGEN_MENU);
+        }
+
+        // Horizontal: alineado al borde derecho del ancla; si no entra, se
+        // corre a la izquierda; nunca se sale del viewport.
+        let left = r.right - anchoMenu;
+        if (left + anchoMenu > vw - MARGEN_MENU) left = vw - anchoMenu - MARGEN_MENU;
+        if (left < MARGEN_MENU) left = MARGEN_MENU;
+
+        setPos({ top, left });
+    }, [anclaRef, ajustar]);
+
+    useLayoutEffect(() => {
+        if (!abierto) return;
+
+        calcular();
+
+        // `capture`: los scrolls de contenedores internos (la grilla) también
+        // mueven el ancla, así que hay que escucharlos para que el menú
+        // siga pegado al botón.
+        const alMover = () => calcular();
+        const alPresionar = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onCerrarRef.current();
+        };
+        window.addEventListener('scroll', alMover, true);
+        window.addEventListener('resize', alMover);
+        window.addEventListener('keydown', alPresionar);
+        return () => {
+            window.removeEventListener('scroll', alMover, true);
+            window.removeEventListener('resize', alMover);
+            window.removeEventListener('keydown', alPresionar);
+        };
+    }, [abierto, calcular]);
+
+    if (!abierto) return null;
+
+    return createPortal(
+        <>
+            {/* Fondo para cerrar al tocar afuera */}
+            {conFondo && (
+                <div className="fixed inset-0 z-40" onClick={() => onCerrarRef.current()} />
+            )}
+
+            <div
+                ref={menuRef}
+                className={`fixed z-50 bg-white border border-stone-200 rounded-xl shadow-xl py-1 overflow-y-auto ${ajustar ? '' : ancho} ${className}`}
+                style={{
+                    top: pos?.top ?? 0,
+                    left: pos?.left ?? 0,
+                    maxHeight: `calc(100vh - ${MARGEN_MENU * 2}px)`,
+                    // Hasta tener la posición calculada no se muestra: evita
+                    // el flash en la esquina (0,0).
+                    visibility: pos ? 'visible' : 'hidden',
+                }}
+            >
+                {children}
+            </div>
+        </>,
+        document.body
+    );
+};
