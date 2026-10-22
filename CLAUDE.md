@@ -77,7 +77,7 @@ When adding a field that exists in the DB, add it to the DB entity interface; on
 - Extensions enabled: `pg_cron`, `pg_net`.
 - General principle: integrity rules go close to the data (DB); presentation and external-service orchestration go higher up (frontend / Edge Functions).
 - **El descuento no se calcula «por ahí»:** `src/logic/venta.ts` (`calcularVenta`/`calcularDescuento`) es el único lugar donde se calculan subtotal, descuento y total (redondeo del `%` y clamp a `[0, subtotal]` incluidos). `registrarVenta`/`cerrarMesa`/`cobrar` reciben el descuento tal como lo tipeó el usuario (`DescuentoVenta = {tipo: 'monto'|'porcentaje', valor}`), **nunca un total ya calculado**, y derivan el resto adentro. Invariante en los 3 caminos de escritura (online, cola offline, reconciliación): `ventas.total = Σ detalle_ventas.subtotal − ventas.descuento`, donde `descuento` es el monto aplicado y `descuento_tipo`/`descuento_valor` guardan el insumo tipeado.
-- **Ventas: RPC transaccional, no inserts sueltos.** La venta encolada entra por `registrar_venta_offline(...)`: venta + detalle en una transacción, idempotente por `id`.
+- **Ventas: RPC transaccional, no inserts sueltos.** Los **dos** caminos de escritura (POS online y reconciliación offline) entran por la misma RPC `registrar_venta(...)`: venta + detalle en una transacción, idempotente por el `id` que genera el cliente. Antes la venta online insertaba venta y detalle en dos requests sueltos a PostgREST (de ahí salieron 11 ventas huérfanas sin detalle). La función se llamaba `registrar_venta_offline` y se renombró a `registrar_venta` en la migración `20261017043253` (cuerpo, ACL y `security invoker` intactos).
 
 ### Granel (sold-by-weight) architecture
 
