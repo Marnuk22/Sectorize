@@ -173,7 +173,7 @@ const ModalProductoOFF = ({ abierto, codigoInicial = '', onCerrar, onAgregado }:
         setErrorGuardar('');
 
         try {
-            const producto = await agregarProducto({
+            const datosProducto: Record<string, unknown> = {
                 nombre: nombreLimpio,
                 descripcion: null,
                 categoria: categoria.trim() || null,
@@ -188,17 +188,18 @@ const ModalProductoOFF = ({ abierto, codigoInicial = '', onCerrar, onAgregado }:
                 favorito: false,
                 publicado: false,
                 imagen_url: imagenUrl,
-                eoff,
                 tiendanube_producto_id: null,
                 tiendanube_variant_id: null,
-            });
+            };
+            // Solo se envía eoff cuando es true; si es false se usa el default de la columna.
+            if (eoff) datosProducto.eoff = true;
+
+            const producto = await agregarProducto(datosProducto as Omit<Producto, 'id' | 'local_id' | 'negocio_id' | 'creado_at' | 'updated_at' | 'alerta_enviada'>);
             onAgregado(producto);
         } catch (err) {
-            setErrorGuardar(
-                err instanceof Error && err.message
-                    ? err.message
-                    : 'No se pudo guardar el producto en el catálogo.',
-            );
+            const mensaje = err instanceof Error ? err.message : 'Error desconocido.';
+            setErrorGuardar(`No se pudo guardar en el catálogo: ${mensaje}`);
+            console.error('Error guardando producto OFF:', err);
         } finally {
             setGuardando(false);
         }
