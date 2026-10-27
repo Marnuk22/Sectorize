@@ -153,6 +153,7 @@ export interface Producto {
     publicado: boolean;
     imagen_url: string | null;
     alerta_enviada: boolean;
+    eoff?: boolean;
     tiendanube_producto_id: string | null;
     tiendanube_variant_id: string | null;
 }

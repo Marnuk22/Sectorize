@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vallis-off-pg
+    environment:
+      POSTGRES_USER: off
+      POSTGRES_PASSWORD: off
+      POSTGRES_DB: vallis_off
+    ports:
+      # 5433 para no chocar con el Postgres que ya tengas en 5432
+      - "5433:5432"
+    volumes:
+      - off-pgdata:/var/lib/postgresql/data
+
+volumes:
+  off-pgdata:

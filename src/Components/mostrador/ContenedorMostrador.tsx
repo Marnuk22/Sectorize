@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Plus, Minus, Trash2, ShoppingCart, Check, X, ChevronDown, AlertTriangle, CheckCircle2, Camera } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, ShoppingCart, Check, X, ChevronDown, AlertTriangle, CheckCircle2, Camera, Barcode } from 'lucide-react';
 import { useMenu } from '../../context/MenuContext';
 import { useMostrador } from '../../context/MostradorContext';
 import { useVentas } from '../../context/VentasContext';
@@ -15,6 +15,8 @@ import { useEscaner } from '../../hooks/useEscaner';
 import { useFavoritos } from '../../hooks/useFavoritos';
 import { TarjetaProducto } from '../ui/ComponentesBase';
 import ModalEscanerCamara from '../Inventario/ModalEscanerCamara';
+import ModalProductoOFF from './ModalProductoOFF';
+import { pareceCodigoBarras } from '../../logic/off';
 import { calcularVenta } from '../../logic/venta';
 
 const ContenedorMostrador = () => {
@@ -47,38 +49,102 @@ const ContenedorMostrador = () => {
     // Escaneo de código de barras
     const [avisoEscaner, setAvisoEscaner] = useState<string | null>(null);
     const [modalEscaner, setModalEscaner] = useState(false);
+    // Alta de productos que no están en el catálogo local (Open Food Facts)
+    const [modalOFF, setModalOFF] = useState(false);
+    const [codigoOFF, setCodigoOFF] = useState('');
+    const [modalOFFKey, setModalOFFKey] = useState(0);
 
-    const handleEscaneo = (codigo: string) => {
-        const prod = productos.find(p => p.codigo_barras === codigo);
-        if (!prod) {
-            setAvisoEscaner(`No se encontró un producto con el código ${codigo}`);
-            setTimeout(() => setAvisoEscaner(null), 3000);
-            return;
-        }
-        if (!prod.activo) {
-            setAvisoEscaner(`"${prod.nombre}" está inactivo`);
-            setTimeout(() => setAvisoEscaner(null), 3000);
-            return;
-        }
-        // Producto a granel: no se puede escanear directo (necesita peso), abrir teclado
+    const avisar = (mensaje: string, ms = 1500) => {
+        setAvisoEscaner(mensaje);
+        setTimeout(() => setAvisoEscaner(null), ms);
+    };
+
+    /** Abre el alta por código con el código ya cargado. */
+    const abrirAltaOFF = (codigo: string) => {
+        setCodigoOFF(codigo.trim());
+        setModalOFFKey(k => k + 1); // remonta el modal: arranca limpio
+        setModalOFF(true);
+    };
+
+    /** Suma un producto al carrito respetando el caso "granel". */
+    const agregarAlCarrito = (prod: Producto) => {
         if (prod.tipo_venta === 'granel') {
             setProductoGranel(prod);
             return;
         }
-        // Producto por unidad: sumar al carrito
         agregar(prod);
-        setAvisoEscaner(`✓ ${prod.nombre} agregado`);
-        setTimeout(() => setAvisoEscaner(null), 1500);
+        avisar(`✓ ${prod.nombre} agregado`);
     };
 
-    // Activar el escáner solo cuando no se está cobrando
-    useEscaner(handleEscaneo, !cobrando);
+    const handleEscaneo = (codigo: string) => {
+        const codigoLimpio = codigo.trim();
+        if (!codigoLimpio) return;
+
+        const prod = productos.find(p => p.codigo_barras === codigoLimpio);
+        if (!prod) {
+            // No está en el catálogo local: se busca en OFF para darlo de alta.
+            abrirAltaOFF(codigoLimpio);
+            return;
+        }
+        if (!prod.activo) {
+            avisar(`"${prod.nombre}" está inactivo`);
+            return;
+        }
+        agregarAlCarrito(prod);
+        setBusqueda('');
+    };
+
+    /**
+     * Enter en el buscador: si el texto es exactamente el código de barras
+     * de un producto local, lo agrega al carrito (igual que la pistola).
+     * Si no existe localmente y parece un código, se busca en OFF.
+     */
+    const handleEnterBusqueda = () => {
+        const termino = busqueda.trim();
+        if (!termino) return;
+
+        const exacto = productos.find(p => p.codigo_barras === termino);
+        if (exacto) {
+            if (!exacto.activo) {
+                avisar(`"${exacto.nombre}" está inactivo`);
+                return;
+            }
+            agregarAlCarrito(exacto);
+            setBusqueda('');
+            return;
+        }
+
+        if (pareceCodigoBarras(termino)) abrirAltaOFF(termino);
+    };
+
+    /** Producto creado en Supabase desde el modal de OFF. */
+    const handleAgregadoOFF = (producto: Producto) => {
+        setModalOFF(false);
+        setBusqueda('');
+        // Si el filtro de categoria no lo incluiria, volver a "Todos" para que
+        // se vea el producto recien creado en la grilla.
+        if (categoriaActiva) {
+            const categoria = categorias.find(c => c.id === categoriaActiva);
+            if (categoria && producto.categoria !== categoria.nombre) {
+                setCategoriaActiva(null);
+            }
+        }
+        agregarAlCarrito(producto);
+    };
+
+    // Activar el escáner solo cuando no se está cobrando ni hay un modal abierto
+    useEscaner(handleEscaneo, !cobrando && !modalOFF && !modalEscaner);
 
     const productosFiltrados = productos.filter(p => {
         if (!p.activo) return false;
         const cat = categorias.find(c => c.id === categoriaActiva);
         const porCategoria = !categoriaActiva || p.categoria === cat?.nombre;
-        const porBusqueda = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
+        const termino = busqueda.trim().toLowerCase();
+        // Mismo criterio que el buscador de Inventario: nombre o código de barras.
+        const porBusqueda =
+            termino === '' ||
+            p.nombre.toLowerCase().includes(termino) ||
+            (p.codigo_barras?.toLowerCase().includes(termino) ?? false);
         return porCategoria && porBusqueda;
     });
 
@@ -156,20 +222,40 @@ const ContenedorMostrador = () => {
             {/* Columna productos */}
             <div className="flex-1 flex flex-col min-h-0">
                 <div className="space-y-3 mb-3 shrink-0">
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
-                        <input
-                            className="w-full pl-9 pr-9 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                            placeholder="Buscar producto..."
-                            value={busqueda}
-                            onChange={e => setBusqueda(e.target.value)}
-                        />
+                    <div className="flex gap-2">
+                        <div className="relative flex-1">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                            <input
+                                className="w-full pl-9 pr-9 py-2 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                                placeholder="Buscar por nombre o código de barras..."
+                                value={busqueda}
+                                onChange={e => setBusqueda(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleEnterBusqueda();
+                                    }
+                                    if (e.key === 'Escape') setBusqueda('');
+                                }}
+                            />
+                            <button
+                                onClick={() => setModalEscaner(true)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-violet-600"
+                                title="Escanear con la cámara"
+                            >
+                                <Camera size={15} />
+                            </button>
+                        </div>
+
+                        {/* Alta por codigo de barras: busca en Open Food Facts
+                            y agrega el producto al catalogo de Supabase. */}
                         <button
-                            onClick={() => setModalEscaner(true)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-violet-600"
-                            title="Escanear con la cámara"
+                            onClick={() => abrirAltaOFF(busqueda.trim())}
+                            title="Buscar un código de barras en Open Food Facts"
+                            className="shrink-0 flex items-center gap-1.5 px-3 py-2 bg-white border border-dashed border-violet-300 rounded-xl text-xs font-bold text-violet-600 hover:bg-violet-50 hover:border-violet-500 transition-colors"
                         >
-                            <Camera size={15} />
+                            <Barcode size={15} />
+                            Escanear
                         </button>
                     </div>
                     <div className="flex gap-1 overflow-x-auto pb-1">
@@ -193,8 +279,21 @@ const ContenedorMostrador = () => {
 
                 <div className="flex-1 overflow-y-auto">
                     {productosFiltrados.length === 0 ? (
-                        <div className="flex items-center justify-center h-48 text-stone-400 text-sm">
-                            No hay productos disponibles
+                        <div className="flex flex-col items-center justify-center h-48 gap-3 text-center px-4">
+                            <p className="text-stone-400 text-sm">
+                                {busqueda.trim()
+                                    ? `No hay productos con “${busqueda.trim()}”`
+                                    : 'No hay productos disponibles'}
+                            </p>
+                            {busqueda.trim() && pareceCodigoBarras(busqueda.trim()) && (
+                                <button
+                                    onClick={() => abrirAltaOFF(busqueda.trim())}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl text-xs font-bold hover:bg-violet-700 transition-colors"
+                                >
+                                    <Barcode size={14} />
+                                    Buscar en Open Food Facts
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start">
@@ -435,6 +534,16 @@ const ContenedorMostrador = () => {
                 abierto={modalEscaner}
                 onCerrar={() => setModalEscaner(false)}
                 onDetectar={codigo => { setModalEscaner(false); handleEscaneo(codigo); }}
+            />
+
+            {/* Alta de productos que no estan en el catalogo local:
+                busca en Open Food Facts y guarda en Supabase. */}
+            <ModalProductoOFF
+                key={modalOFFKey}
+                abierto={modalOFF}
+                codigoInicial={codigoOFF}
+                onCerrar={() => setModalOFF(false)}
+                onAgregado={handleAgregadoOFF}
             />
         </div>
     );
