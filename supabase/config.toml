@@ -77,3 +77,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/gestionar-addon/deno.json"
 entrypoint = "./functions/gestionar-addon/index.ts"
+
+[functions.modulo-off-productToDB]
+enabled = true
+verify_jwt = false
+import_map = "./functions/modulo-off-productToDB/deno.json"
+entrypoint = "./functions/modulo-off-productToDB/index.ts"
