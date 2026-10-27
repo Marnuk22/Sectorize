@@ -507,6 +507,16 @@ podrían depender del plan pago, igual que `seguimiento_stock`).
 
 ---
 
+## 🟣 Productos creados desde escaneo (Open Food Facts)
+
+Funcionalidad de alta de productos que no existen en el catálogo local ni en Open Food Facts. El flujo: escaneo en Venta rápida → consulta OFF → si existe, precarga datos; si no, se crea a mano con nombre/descripción/categoría/precio/stock → se guarda en `productos` con el flag `eoff` indicando si viene de OFF o es producto propio.
+
+- [x] **Edge Function `modulo-off-productToDB`** — `GET /api/products/scan/:barcode` contra Open Food Facts, devuelve `PROMPT_PRICE_OFF` / `PROMPT_INCOMPLETE` con sugerencia o producto genérico. Desplegada en Supabase Cloud.
+- [x] **Buscador de Venta rápida por código de barras** — filtra por nombre o código, Enter sobre código local agrega al carrito, código desconocido abre el alta desde OFF.
+- [x] **ModalProductoOFF** — alta de producto desde OFF: precarga nombre/categoría/imagen (si OFF los tiene), pide precio y stock, guarda en `productos` vía `agregarProducto` con flag `eoff` y agrega al carrito.
+- [ ] **Pantalla de gestión de productos creados desde escaneo** — listar los productos con `eoff = false` (creados a mano por el usuario), editarlos (nombre/descripción/categoría/precio/stock), desactivarlos y ver cuántos ya se vendieron. Para que el dueño tenga control sobre los productos que agregó "a mano" sin pasar por OFF.
+- [ ] **Agilizar la alta de productos a través de escáner** — cuando la pistola de códigos de barras detecte un código no encontrado, saltar directo al modal de alta con el barcode precargado (sin pasar por el buscador), y opcionalmente permitir "agilizar" creando el producto con precio por defecto (ej. 0) para editarlo después en Inventario.
+
 ## 📝 Notas de mantenimiento
 
 - Validación de firma del webhook de MercadoPago con `MP_WEBHOOK_SECRET` (guardado en el gestor, no implementado en código — la seguridad actual es re-consultar el estado a MP, que ya es robusto). Opcional.
